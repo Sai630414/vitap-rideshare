@@ -264,7 +264,7 @@ const approveDriver = async (req, res, next) => {
             numberPlate: driver.vehicleNumber,
             color: driver.vehicleColour,
             seats: driver.vehicleType === 'car' ? 4 : 1,
-            rcImage: driver.rcImage,
+            rcImage: driver.collegeCardImage || driver.licenceImage || '',
             verified: true,
             status: 'verified',
         }, { upsert: true, new: true });

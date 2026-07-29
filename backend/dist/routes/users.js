@@ -13,7 +13,7 @@ router.use(auth_1.protect);
 router.post('/apply-driver', upload_1.upload.fields([
     { name: 'profilePhoto', maxCount: 1 },
     { name: 'licenceImage', maxCount: 1 },
-    { name: 'rcImage', maxCount: 1 },
+    { name: 'collegeCardImage', maxCount: 1 },
     { name: 'vehicleImage', maxCount: 1 },
 ]), authController_1.applyDriver);
 router.put('/profile', (0, validation_1.validateRequest)(authValidator_1.updateProfileSchema), userController_1.updateProfile);

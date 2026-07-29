@@ -70,13 +70,13 @@ exports.driverSignupSchema = zod_1.z.object({
             .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
         confirmPassword: zod_1.z.string({ required_error: 'Confirm password is required' }),
         licenceNumber: zod_1.z
-            .string({ required_error: 'Driving Licence Number is required' })
-            .min(5, 'Licence number is invalid')
-            .toUpperCase(),
-        vehicleRCNumber: zod_1.z
-            .string({ required_error: 'Vehicle RC Number is required' })
-            .min(5, 'RC number is invalid')
-            .toUpperCase(),
+            .string()
+            .optional()
+            .transform(val => val ? val.toUpperCase() : undefined),
+        collegeCardNumber: zod_1.z
+            .string()
+            .optional()
+            .transform(val => val ? val.toUpperCase() : undefined),
         vehicleNumber: zod_1.z
             .string({ required_error: 'Vehicle Number is required' })
             .min(5, 'Vehicle registration plate number is invalid')
@@ -103,6 +103,10 @@ exports.driverSignupSchema = zod_1.z.object({
         .refine((data) => data.password === data.confirmPassword, {
         message: 'Passwords do not match',
         path: ['confirmPassword'],
+    })
+        .refine((data) => data.licenceNumber || data.collegeCardNumber, {
+        message: 'Either Driving Licence or College ID Card details must be provided',
+        path: ['licenceNumber'],
     }),
 });
 exports.loginSchema = zod_1.z.object({

@@ -16,6 +16,7 @@ import Input from '../components/ui/Input';
 import vehicleService, { type VehicleData } from '../services/vehicleService';
 import rideService from '../services/rideService';
 import MapContainerComponent from '../components/MapContainer';
+import AutocompleteInput from '../components/AutocompleteInput';
 
 export const OfferRide: React.FC = () => {
   const { toast } = useToast();
@@ -201,21 +202,27 @@ export const OfferRide: React.FC = () => {
                 </select>
               </div>
 
-              <Input
+              <AutocompleteInput
                 label="Leaving From (Pickup Address)"
                 placeholder="e.g. Hostels gate, Block 1"
                 value={source}
-                onChange={(e) => setSource(e.target.value)}
-                icon={<MapPin className="w-4 h-4" />}
+                onChange={(val) => setSource(val)}
+                onSelect={(coords, name) => {
+                  setPickupCoords(coords);
+                  setPickupAddress(name);
+                }}
                 required
               />
 
-              <Input
+              <AutocompleteInput
                 label="Going To (Drop Address)"
                 placeholder="e.g. Vijayawada Railway Station"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                icon={<MapPin className="w-4 h-4 text-violet-500" />}
+                onChange={(val) => setDestination(val)}
+                onSelect={(coords, name) => {
+                  setDropCoords(coords);
+                  setDropAddress(name);
+                }}
                 required
               />
 

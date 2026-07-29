@@ -26,7 +26,7 @@ export const DriverSignup: React.FC = () => {
 
   // Step 2: Vehicle details
   const [licenceNumber, setLicenceNumber] = useState('');
-  const [vehicleRCNumber, setVehicleRCNumber] = useState('');
+  const [collegeCardNumber, setCollegeCardNumber] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleColour, setVehicleColour] = useState('');
@@ -36,7 +36,7 @@ export const DriverSignup: React.FC = () => {
   // Step 3: Files state
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [licenceImage, setLicenceImage] = useState<File | null>(null);
-  const [rcImage, setRcImage] = useState<File | null>(null);
+  const [collegeCardImage, setCollegeCardImage] = useState<File | null>(null);
   const [vehicleImage, setVehicleImage] = useState<File | null>(null);
 
   // Password requirements checklist
@@ -66,8 +66,8 @@ export const DriverSignup: React.FC = () => {
 
     if (step !== 3) return;
 
-    if (!profilePhoto || !licenceImage || !rcImage || !vehicleImage) {
-      toast.error('All registration documents must be uploaded');
+    if (!profilePhoto || (!licenceImage && !collegeCardImage) || !vehicleImage) {
+      toast.error('Profile photo, vehicle photo, and at least one identity document (Driving Licence or College ID) are required');
       return;
     }
 
@@ -79,8 +79,8 @@ export const DriverSignup: React.FC = () => {
       formData.append('phone', phone);
       formData.append('password', password);
       formData.append('confirmPassword', confirmPassword);
-      formData.append('licenceNumber', licenceNumber);
-      formData.append('vehicleRCNumber', vehicleRCNumber);
+      if (licenceNumber) formData.append('licenceNumber', licenceNumber);
+      if (collegeCardNumber) formData.append('collegeCardNumber', collegeCardNumber);
       formData.append('vehicleNumber', vehicleNumber);
       formData.append('vehicleModel', vehicleModel);
       formData.append('vehicleColour', vehicleColour);
@@ -88,8 +88,8 @@ export const DriverSignup: React.FC = () => {
       formData.append('drivingExperience', drivingExperience);
       formData.append('emergencyContact', emergencyContact);
       formData.append('profilePhoto', profilePhoto);
-      formData.append('licenceImage', licenceImage);
-      formData.append('rcImage', rcImage);
+      if (licenceImage) formData.append('licenceImage', licenceImage);
+      if (collegeCardImage) formData.append('collegeCardImage', collegeCardImage);
       formData.append('vehicleImage', vehicleImage);
 
       const res = await signupDriver(formData);
@@ -126,8 +126,12 @@ export const DriverSignup: React.FC = () => {
       }
       setStep(2);
     } else if (step === 2) {
-      if (!licenceNumber || !vehicleRCNumber || !vehicleNumber || !vehicleModel || !vehicleColour || !drivingExperience) {
-        toast.error('All fields are required');
+      if (!vehicleNumber || !vehicleModel || !vehicleColour || !drivingExperience) {
+        toast.error('All vehicle fields and experience are required');
+        return;
+      }
+      if (!licenceNumber && !collegeCardNumber) {
+        toast.error('Either Driving Licence Number or College ID Card Number must be specified');
         return;
       }
       const expNum = Number(drivingExperience);
@@ -289,21 +293,19 @@ export const DriverSignup: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
                       label="Driving Licence Number"
-                      placeholder="AP07XXXXXXXXX"
+                      placeholder="AP07XXXXXXXXX (Optional if College ID provided)"
                       type="text"
                       value={licenceNumber}
                       onChange={(e) => setLicenceNumber(e.target.value)}
                       icon={<FileText className="w-5 h-5" />}
-                      required
                     />
                     <Input
-                      label="Vehicle RC Number"
-                      placeholder="RCXXXXXXXXXX"
+                      label="College ID Card Number"
+                      placeholder="23MICXXXX (Optional if DL provided)"
                       type="text"
-                      value={vehicleRCNumber}
-                      onChange={(e) => setVehicleRCNumber(e.target.value)}
+                      value={collegeCardNumber}
+                      onChange={(e) => setCollegeCardNumber(e.target.value)}
                       icon={<FileText className="w-5 h-5" />}
-                      required
                     />
                   </div>
 
@@ -413,7 +415,7 @@ export const DriverSignup: React.FC = () => {
 
                   {/* licenceImage */}
                   <div className="p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                    <label className="block text-xs font-bold text-zinc-400 mb-1">Driving Licence Scan</label>
+                    <label className="block text-xs font-bold text-zinc-400 mb-1">Driving Licence Scan (Optional if ID uploaded)</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="file"
@@ -429,32 +431,32 @@ export const DriverSignup: React.FC = () => {
                         <Upload className="w-3.5 h-3.5 text-zinc-400" />
                         Select File
                       </label>
-                      <span className="text-xs text-zinc-450 truncate flex-1">
+                      <span className="text-xs text-zinc-455 truncate flex-1">
                         {licenceImage ? licenceImage.name : 'No image selected'}
                       </span>
                     </div>
                   </div>
 
-                  {/* rcImage */}
+                  {/* collegeCardImage */}
                   <div className="p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                    <label className="block text-xs font-bold text-zinc-400 mb-1">Vehicle RC Book Document</label>
+                    <label className="block text-xs font-bold text-zinc-400 mb-1">College ID Card Scan (Optional if Licence uploaded)</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="file"
                         accept="image/*,application/pdf"
-                        id="rcImageInput"
+                        id="collegeCardImageInput"
                         className="hidden"
-                        onChange={(e) => setRcImage(e.target.files?.[0] || null)}
+                        onChange={(e) => setCollegeCardImage(e.target.files?.[0] || null)}
                       />
                       <label
-                        htmlFor="rcImageInput"
+                        htmlFor="collegeCardImageInput"
                         className="flex items-center gap-2 px-3 py-2 bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-750 text-xs font-bold text-zinc-200 rounded-lg cursor-pointer transition-all"
                       >
                         <Upload className="w-3.5 h-3.5 text-zinc-400" />
                         Select File
                       </label>
-                      <span className="text-xs text-zinc-450 truncate flex-1">
-                        {rcImage ? rcImage.name : 'No image selected'}
+                      <span className="text-xs text-zinc-455 truncate flex-1">
+                        {collegeCardImage ? collegeCardImage.name : 'No image selected'}
                       </span>
                     </div>
                   </div>

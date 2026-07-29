@@ -16,15 +16,11 @@ const driverSchema = new mongoose_1.Schema({
     },
     licenceNumber: {
         type: String,
-        required: [true, 'Licence number is required'],
-        unique: true,
         trim: true,
         uppercase: true,
     },
-    vehicleRCNumber: {
+    collegeCardNumber: {
         type: String,
-        required: [true, 'Vehicle RC number is required'],
-        unique: true,
         trim: true,
         uppercase: true,
     },
@@ -62,11 +58,9 @@ const driverSchema = new mongoose_1.Schema({
     },
     licenceImage: {
         type: String,
-        required: [true, 'Licence image is required'],
     },
-    rcImage: {
+    collegeCardImage: {
         type: String,
-        required: [true, 'RC image is required'],
     },
     vehicleImage: {
         type: String,

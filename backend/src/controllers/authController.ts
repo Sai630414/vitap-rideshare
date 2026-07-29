@@ -148,7 +148,7 @@ export const signupDriver = async (
       phone,
       password,
       licenceNumber,
-      vehicleRCNumber,
+      collegeCardNumber,
       vehicleNumber,
       vehicleModel,
       vehicleColour,
@@ -167,9 +167,9 @@ export const signupDriver = async (
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    if (!files || !files.profilePhoto || !files.licenceImage || !files.rcImage || !files.vehicleImage) {
+    if (!files || !files.profilePhoto || (!files.licenceImage && !files.collegeCardImage) || !files.vehicleImage) {
       cleanupUploadedFiles(files);
-      return next(new AppError('All required registration photos must be uploaded.', 400));
+      return next(new AppError('Profile photo, vehicle photo, and at least one identity document (Driving Licence or College ID Card) are required.', 400));
     }
 
     const existingUser = await User.findOne({ email });
@@ -179,16 +179,20 @@ export const signupDriver = async (
     }
 
     // Check unique fields in Driver collection
-    const duplicateLicence = await Driver.findOne({ licenceNumber });
-    if (duplicateLicence) {
-      cleanupUploadedFiles(files);
-      return next(new AppError('Licence number is already registered.', 400));
+    if (licenceNumber) {
+      const duplicateLicence = await Driver.findOne({ licenceNumber });
+      if (duplicateLicence) {
+        cleanupUploadedFiles(files);
+        return next(new AppError('Licence number is already registered.', 400));
+      }
     }
 
-    const duplicateRC = await Driver.findOne({ vehicleRCNumber });
-    if (duplicateRC) {
-      cleanupUploadedFiles(files);
-      return next(new AppError('RC document number is already registered.', 400));
+    if (collegeCardNumber) {
+      const duplicateCard = await Driver.findOne({ collegeCardNumber });
+      if (duplicateCard) {
+        cleanupUploadedFiles(files);
+        return next(new AppError('College ID card number is already registered.', 400));
+      }
     }
 
     const duplicatePlate = await Driver.findOne({ vehicleNumber });
@@ -199,9 +203,18 @@ export const signupDriver = async (
 
     // Upload documents
     const profilePhotoUrl = await uploadToCloudinaryOrLocal(files.profilePhoto[0].path, 'profiles');
-    const licenceImageUrl = await uploadToCloudinaryOrLocal(files.licenceImage[0].path, 'licences');
-    const rcImageUrl = await uploadToCloudinaryOrLocal(files.rcImage[0].path, 'rc_documents');
     const vehicleImageUrl = await uploadToCloudinaryOrLocal(files.vehicleImage[0].path, 'vehicles');
+    
+    let licenceImageUrl = '';
+    if (files.licenceImage && files.licenceImage.length > 0) {
+      licenceImageUrl = await uploadToCloudinaryOrLocal(files.licenceImage[0].path, 'licences');
+    }
+
+    let collegeCardImageUrl = '';
+    if (files.collegeCardImage && files.collegeCardImage.length > 0) {
+      collegeCardImageUrl = await uploadToCloudinaryOrLocal(files.collegeCardImage[0].path, 'college_cards');
+    }
+
     logger.info("Documents Uploaded");
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -228,16 +241,16 @@ export const signupDriver = async (
     await Driver.create({
       user: user._id,
       phone,
-      licenceNumber,
-      vehicleRCNumber,
+      licenceNumber: licenceNumber || undefined,
+      collegeCardNumber: collegeCardNumber || undefined,
       vehicleNumber,
       vehicleModel,
       vehicleColour,
       vehicleType,
       drivingExperience: Number(drivingExperience),
       emergencyContact,
-      licenceImage: licenceImageUrl,
-      rcImage: rcImageUrl,
+      licenceImage: licenceImageUrl || undefined,
+      collegeCardImage: collegeCardImageUrl || undefined,
       vehicleImage: vehicleImageUrl,
       approvalStatus: 'Pending',
       driverStatus: 'PENDING_APPROVAL',
@@ -595,7 +608,7 @@ export const applyDriver = async (
     const {
       phone,
       licenceNumber,
-      vehicleRCNumber,
+      collegeCardNumber,
       vehicleNumber,
       vehicleModel,
       vehicleColour,
@@ -618,22 +631,26 @@ export const applyDriver = async (
       }
     }
 
-    if (!driver && (!files || !files.licenceImage || !files.rcImage || !files.vehicleImage)) {
+    if (!driver && (!files || (!files.licenceImage && !files.collegeCardImage) || !files.vehicleImage)) {
       cleanupUploadedFiles(files);
-      return next(new AppError('All required vehicle and licence documents must be uploaded.', 400));
+      return next(new AppError('Profile photo, vehicle photo, and at least one identity document (Driving Licence or College ID Card) are required.', 400));
     }
 
     // Check unique fields in Driver collection
-    const duplicateLicence = await Driver.findOne({ licenceNumber, user: { $ne: userId } });
-    if (duplicateLicence) {
-      cleanupUploadedFiles(files);
-      return next(new AppError('Licence number is already registered.', 400));
+    if (licenceNumber) {
+      const duplicateLicence = await Driver.findOne({ licenceNumber, user: { $ne: userId } });
+      if (duplicateLicence) {
+        cleanupUploadedFiles(files);
+        return next(new AppError('Licence number is already registered.', 400));
+      }
     }
 
-    const duplicateRC = await Driver.findOne({ vehicleRCNumber, user: { $ne: userId } });
-    if (duplicateRC) {
-      cleanupUploadedFiles(files);
-      return next(new AppError('RC document number is already registered.', 400));
+    if (collegeCardNumber) {
+      const duplicateCard = await Driver.findOne({ collegeCardNumber, user: { $ne: userId } });
+      if (duplicateCard) {
+        cleanupUploadedFiles(files);
+        return next(new AppError('College ID card number is already registered.', 400));
+      }
     }
 
     const duplicatePlate = await Driver.findOne({ vehicleNumber, user: { $ne: userId } });
@@ -644,14 +661,14 @@ export const applyDriver = async (
 
     // Upload documents
     let licenceImageUrl = driver?.licenceImage;
-    let rcImageUrl = driver?.rcImage;
+    let collegeCardImageUrl = driver?.collegeCardImage;
     let vehicleImageUrl = driver?.vehicleImage;
 
     if (files?.licenceImage) {
       licenceImageUrl = await uploadToCloudinaryOrLocal(files.licenceImage[0].path, 'licences');
     }
-    if (files?.rcImage) {
-      rcImageUrl = await uploadToCloudinaryOrLocal(files.rcImage[0].path, 'rc_documents');
+    if (files?.collegeCardImage) {
+      collegeCardImageUrl = await uploadToCloudinaryOrLocal(files.collegeCardImage[0].path, 'college_cards');
     }
     if (files?.vehicleImage) {
       vehicleImageUrl = await uploadToCloudinaryOrLocal(files.vehicleImage[0].path, 'vehicles');
@@ -673,16 +690,16 @@ export const applyDriver = async (
       driver = await Driver.create({
         user: userId,
         phone,
-        licenceNumber,
-        vehicleRCNumber,
+        licenceNumber: licenceNumber || undefined,
+        collegeCardNumber: collegeCardNumber || undefined,
         vehicleNumber,
         vehicleModel,
         vehicleColour,
         vehicleType,
         drivingExperience: Number(drivingExperience),
         emergencyContact,
-        licenceImage: licenceImageUrl,
-        rcImage: rcImageUrl,
+        licenceImage: licenceImageUrl || undefined,
+        collegeCardImage: collegeCardImageUrl || undefined,
         vehicleImage: vehicleImageUrl,
         approvalStatus: 'Pending',
         driverStatus: 'PENDING_APPROVAL',
@@ -695,16 +712,16 @@ export const applyDriver = async (
     } else {
       driver.phone = phone || driver.phone;
       driver.licenceNumber = licenceNumber || driver.licenceNumber;
-      driver.vehicleRCNumber = vehicleRCNumber || driver.vehicleRCNumber;
+      driver.collegeCardNumber = collegeCardNumber || driver.collegeCardNumber;
       driver.vehicleNumber = vehicleNumber || driver.vehicleNumber;
       driver.vehicleModel = vehicleModel || driver.vehicleModel;
       driver.vehicleColour = vehicleColour || driver.vehicleColour;
       driver.vehicleType = vehicleType || driver.vehicleType;
       driver.drivingExperience = drivingExperience ? Number(drivingExperience) : driver.drivingExperience;
       driver.emergencyContact = emergencyContact || driver.emergencyContact;
-      driver.licenceImage = licenceImageUrl as string;
-      driver.rcImage = rcImageUrl as string;
-      driver.vehicleImage = vehicleImageUrl as string;
+      driver.licenceImage = licenceImageUrl || driver.licenceImage;
+      driver.collegeCardImage = collegeCardImageUrl || driver.collegeCardImage;
+      driver.vehicleImage = vehicleImageUrl || driver.vehicleImage;
       driver.approvalStatus = 'Pending';
       driver.driverStatus = 'PENDING_APPROVAL';
       driver.paymentStatus = false;

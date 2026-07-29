@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Navigation } from 'lucide-react';
+import { reverseGeocode } from '../utils/locationUtils';
 
 // Inline premium SVG markers to prevent leaflet icon resolution bugs
 const createMarkerIcon = (color: string) => {
@@ -103,14 +104,13 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
 
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
-      // Get address name (simulate geocoding to keep it lightweight)
-      const simulatedAddress = `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      // Get address name using geocoder helper
+      const addressName = await reverseGeocode(lat, lng);
       
-      // For simplicity, we can let user click and choose if it is pickup or drop
       if (!pickupCoords) {
-        onSelectCoords('pickup', [lng, lat], simulatedAddress);
+        onSelectCoords('pickup', [lng, lat], addressName);
       } else {
-        onSelectCoords('drop', [lng, lat], simulatedAddress);
+        onSelectCoords('drop', [lng, lat], addressName);
       }
     });
     return null;

@@ -938,3 +938,229 @@
 [2026-07-29 18:47:53:4753] [[32minfo[39m]: [32mNew WebSocket client connected: BnSnrOa8BMGawex9AAAD[39m
 [2026-07-29 18:47:53:4753] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket BnSnrOa8BMGawex9AAAD[39m
 [2026-07-29 18:47:54:4754] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 18:47:58:4758] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 18:47:58:4758] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 18:47:58:4758] [[32minfo[39m]: [32mNew WebSocket client connected: 24UzkzKYDtByeE3yAAAC[39m
+[2026-07-29 18:47:58:4758] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket 24UzkzKYDtByeE3yAAAC[39m
+[2026-07-29 18:47:58:4758] [[32minfo[39m]: [32mNew WebSocket client connected: LitR-c71_pH7zr3WAAAD[39m
+[2026-07-29 18:47:58:4758] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket LitR-c71_pH7zr3WAAAD[39m
+[2026-07-29 18:47:59:4759] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 18:48:09:489] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket LitR-c71_pH7zr3WAAAD[39m
+[2026-07-29 18:48:10:4810] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket 24UzkzKYDtByeE3yAAAC[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mNew WebSocket client connected: I3S5v0WovXbTSKzYAAAG[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket I3S5v0WovXbTSKzYAAAG[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket I3S5v0WovXbTSKzYAAAG[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mNew WebSocket client connected: g6N38uIUqaop85TVAAAI[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket g6N38uIUqaop85TVAAAI[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket g6N38uIUqaop85TVAAAI[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mNew WebSocket client connected: 8hUXJE_rWRVHTkNmAAAK[39m
+[2026-07-29 18:48:11:4811] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket 8hUXJE_rWRVHTkNmAAAK[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket 8hUXJE_rWRVHTkNmAAAK[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mNew WebSocket client connected: COh2o4rTxP-6rinHAAAM[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket COh2o4rTxP-6rinHAAAM[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket COh2o4rTxP-6rinHAAAM[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mNew WebSocket client connected: 2kH-Emf1bbXy-Xd0AAAO[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket 2kH-Emf1bbXy-Xd0AAAO[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket 2kH-Emf1bbXy-Xd0AAAO[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mNew WebSocket client connected: T2WdS1JRnPH9J3h-AAAQ[39m
+[2026-07-29 18:49:01:491] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket T2WdS1JRnPH9J3h-AAAQ[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mNew WebSocket client connected: bv7sOhZeVuBZCeQnAAAS[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket bv7sOhZeVuBZCeQnAAAS[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket bv7sOhZeVuBZCeQnAAAS[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mNew WebSocket client connected: Et6tOxihi4n5zEBuAAAU[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket Et6tOxihi4n5zEBuAAAU[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket Et6tOxihi4n5zEBuAAAU[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mNew WebSocket client connected: 36m6LKOGJrdpYeDGAAAW[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 36m6LKOGJrdpYeDGAAAW[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket 36m6LKOGJrdpYeDGAAAW[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mNew WebSocket client connected: yn5Y3usjtTyzy5sVAAAY[39m
+[2026-07-29 18:51:32:5132] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket yn5Y3usjtTyzy5sVAAAY[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket yn5Y3usjtTyzy5sVAAAY[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mNew WebSocket client connected: HdNdCbIVMozfjEA4AAAa[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket HdNdCbIVMozfjEA4AAAa[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket HdNdCbIVMozfjEA4AAAa[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mNew WebSocket client connected: 6zQDrNk1CedfFxQlAAAc[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 6zQDrNk1CedfFxQlAAAc[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket 6zQDrNk1CedfFxQlAAAc[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mNew WebSocket client connected: DpOHQEu_AGXyJOwnAAAe[39m
+[2026-07-29 18:53:06:536] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket DpOHQEu_AGXyJOwnAAAe[39m
+[2026-07-29 18:54:10:5410] [[32minfo[39m]: [32mNew WebSocket client connected: -rufCTxEP4ts_g6jAAAg[39m
+[2026-07-29 18:54:10:5410] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket -rufCTxEP4ts_g6jAAAg[39m
+[2026-07-29 18:54:10:5410] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket -rufCTxEP4ts_g6jAAAg[39m
+[2026-07-29 18:54:10:5410] [[32minfo[39m]: [32mNew WebSocket client connected: Bbm_DMuHLChjRRDxAAAi[39m
+[2026-07-29 18:54:10:5410] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket Bbm_DMuHLChjRRDxAAAi[39m
+[2026-07-29 18:54:11:5411] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket Bbm_DMuHLChjRRDxAAAi[39m
+[2026-07-29 18:54:11:5411] [[32minfo[39m]: [32mNew WebSocket client connected: VkDrrAyqHFSfKDdPAAAk[39m
+[2026-07-29 18:54:11:5411] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket VkDrrAyqHFSfKDdPAAAk[39m
+[2026-07-29 18:54:11:5411] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket VkDrrAyqHFSfKDdPAAAk[39m
+[2026-07-29 18:54:11:5411] [[32minfo[39m]: [32mNew WebSocket client connected: lzqP9W00FPVR04cLAAAm[39m
+[2026-07-29 18:54:11:5411] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket lzqP9W00FPVR04cLAAAm[39m
+[2026-07-29 18:54:33:5433] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket lzqP9W00FPVR04cLAAAm[39m
+[2026-07-29 18:54:33:5433] [[32minfo[39m]: [32mNew WebSocket client connected: ZfSMYioIq7EdPG-DAAAo[39m
+[2026-07-29 18:54:33:5433] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 bound to socket ZfSMYioIq7EdPG-DAAAo[39m
+[2026-07-29 18:56:08:568] [[32minfo[39m]: [32mUser 6a69fb5c2b9ae9be810e9a33 disconnected from socket ZfSMYioIq7EdPG-DAAAo[39m
+[2026-07-29 18:57:07:577] [[32minfo[39m]: [32mOTP email sent successfully to: raveendra.23mic7282@vitapstudent.ac.in[39m
+[2026-07-29 18:57:23:5723] [[32minfo[39m]: [32mOTP Verified for user: raveendra.23mic7282@vitapstudent.ac.in[39m
+[2026-07-29 18:57:24:5724] [[32minfo[39m]: [32mWelcome email sent successfully to: raveendra.23mic7282@vitapstudent.ac.in[39m
+[2026-07-29 18:57:24:5724] [[32minfo[39m]: [32mNew WebSocket client connected: Rvw52zc6aWrZf_XTAAAq[39m
+[2026-07-29 18:57:24:5724] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket Rvw52zc6aWrZf_XTAAAq[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mNew WebSocket client connected: UoaN2bt6qGRyJsnbAAAs[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket UoaN2bt6qGRyJsnbAAAs[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket UoaN2bt6qGRyJsnbAAAs[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mNew WebSocket client connected: kp__hOwdEFBlH-lpAAAu[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket kp__hOwdEFBlH-lpAAAu[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket kp__hOwdEFBlH-lpAAAu[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mNew WebSocket client connected: cG9KNyEtxFKbDUJ4AAAw[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket cG9KNyEtxFKbDUJ4AAAw[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket cG9KNyEtxFKbDUJ4AAAw[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mNew WebSocket client connected: bNhlmdNZ2_XupFKDAAAy[39m
+[2026-07-29 19:07:25:725] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket bNhlmdNZ2_XupFKDAAAy[39m
+[2026-07-29 19:07:37:737] [[32minfo[39m]: [32mSocket bNhlmdNZ2_XupFKDAAAy joined room 6a6a0203222d9b76be57fe44[39m
+[2026-07-29 19:07:47:747] [[32minfo[39m]: [32mSocket Rvw52zc6aWrZf_XTAAAq joined room 6a6a0203222d9b76be57fe44[39m
+[2026-07-29 19:17:07:177] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:17:08:178] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:17:09:179] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:17:11:1711] [[32minfo[39m]: [32mNew WebSocket client connected: 9fQpsT4TxYclvWVyAAAC[39m
+[2026-07-29 19:17:11:1711] [[32minfo[39m]: [32mNew WebSocket client connected: JEpclXRtflu4fi1EAAAD[39m
+[2026-07-29 19:17:11:1711] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket 9fQpsT4TxYclvWVyAAAC[39m
+[2026-07-29 19:17:11:1711] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket JEpclXRtflu4fi1EAAAD[39m
+[2026-07-29 19:17:34:1734] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:17:34:1734] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:17:34:1734] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:17:35:1735] [[32minfo[39m]: [32mNew WebSocket client connected: 2wFzcqR1tr1XF1TgAAAC[39m
+[2026-07-29 19:17:35:1735] [[32minfo[39m]: [32mNew WebSocket client connected: xmED6xh5EHLQuFV9AAAD[39m
+[2026-07-29 19:17:35:1735] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 2wFzcqR1tr1XF1TgAAAC[39m
+[2026-07-29 19:17:35:1735] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket xmED6xh5EHLQuFV9AAAD[39m
+[2026-07-29 19:17:57:1757] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:17:58:1758] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:17:58:1758] [[32minfo[39m]: [32mNew WebSocket client connected: _KNKYb-C1cZC4CbXAAAB[39m
+[2026-07-29 19:17:58:1758] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket _KNKYb-C1cZC4CbXAAAB[39m
+[2026-07-29 19:17:58:1758] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:17:58:1758] [[32minfo[39m]: [32mNew WebSocket client connected: c8pa2DxhsSGCsdpeAAAD[39m
+[2026-07-29 19:17:58:1758] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket c8pa2DxhsSGCsdpeAAAD[39m
+[2026-07-29 19:18:09:189] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:18:09:189] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:18:10:1810] [[32minfo[39m]: [32mNew WebSocket client connected: GdKvDFgocY_s5nXLAAAB[39m
+[2026-07-29 19:18:10:1810] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket GdKvDFgocY_s5nXLAAAB[39m
+[2026-07-29 19:18:10:1810] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:18:10:1810] [[32minfo[39m]: [32mNew WebSocket client connected: PdFfwLhJY0eXcaNoAAAD[39m
+[2026-07-29 19:18:10:1810] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket PdFfwLhJY0eXcaNoAAAD[39m
+[2026-07-29 19:18:16:1816] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:18:16:1816] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:18:16:1816] [[32minfo[39m]: [32mNew WebSocket client connected: XL7cJ7ksQOu7JrG-AAAC[39m
+[2026-07-29 19:18:16:1816] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket XL7cJ7ksQOu7JrG-AAAC[39m
+[2026-07-29 19:18:16:1816] [[32minfo[39m]: [32mNew WebSocket client connected: N3pYeJppxMqm7TNgAAAD[39m
+[2026-07-29 19:18:16:1816] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket N3pYeJppxMqm7TNgAAAD[39m
+[2026-07-29 19:18:17:1817] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:18:37:1837] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:18:37:1837] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:18:37:1837] [[32minfo[39m]: [32mNew WebSocket client connected: CO6ZQHWTna7dE5GuAAAB[39m
+[2026-07-29 19:18:37:1837] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket CO6ZQHWTna7dE5GuAAAB[39m
+[2026-07-29 19:18:38:1838] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:18:38:1838] [[32minfo[39m]: [32mNew WebSocket client connected: YDmbLwnaTKWwT_luAAAD[39m
+[2026-07-29 19:18:38:1838] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket YDmbLwnaTKWwT_luAAAD[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mNew WebSocket client connected: QZUdm-_1pq0zUpZkAAAC[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mNew WebSocket client connected: kljvh_9GXPCQ_2mSAAAD[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket QZUdm-_1pq0zUpZkAAAC[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket kljvh_9GXPCQ_2mSAAAD[39m
+[2026-07-29 19:18:57:1857] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:19:04:194] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:19:05:195] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:19:05:195] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:19:05:195] [[32minfo[39m]: [32mNew WebSocket client connected: VW5kjp33YGM5PLZ8AAAB[39m
+[2026-07-29 19:19:05:195] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket VW5kjp33YGM5PLZ8AAAB[39m
+[2026-07-29 19:19:06:196] [[32minfo[39m]: [32mNew WebSocket client connected: YavzVRAwJ6qRCiWjAAAD[39m
+[2026-07-29 19:19:06:196] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket YavzVRAwJ6qRCiWjAAAD[39m
+[2026-07-29 19:19:22:1922] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket VW5kjp33YGM5PLZ8AAAB[39m
+[2026-07-29 19:19:22:1922] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket YavzVRAwJ6qRCiWjAAAD[39m
+[2026-07-29 19:19:23:1923] [[32minfo[39m]: [32mNew WebSocket client connected: KgheZw6c1mo7-iQlAAAG[39m
+[2026-07-29 19:19:23:1923] [[32minfo[39m]: [32mNew WebSocket client connected: 4kTrV-xWMOXCQmMtAAAI[39m
+[2026-07-29 19:19:23:1923] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 4kTrV-xWMOXCQmMtAAAI[39m
+[2026-07-29 19:19:23:1923] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket 4kTrV-xWMOXCQmMtAAAI[39m
+[2026-07-29 19:19:23:1923] [[32minfo[39m]: [32mNew WebSocket client connected: lqe4gSb4P2pthCJDAAAK[39m
+[2026-07-29 19:19:23:1923] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket lqe4gSb4P2pthCJDAAAK[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mNew WebSocket client connected: 75shJH8Wu25diozKAAAM[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket 75shJH8Wu25diozKAAAM[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket 75shJH8Wu25diozKAAAM[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mNew WebSocket client connected: ezK1a1dG6-rr2v0NAAAO[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket ezK1a1dG6-rr2v0NAAAO[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket ezK1a1dG6-rr2v0NAAAO[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mNew WebSocket client connected: 7H3xzTtVPHunK13SAAAQ[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket 7H3xzTtVPHunK13SAAAQ[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket 7H3xzTtVPHunK13SAAAQ[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mNew WebSocket client connected: xny_9Ku2xvKCzbv8AAAS[39m
+[2026-07-29 19:21:48:2148] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket xny_9Ku2xvKCzbv8AAAS[39m
+[2026-07-29 19:22:17:2217] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket lqe4gSb4P2pthCJDAAAK[39m
+[2026-07-29 19:22:17:2217] [[32minfo[39m]: [32mNew WebSocket client connected: hg9os42f1qkqHJCMAAAU[39m
+[2026-07-29 19:22:17:2217] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket hg9os42f1qkqHJCMAAAU[39m
+[2026-07-29 19:22:18:2218] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket hg9os42f1qkqHJCMAAAU[39m
+[2026-07-29 19:22:18:2218] [[32minfo[39m]: [32mNew WebSocket client connected: PuOVS2EDt8UYi8G4AAAW[39m
+[2026-07-29 19:22:18:2218] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket PuOVS2EDt8UYi8G4AAAW[39m
+[2026-07-29 19:22:18:2218] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket PuOVS2EDt8UYi8G4AAAW[39m
+[2026-07-29 19:22:18:2218] [[32minfo[39m]: [32mNew WebSocket client connected: 3G0iS65MRaoPdG31AAAY[39m
+[2026-07-29 19:22:18:2218] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 3G0iS65MRaoPdG31AAAY[39m
+[2026-07-29 19:22:50:2250] [[32minfo[39m]: [32mNew WebSocket client connected: pbr4TO5UjHeXeh8iAAAa[39m
+[2026-07-29 19:22:50:2250] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket pbr4TO5UjHeXeh8iAAAa[39m
+[2026-07-29 19:22:50:2250] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket pbr4TO5UjHeXeh8iAAAa[39m
+[2026-07-29 19:22:50:2250] [[32minfo[39m]: [32mNew WebSocket client connected: 3ivWrKuVcR6a3zZ4AAAc[39m
+[2026-07-29 19:22:50:2250] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 3ivWrKuVcR6a3zZ4AAAc[39m
+[2026-07-29 19:22:51:2251] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket 3ivWrKuVcR6a3zZ4AAAc[39m
+[2026-07-29 19:22:51:2251] [[32minfo[39m]: [32mNew WebSocket client connected: 3R_OHy_rl6F2kpf_AAAe[39m
+[2026-07-29 19:22:51:2251] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 3R_OHy_rl6F2kpf_AAAe[39m
+[2026-07-29 19:22:51:2251] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket 3R_OHy_rl6F2kpf_AAAe[39m
+[2026-07-29 19:22:51:2251] [[32minfo[39m]: [32mNew WebSocket client connected: lEO3Ib2OJZY-pZNDAAAg[39m
+[2026-07-29 19:22:51:2251] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket lEO3Ib2OJZY-pZNDAAAg[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket lEO3Ib2OJZY-pZNDAAAg[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mNew WebSocket client connected: nmiWvSswWWKiFs68AAAi[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket nmiWvSswWWKiFs68AAAi[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket nmiWvSswWWKiFs68AAAi[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mNew WebSocket client connected: DXvQfZYmeV8D_QILAAAk[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket DXvQfZYmeV8D_QILAAAk[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket DXvQfZYmeV8D_QILAAAk[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mNew WebSocket client connected: HN3qNb6Reb4Eg5UpAAAm[39m
+[2026-07-29 19:23:32:2332] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket HN3qNb6Reb4Eg5UpAAAm[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket xny_9Ku2xvKCzbv8AAAS[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mNew WebSocket client connected: UwpD6bou2DNM-c-zAAAo[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket UwpD6bou2DNM-c-zAAAo[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket UwpD6bou2DNM-c-zAAAo[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mNew WebSocket client connected: wgIGu7NQLZTpo3XJAAAq[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket wgIGu7NQLZTpo3XJAAAq[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket wgIGu7NQLZTpo3XJAAAq[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mNew WebSocket client connected: xb4xpvT1FtMACA-2AAAs[39m
+[2026-07-29 19:23:43:2343] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket xb4xpvT1FtMACA-2AAAs[39m
+[2026-07-29 19:24:18:2418] [[32minfo[39m]: [32mSocket xb4xpvT1FtMACA-2AAAs joined room 6a6a0203222d9b76be57fe44[39m
+[2026-07-29 19:24:19:2419] [[32minfo[39m]: [32mSocket xb4xpvT1FtMACA-2AAAs joined room 6a6a0203222d9b76be57fe44[39m
+[2026-07-29 19:24:29:2429] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket HN3qNb6Reb4Eg5UpAAAm[39m
+[2026-07-29 19:25:26:2526] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 19:25:27:2527] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 19:25:28:2528] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 19:25:32:2532] [[32minfo[39m]: [32mNew WebSocket client connected: P60lEkIgINy4DFNSAAAB[39m
+[2026-07-29 19:25:32:2532] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 bound to socket P60lEkIgINy4DFNSAAAB[39m
+[2026-07-29 19:25:32:2532] [[32minfo[39m]: [32mNew WebSocket client connected: Iaq3Cp6fG4Z3-nRtAAAE[39m
+[2026-07-29 19:25:32:2532] [[32minfo[39m]: [32mNew WebSocket client connected: b3yQq1yYSQsHGPh6AAAG[39m
+[2026-07-29 19:25:32:2532] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket b3yQq1yYSQsHGPh6AAAG[39m
+[2026-07-29 19:25:33:2533] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket b3yQq1yYSQsHGPh6AAAG[39m
+[2026-07-29 19:25:33:2533] [[32minfo[39m]: [32mNew WebSocket client connected: Sf6z9VYEvHv6WSEyAAAI[39m
+[2026-07-29 19:25:33:2533] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket Sf6z9VYEvHv6WSEyAAAI[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket Sf6z9VYEvHv6WSEyAAAI[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mNew WebSocket client connected: AzXKUzwK3yC4QQvMAAAK[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket AzXKUzwK3yC4QQvMAAAK[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket AzXKUzwK3yC4QQvMAAAK[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mNew WebSocket client connected: J636CN4aEjn8Z75DAAAM[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket J636CN4aEjn8Z75DAAAM[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket J636CN4aEjn8Z75DAAAM[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mNew WebSocket client connected: 7dBrATOkltfcks41AAAO[39m
+[2026-07-29 19:25:37:2537] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket 7dBrATOkltfcks41AAAO[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket 7dBrATOkltfcks41AAAO[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mNew WebSocket client connected: bCRmB-PYbEfyyDZmAAAQ[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket bCRmB-PYbEfyyDZmAAAQ[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket bCRmB-PYbEfyyDZmAAAQ[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mNew WebSocket client connected: -hVnkNyHC1dmzT_EAAAS[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket -hVnkNyHC1dmzT_EAAAS[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket -hVnkNyHC1dmzT_EAAAS[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mNew WebSocket client connected: MwytD0CmFwYcEncbAAAU[39m
+[2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket MwytD0CmFwYcEncbAAAU[39m
+[2026-07-29 19:30:17:3017] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket P60lEkIgINy4DFNSAAAB[39m
+[2026-07-29 19:30:19:3019] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket MwytD0CmFwYcEncbAAAU[39m
