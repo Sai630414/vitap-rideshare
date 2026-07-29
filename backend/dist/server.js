@@ -97,6 +97,15 @@ app.use((0, express_session_1.default)({
 app.use(passport_1.default.initialize());
 // Serve local static uploaded files
 app.use('/uploads', express_1.default.static(path_1.default.resolve('uploads')));
+// Health check endpoint for deployment monitoring
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        message: 'Backend is healthy and running.',
+        timestamp: new Date(),
+        uptime: process.uptime(),
+    });
+});
 // 2) Route Handlers mapping
 app.use('/api/auth', auth_1.default);
 app.use('/api/users', users_1.default);
