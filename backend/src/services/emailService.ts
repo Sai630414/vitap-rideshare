@@ -234,10 +234,15 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
     try {
       await transporter.sendMail({ from: FROM_EMAIL, to: email, subject, html });
       logger.info(`Password reset email sent successfully to: ${email}`);
-    } catch (error) {
-      logger.error(`Failed to send password reset email to ${email}:`, error);
-      throw error;
-    }
+    } catch (error: any) {
+  console.error("FULL SMTP ERROR:", error);
+  console.error("Code:", error?.code);
+  console.error("Command:", error?.command);
+  console.error("Stack:", error?.stack);
+
+  logger.error(`Failed to send password reset email to ${email}: ${error?.message}`);
+  throw error;
+}
   } else {
     logger.warn('[Brevo SMTP not configured] Simulating Password Reset Email:');
     console.log(`\nTo: ${email}\nSubject: ${subject}\nReset Link: ${resetUrl}\n`);
