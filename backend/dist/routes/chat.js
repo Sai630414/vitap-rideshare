@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const chatController_1 = require("../controllers/chatController");
+const auth_1 = require("../middleware/auth");
+const upload_1 = require("../middleware/upload");
+const router = (0, express_1.Router)();
+router.use(auth_1.protect);
+router.post('/', chatController_1.getOrCreateChat);
+router.get('/', chatController_1.getUserChats);
+router.post('/:chatId/messages', upload_1.upload.single('image'), chatController_1.sendMessage);
+router.get('/:chatId/messages', chatController_1.getChatMessages);
+router.patch('/:chatId/seen', chatController_1.markAsSeen);
+exports.default = router;

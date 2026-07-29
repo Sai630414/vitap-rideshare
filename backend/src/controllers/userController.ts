@@ -1,0 +1,222 @@
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from '../middleware/auth';
+import User from '../models/User';
+import Report from '../models/Report';
+import AppError from '../utils/appError';
+import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
+
+export const getUserProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('blockedUsers', 'name email profileImage');
+    
+    if (!user) {
+      return next(new AppError('No user found with that ID', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError('Unauthorized', 401));
+    }
+
+    // Filtered body parameters to restrict role or verification modification
+    const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch'];
+    const updateData: Record<string, any> = {};
+
+    Object.keys(req.body).forEach((key) => {
+      if (allowedFields.includes(key)) {
+        updateData[key] = req.body[key];
+      }
+    });
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadAvatar = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError('Unauthorized', 401));
+    }
+
+    if (!req.file) {
+      return next(new AppError('Please select a file to upload', 400));
+    }
+
+    // Upload using Cloudinary or local fallback
+    const fileUrl = await uploadToCloudinaryOrLocal(req.file.path, 'avatars');
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { profileImage: fileUrl } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const blockUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userIdToBlock = req.params.id;
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    if (req.user.id === userIdToBlock) {
+      return next(new AppError('You cannot block yourself', 400));
+    }
+
+    const userToBlock = await User.findById(userIdToBlock);
+    if (!userToBlock) {
+      return next(new AppError('User to block not found', 404));
+    }
+
+    // Add to block list if not already there
+    await User.findByIdAndUpdate(req.user.id, {
+      $addToSet: { blockedUsers: userToBlock._id },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'User blocked successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const unblockUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userIdToUnblock = req.params.id;
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    await User.findByIdAndUpdate(req.user.id, {
+      $pull: { blockedUsers: userIdToUnblock },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'User unblocked successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getBlocklist = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const user = await User.findById(req.user.id).populate(
+      'blockedUsers',
+      'name email profileImage role'
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        blockedUsers: user?.blockedUsers || [],
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reportUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const reportedUserId = req.params.id;
+    const { reason, description } = req.body;
+
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    if (req.user.id === reportedUserId) {
+      return next(new AppError('You cannot report yourself', 400));
+    }
+
+    const reportedUser = await User.findById(reportedUserId);
+    if (!reportedUser) {
+      return next(new AppError('Reported user not found', 404));
+    }
+
+    if (!reason) {
+      return next(new AppError('Please provide a reason for the report', 400));
+    }
+
+    const report = await Report.create({
+      reporter: req.user.id,
+      reportedUser: reportedUser._id,
+      reason,
+      description,
+    });
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        report,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

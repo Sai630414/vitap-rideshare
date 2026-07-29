@@ -1,0 +1,7 @@
+[2026-07-29 00:24:14:2414] [[31merror[39m]: [31mMongoDB connection error: D0550000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:916:SSL alert number 80[39m
+[31m[39m
+[2026-07-29 00:24:45:2445] [[31merror[39m]: [31mMongoDB connection error: 9C130000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:916:SSL alert number 80[39m
+[31m[39m
+[2026-07-29 01:20:32:2032] [[31merror[39m]: [31mUpload error: Invalid cloud_name waygo[39m
+[2026-07-29 01:24:16:2416] [[31merror[39m]: [31mUpload error: Invalid cloud_name waygo[39m
+[2026-07-29 01:26:07:267] [[31merror[39m]: [31mUpload error: Invalid cloud_name waygo[39m
