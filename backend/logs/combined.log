@@ -1180,3 +1180,8 @@
 [2026-07-29 23:41:18:4118] [[32minfo[39m]: [32mNew WebSocket client connected: HMSFZanC2nqxbLFIAAAB[39m
 [2026-07-29 23:41:18:4118] [[32minfo[39m]: [32mUser 6a6999a4d9622b6d72b62298 bound to socket HMSFZanC2nqxbLFIAAAB[39m
 [2026-07-29 23:41:20:4120] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
+[2026-07-29 23:41:42:4142] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 23:41:42:4142] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 23:41:42:4142] [[32minfo[39m]: [32mNew WebSocket client connected: VmlvWUJHQoRUYED4AAAB[39m
+[2026-07-29 23:41:42:4142] [[32minfo[39m]: [32mUser 6a6999a4d9622b6d72b62298 bound to socket VmlvWUJHQoRUYED4AAAB[39m
+[2026-07-29 23:41:43:4143] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
