@@ -10,11 +10,6 @@ passport.use(
       callbackURL: process.env.BACKEND_URL + "/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
-      console.log("BACKEND_URL =", process.env.BACKEND_URL);
-console.log(
-  "CALLBACK URL =",
-  process.env.BACKEND_URL + "/api/auth/google/callback"
-);
       try {
         const email = profile.emails?.[0]?.value;
         console.log(process.env.GOOGLE_CLIENT_ID);

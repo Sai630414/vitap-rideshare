@@ -22,7 +22,21 @@ const getTransporter = () => {
   return null;
 };
 
+
 const transporter = getTransporter();
+if (transporter) {
+  transporter
+    .verify()
+    .then(() => {
+      console.log("✅ SMTP Connected");
+    })
+    .catch((err) => {
+      console.error("SMTP VERIFY ERROR:", err);
+    });
+}
+
+
+
 const FROM_EMAIL = process.env.EMAIL_FROM || 'VIT RideShare <noreply@vitapstudent.ac.in>';
 
 // Common HTML layout wrapper for brand consistency
@@ -152,6 +166,8 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
   `;
 
   const html = wrapHtmlLayout(content);
+
+
 
   if (transporter) {
     try {
