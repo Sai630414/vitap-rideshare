@@ -1,4 +1,4 @@
-import winston from 'winston';
+import winston from "winston";
 
 const levels = {
   error: 0,
@@ -9,36 +9,52 @@ const levels = {
 };
 
 const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  http: 'magenta',
-  debug: 'white',
+  error: "red",
+  warn: "yellow",
+  info: "green",
+  http: "magenta",
+  debug: "white",
 };
 
 winston.addColors(colors);
 
-const format = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+const logFormat = winston.format.combine(
+  winston.format.timestamp({
+    format: "YYYY-MM-DD HH:mm:ss:ms",
+  }),
   winston.format.colorize({ all: true }),
   winston.format.printf(
-    (info) => `[${info.timestamp}] [${info.level}]: ${info.message}`
+    ({ timestamp, level, message }) =>
+      `[${timestamp}] [${level}]: ${message}`
   )
 );
 
-const transports = [
-  new winston.transports.Console(),
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-  }),
-  new winston.transports.File({ filename: 'logs/combined.log' }),
-];
+// Explicitly type the transports array
+const transports: winston.transport[] = [];
+
+// Always log to console
+transports.push(new winston.transports.Console());
+
+// Only write log files when NOT running on Vercel
+if (!process.env.VERCEL) {
+  transports.push(
+    new winston.transports.File({
+      filename: "logs/error.log",
+      level: "error",
+    })
+  );
+
+  transports.push(
+    new winston.transports.File({
+      filename: "logs/combined.log",
+    })
+  );
+}
 
 export const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  level: process.env.NODE_ENV === "development" ? "debug" : "info",
   levels,
-  format,
+  format: logFormat,
   transports,
 });
 
