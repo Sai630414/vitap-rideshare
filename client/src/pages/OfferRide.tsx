@@ -291,7 +291,7 @@ export const OfferRide: React.FC = () => {
                 onChange={(e) => setDescription(e.target.value)}
               />
 
-              <Button type="submit" loading={loading} className="w-full py-3 mt-2">
+              <Button type="submit" loading={loading} className="w-full py-3 mt-2" onClick={() => navigate('/search')}>
                 List Ride Offer
               </Button>
             </form>
