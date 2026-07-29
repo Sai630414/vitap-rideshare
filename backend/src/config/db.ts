@@ -3,7 +3,7 @@ import logger from '../utils/logger';
 
 export const connectDB = async (): Promise<void> => {
   try {
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/vit_rideshare';
+    const mongoURI = process.env.MONGO_URI || 'mongodb://database:27017/vit_rideshare';
     
     mongoose.set('strictQuery', true);
     

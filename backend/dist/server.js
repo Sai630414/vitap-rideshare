@@ -47,7 +47,22 @@ app.use((0, helmet_1.default)({
 }));
 // CORS configuration (allow client credentials and domain mapping)
 const corsOptions = {
-    origin: process.env.CLIENT_URL || 'http://localhost:5174',
+    origin: (origin, callback) => {
+        const clientUrl = process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app';
+        if (!origin) {
+            return callback(null, true);
+        }
+        if (origin === clientUrl) {
+            return callback(null, true);
+        }
+        if (process.env.NODE_ENV !== 'production') {
+            const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+            if (isLocalhost) {
+                return callback(null, true);
+            }
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
 };

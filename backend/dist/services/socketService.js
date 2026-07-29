@@ -11,7 +11,22 @@ const userSockets = new Map(); // userId -> socketId
 const initSocket = (server) => {
     io = new socket_io_1.Server(server, {
         cors: {
-            origin: process.env.CLIENT_URL || 'http://localhost:5173',
+            origin: (origin, callback) => {
+                const clientUrl = process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app';
+                if (!origin) {
+                    return callback(null, true);
+                }
+                if (origin === clientUrl) {
+                    return callback(null, true);
+                }
+                if (process.env.NODE_ENV !== 'production') {
+                    const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+                    if (isLocalhost) {
+                        return callback(null, true);
+                    }
+                }
+                return callback(new Error('Not allowed by CORS'));
+            },
             methods: ['GET', 'POST'],
             credentials: true,
         },

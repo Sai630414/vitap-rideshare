@@ -38,7 +38,7 @@ export const AdminLogin: React.FC = () => {
 
   const handleGoogleAdminLogin = () => {
     // Navigate to google auth redirect, which automatically grants admin role to the designated google account
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    window.location.href = `${import.meta.env.VITE_API_URL || 'https://vitap-rideshare.onrender.com'}/api/auth/google`;
   };
 
   return (

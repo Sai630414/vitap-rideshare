@@ -146,7 +146,7 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
         : `<p>You can search for active rides, book empty seats, review ratings of host drivers, and message them through our real-time portal.</p>`
     }
     <div class="btn-container">
-      <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" class="btn">Access Dashboard</a>
+      <a href="${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/login" class="btn">Access Dashboard</a>
     </div>
     <p>Have a safe and happy commute!</p>
   `;
@@ -238,7 +238,7 @@ export const sendDriverApprovalEmail = async (email: string, name: string): Prom
     <p>We are excited to inform you that your driver registration documents (Driving Licence, RC, and Vehicle photos) have been reviewed and <strong>approved</strong> by our administrator!</p>
     <p>Your profile is upgraded to the <strong>Driver</strong> role. You can now immediately start posting ride offers, checking passenger ride requests, and coordinating bookings.</p>
     <div class="btn-container">
-      <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" class="btn">Go to Driver Dashboard</a>
+      <a href="${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/login" class="btn">Go to Driver Dashboard</a>
     </div>
     <p>Please make sure to drive safely and adhere to the campus guidelines.</p>
   `;
@@ -284,7 +284,7 @@ export const sendDriverRejectionEmail = async (
       </div>
       <p>Please log into your dashboard, review your upload fields, and submit clear photos of your license, RC, or vehicle details.</p>
       <div class="btn-container">
-        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" class="btn">Resubmit Documents</a>
+        <a href="${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/login" class="btn">Resubmit Documents</a>
       </div>
       `
         : `
