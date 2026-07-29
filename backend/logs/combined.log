@@ -1164,3 +1164,6 @@
 [2026-07-29 19:28:35:2835] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b bound to socket MwytD0CmFwYcEncbAAAU[39m
 [2026-07-29 19:30:17:3017] [[32minfo[39m]: [32mUser 6a69ffa9222d9b76be57fdb5 disconnected from socket P60lEkIgINy4DFNSAAAB[39m
 [2026-07-29 19:30:19:3019] [[32minfo[39m]: [32mUser 6a69b1594a095652eff2624b disconnected from socket MwytD0CmFwYcEncbAAAU[39m
+[2026-07-29 21:21:47:2147] [[32minfo[39m]: [32mCloudinary integration enabled.[39m
+[2026-07-29 21:21:48:2148] [[32minfo[39m]: [32mServer is running in development mode on port 5000[39m
+[2026-07-29 21:21:49:2149] [[32minfo[39m]: [32mSuccessfully connected to MongoDB database.[39m
