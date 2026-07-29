@@ -43,11 +43,7 @@ const authenticate = async (req, res, next) => {
 exports.authenticate = authenticate;
 const requireAdmin = (req, res, next) => {
     if (!req.user || req.user.role !== 'admin') {
-        res.status(403).json({
-            status: 'fail',
-            message: 'Access Denied: 403 Forbidden. Administrator privileges required.',
-        });
-        return;
+        return next(new appError_1.default('Access Denied: 403 Forbidden. Administrator privileges required.', 403));
     }
     next();
 };

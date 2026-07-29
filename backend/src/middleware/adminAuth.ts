@@ -57,11 +57,9 @@ export const requireAdmin = (
   next: NextFunction
 ): void => {
   if (!req.user || req.user.role !== 'admin') {
-    res.status(403).json({
-      status: 'fail',
-      message: 'Access Denied: 403 Forbidden. Administrator privileges required.',
-    });
-    return;
+    return next(
+      new AppError('Access Denied: 403 Forbidden. Administrator privileges required.', 403)
+    );
   }
   next();
 };

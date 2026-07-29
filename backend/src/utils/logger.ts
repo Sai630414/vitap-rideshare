@@ -35,8 +35,13 @@ const transports: winston.transport[] = [];
 // Always log to console
 transports.push(new winston.transports.Console());
 
-// Only write log files when NOT running on Vercel
-if (!process.env.VERCEL) {
+// Only write log files when NOT running on Vercel, Render, or in Production mode
+const isProductionLike =
+  process.env.VERCEL ||
+  process.env.RENDER ||
+  process.env.NODE_ENV === 'production';
+
+if (!isProductionLike) {
   transports.push(
     new winston.transports.File({
       filename: "logs/error.log",

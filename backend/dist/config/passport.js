@@ -9,12 +9,10 @@ const User_1 = __importDefault(require("../models/User"));
 passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    callbackURL: process.env.BACKEND_URL + "/api/auth/google/callback",
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const email = profile.emails?.[0]?.value;
-        console.log(process.env.GOOGLE_CLIENT_ID);
-        console.log(process.env.GOOGLE_CLIENT_SECRET);
         if (!email) {
             return done(new Error("No email found"));
         }

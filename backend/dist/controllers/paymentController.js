@@ -8,13 +8,8 @@ const Driver_1 = __importDefault(require("../models/Driver"));
 const User_1 = __importDefault(require("../models/User"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const crypto_1 = __importDefault(require("crypto"));
-const winston_1 = __importDefault(require("winston"));
 const razorpay_1 = __importDefault(require("razorpay"));
-const logger = winston_1.default.createLogger({
-    level: 'info',
-    format: winston_1.default.format.json(),
-    transports: [new winston_1.default.transports.Console()],
-});
+const logger_1 = __importDefault(require("../utils/logger"));
 const razorpay = new razorpay_1.default({
     key_id: process.env.RAZORPAY_KEY_ID || '',
     key_secret: process.env.RAZORPAY_KEY_SECRET || '',
@@ -59,7 +54,7 @@ const createOrder = async (req, res, next) => {
         });
     }
     catch (error) {
-        logger.error('Error creating Razorpay order:', error);
+        logger_1.default.error('Error creating Razorpay order:', error);
         next(new appError_1.default(error.message || 'Error creating Razorpay order', 500));
     }
 };
@@ -106,8 +101,8 @@ const verifyPayment = async (req, res, next) => {
             user.verifiedDriver = true;
             await user.save();
         }
-        logger.info('Payment Successful');
-        logger.info('Subscription Activated');
+        logger_1.default.info('Payment Successful');
+        logger_1.default.info('Subscription Activated');
         res.status(200).json({
             status: 'success',
             message: 'Payment completed successfully. Your driver account is now active!',

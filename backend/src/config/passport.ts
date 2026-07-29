@@ -12,8 +12,6 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails?.[0]?.value;
-        console.log(process.env.GOOGLE_CLIENT_ID);
-        console.log(process.env.GOOGLE_CLIENT_SECRET);
 
         if (!email) {
           return done(new Error("No email found"));

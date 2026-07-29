@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendDriverRejectionEmail = exports.sendDriverApprovalEmail = exports.sendPasswordResetEmail = exports.sendOTPEmail = exports.sendWelcomeEmail = void 0;
+exports.sendDriverRejectionEmail = exports.sendDriverApprovalEmail = exports.sendPasswordResetEmail = exports.sendOTPEmail = exports.sendWelcomeEmail = exports.verifyEmailTransporter = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const logger_1 = __importDefault(require("../utils/logger"));
 // Create a transporter using Brevo SMTP environment variables
@@ -26,6 +26,27 @@ const getTransporter = () => {
     return null;
 };
 const transporter = getTransporter();
+/**
+ * Verifies the Nodemailer SMTP connection setup.
+ * Does not throw on failure to prevent server crashes, but logs warnings.
+ */
+const verifyEmailTransporter = async () => {
+    if (!transporter) {
+        logger_1.default.warn('Nodemailer SMTP transporter is not configured. Email services will run in simulation mode.');
+        return;
+    }
+    try {
+        await transporter.verify();
+        logger_1.default.info('✅ SMTP Connection verified successfully. Nodemailer is ready to send emails.');
+    }
+    catch (error) {
+        logger_1.default.error(`❌ SMTP Connection verification failed: ${error.message}`);
+        if (process.env.NODE_ENV === 'production') {
+            logger_1.default.warn('SMTP verification failed in production. Email features will be unavailable.');
+        }
+    }
+};
+exports.verifyEmailTransporter = verifyEmailTransporter;
 const FROM_EMAIL = process.env.EMAIL_FROM || 'VIT RideShare <noreply@vitapstudent.ac.in>';
 // Common HTML layout wrapper for brand consistency
 const wrapHtmlLayout = (content) => `
@@ -161,8 +182,7 @@ const sendWelcomeEmail = async (email, name, role) => {
         }
     }
     else {
-        logger_1.default.warn('[Brevo SMTP not configured] Simulating Welcome Email:');
-        console.log(`\nTo: ${email}\nSubject: ${subject}\nRole: ${role}\n`);
+        logger_1.default.warn(`[Brevo SMTP not configured] Simulating Welcome Email to: ${email} | Subject: ${subject} | Role: ${role}`);
     }
 };
 exports.sendWelcomeEmail = sendWelcomeEmail;
@@ -191,8 +211,7 @@ const sendOTPEmail = async (email, otp) => {
         }
     }
     else {
-        logger_1.default.warn('[Brevo SMTP not configured] Simulating OTP Email:');
-        console.log(`\nTo: ${email}\nSubject: ${subject}\nOTP Code: ${otp}\n`);
+        logger_1.default.warn(`[Brevo SMTP not configured] Simulating OTP Email to: ${email} | Subject: ${subject} | OTP: ${otp}`);
     }
 };
 exports.sendOTPEmail = sendOTPEmail;
@@ -217,13 +236,16 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
             logger_1.default.info(`Password reset email sent successfully to: ${email}`);
         }
         catch (error) {
-            logger_1.default.error(`Failed to send password reset email to ${email}:`, error);
+            console.error("FULL SMTP ERROR:", error);
+            console.error("Code:", error?.code);
+            console.error("Command:", error?.command);
+            console.error("Stack:", error?.stack);
+            logger_1.default.error(`Failed to send password reset email to ${email}: ${error?.message}`);
             throw error;
         }
     }
     else {
-        logger_1.default.warn('[Brevo SMTP not configured] Simulating Password Reset Email:');
-        console.log(`\nTo: ${email}\nSubject: ${subject}\nReset Link: ${resetUrl}\n`);
+        logger_1.default.warn(`[Brevo SMTP not configured] Simulating Password Reset Email to: ${email} | Subject: ${subject} | Link: ${resetUrl}`);
     }
 };
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
@@ -253,8 +275,7 @@ const sendDriverApprovalEmail = async (email, name) => {
         }
     }
     else {
-        logger_1.default.warn('[Brevo SMTP not configured] Simulating Driver Approval Email:');
-        console.log(`\nTo: ${email}\nSubject: ${subject}\nName: ${name}\n`);
+        logger_1.default.warn(`[Brevo SMTP not configured] Simulating Driver Approval Email to: ${email} | Subject: ${subject} | Name: ${name}`);
     }
 };
 exports.sendDriverApprovalEmail = sendDriverApprovalEmail;
@@ -299,8 +320,7 @@ const sendDriverRejectionEmail = async (email, name, reason, isResubmission = fa
         }
     }
     else {
-        logger_1.default.warn('[Brevo SMTP not configured] Simulating Driver Notification:');
-        console.log(`\nTo: ${email}\nSubject: ${subject}\nReason: ${reason}\n`);
+        logger_1.default.warn(`[Brevo SMTP not configured] Simulating Driver Notification to: ${email} | Subject: ${subject} | Reason: ${reason}`);
     }
 };
 exports.sendDriverRejectionEmail = sendDriverRejectionEmail;

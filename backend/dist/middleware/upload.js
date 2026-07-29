@@ -14,6 +14,9 @@ if (!fs_1.default.existsSync(uploadDir)) {
 }
 const storage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {
+        if (!fs_1.default.existsSync(uploadDir)) {
+            fs_1.default.mkdirSync(uploadDir, { recursive: true });
+        }
         cb(null, uploadDir);
     },
     filename: (_req, file, cb) => {

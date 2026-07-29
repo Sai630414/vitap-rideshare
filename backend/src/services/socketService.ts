@@ -1,5 +1,6 @@
 import { Server as SocketIOServer } from 'socket.io';
 import logger from '../utils/logger';
+import { getCorsOrigin } from '../utils/cors';
 
 let io: SocketIOServer | null = null;
 const userSockets = new Map<string, string>(); // userId -> socketId
@@ -7,22 +8,7 @@ const userSockets = new Map<string, string>(); // userId -> socketId
 export const initSocket = (server: any) => {
   io = new SocketIOServer(server, {
     cors: {
-      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        const clientUrl = process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app';
-        if (!origin) {
-          return callback(null, true);
-        }
-        if (origin === clientUrl) {
-          return callback(null, true);
-        }
-        if (process.env.NODE_ENV !== 'production') {
-          const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
-          if (isLocalhost) {
-            return callback(null, true);
-          }
-        }
-        return callback(new Error('Not allowed by CORS'));
-      },
+      origin: getCorsOrigin(),
       methods: ['GET', 'POST'],
       credentials: true,
     },

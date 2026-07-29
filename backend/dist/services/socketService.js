@@ -6,27 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendToUser = exports.getIO = exports.initSocket = void 0;
 const socket_io_1 = require("socket.io");
 const logger_1 = __importDefault(require("../utils/logger"));
+const cors_1 = require("../utils/cors");
 let io = null;
 const userSockets = new Map(); // userId -> socketId
 const initSocket = (server) => {
     io = new socket_io_1.Server(server, {
         cors: {
-            origin: (origin, callback) => {
-                const clientUrl = process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app';
-                if (!origin) {
-                    return callback(null, true);
-                }
-                if (origin === clientUrl) {
-                    return callback(null, true);
-                }
-                if (process.env.NODE_ENV !== 'production') {
-                    const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
-                    if (isLocalhost) {
-                        return callback(null, true);
-                    }
-                }
-                return callback(new Error('Not allowed by CORS'));
-            },
+            origin: (0, cors_1.getCorsOrigin)(),
             methods: ['GET', 'POST'],
             credentials: true,
         },

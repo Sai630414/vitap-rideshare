@@ -24,16 +24,26 @@ const getTransporter = () => {
 
 
 const transporter = getTransporter();
-if (transporter) {
-  transporter
-    .verify()
-    .then(() => {
-      console.log("✅ SMTP Connected");
-    })
-    .catch((err) => {
-      console.error("SMTP VERIFY ERROR:", err);
-    });
-}
+
+/**
+ * Verifies the Nodemailer SMTP connection setup.
+ * Does not throw on failure to prevent server crashes, but logs warnings.
+ */
+export const verifyEmailTransporter = async (): Promise<void> => {
+  if (!transporter) {
+    logger.warn('Nodemailer SMTP transporter is not configured. Email services will run in simulation mode.');
+    return;
+  }
+  try {
+    await transporter.verify();
+    logger.info('✅ SMTP Connection verified successfully. Nodemailer is ready to send emails.');
+  } catch (error) {
+    logger.error(`❌ SMTP Connection verification failed: ${(error as Error).message}`);
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('SMTP verification failed in production. Email features will be unavailable.');
+    }
+  }
+};
 
 
 
@@ -178,8 +188,7 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
       throw error;
     }
   } else {
-    logger.warn('[Brevo SMTP not configured] Simulating Welcome Email:');
-    console.log(`\nTo: ${email}\nSubject: ${subject}\nRole: ${role}\n`);
+    logger.warn(`[Brevo SMTP not configured] Simulating Welcome Email to: ${email} | Subject: ${subject} | Role: ${role}`);
   }
 };
 
@@ -208,8 +217,7 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<void> =>
       throw error;
     }
   } else {
-    logger.warn('[Brevo SMTP not configured] Simulating OTP Email:');
-    console.log(`\nTo: ${email}\nSubject: ${subject}\nOTP Code: ${otp}\n`);
+    logger.warn(`[Brevo SMTP not configured] Simulating OTP Email to: ${email} | Subject: ${subject} | OTP: ${otp}`);
   }
 };
 
@@ -244,8 +252,7 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
   throw error;
 }
   } else {
-    logger.warn('[Brevo SMTP not configured] Simulating Password Reset Email:');
-    console.log(`\nTo: ${email}\nSubject: ${subject}\nReset Link: ${resetUrl}\n`);
+    logger.warn(`[Brevo SMTP not configured] Simulating Password Reset Email to: ${email} | Subject: ${subject} | Link: ${resetUrl}`);
   }
 };
 
@@ -275,8 +282,7 @@ export const sendDriverApprovalEmail = async (email: string, name: string): Prom
       throw error;
     }
   } else {
-    logger.warn('[Brevo SMTP not configured] Simulating Driver Approval Email:');
-    console.log(`\nTo: ${email}\nSubject: ${subject}\nName: ${name}\n`);
+    logger.warn(`[Brevo SMTP not configured] Simulating Driver Approval Email to: ${email} | Subject: ${subject} | Name: ${name}`);
   }
 };
 
@@ -329,7 +335,6 @@ export const sendDriverRejectionEmail = async (
       throw error;
     }
   } else {
-    logger.warn('[Brevo SMTP not configured] Simulating Driver Notification:');
-    console.log(`\nTo: ${email}\nSubject: ${subject}\nReason: ${reason}\n`);
+    logger.warn(`[Brevo SMTP not configured] Simulating Driver Notification to: ${email} | Subject: ${subject} | Reason: ${reason}`);
   }
 };

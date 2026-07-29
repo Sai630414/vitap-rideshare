@@ -4,14 +4,8 @@ import Driver from '../models/Driver';
 import User from '../models/User';
 import AppError from '../utils/appError';
 import crypto from 'crypto';
-import winston from 'winston';
 import Razorpay from 'razorpay';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [new winston.transports.Console()],
-});
+import logger from '../utils/logger';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
