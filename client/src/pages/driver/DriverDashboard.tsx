@@ -164,13 +164,9 @@ export const DriverDashboard: React.FC = () => {
   const handlePayment = async () => {
     setPaymentLoading(true);
     try {
-      // 1. Create order on backend
-      const res = await api.post('/payments/order');
-      if (res.data.status !== 'success') {
-        throw new Error('Failed to initiate order.');
-      }
-
-      const orderData = res.data.data;
+      // 1. Create order on backend (5000 paise = ₹50)
+      const res = await api.post('/create-order', { amount: 5000 });
+      const { orderId, amount, currency } = res.data;
 
       // 2. Load script
       const scriptLoaded = await loadRazorpayScript();
@@ -183,15 +179,15 @@ export const DriverDashboard: React.FC = () => {
       // 3. Open Checkout options
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
-        amount: orderData.amount,
-        currency: orderData.currency,
+        amount: amount,
+        currency: currency,
         name: 'VIT RideShare',
         description: 'Driver Subscription Activation Fee',
-        order_id: orderData.id,
+        order_id: orderId,
         handler: async function (response: any) {
           toast.info('Verifying transaction...');
           try {
-            const verifyRes = await api.post('/payments/verify', {
+            const verifyRes = await api.post('/verify-payment', {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -200,9 +196,13 @@ export const DriverDashboard: React.FC = () => {
             if (verifyRes.data.status === 'success') {
               toast.success('🎉 Subscription Activated! Welcome aboard.');
               await refreshUserState();
+            } else {
+              toast.error(verifyRes.data.message || 'Payment verification failed.');
+              setPaymentLoading(false);
             }
           } catch (err: any) {
             toast.error(err.response?.data?.message || 'Payment verification failed.');
+            setPaymentLoading(false);
           }
         },
         prefill: {
@@ -216,16 +216,21 @@ export const DriverDashboard: React.FC = () => {
         modal: {
           ondismiss: function () {
             toast.info('Transaction cancelled by user.');
+            setPaymentLoading(false);
           },
         },
       };
 
       const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        console.error('Razorpay payment failed:', response.error);
+        toast.error(response.error.description || 'Payment failed.');
+        setPaymentLoading(false);
+      });
       rzp.open();
     } catch (err: any) {
       console.error(err);
       toast.error('Could not initialize Razorpay checkout. Please check your internet connection.');
-    } finally {
       setPaymentLoading(false);
     }
   };

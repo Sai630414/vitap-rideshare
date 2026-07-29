@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyPayment = exports.createOrder = void 0;
+exports.verifyPaymentDirect = exports.createOrderDirect = exports.verifyPayment = exports.createOrder = void 0;
 const Driver_1 = __importDefault(require("../models/Driver"));
 const User_1 = __importDefault(require("../models/User"));
 const appError_1 = __importDefault(require("../utils/appError"));
@@ -116,3 +116,123 @@ const verifyPayment = async (req, res, next) => {
     }
 };
 exports.verifyPayment = verifyPayment;
+/**
+ * POST /api/create-order
+ * Create a Razorpay order from requested amount
+ */
+const createOrderDirect = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return next(new appError_1.default('Unauthorized', 401));
+        }
+        const { amount } = req.body;
+        // Validate amount
+        if (amount === undefined || amount === null) {
+            return next(new appError_1.default('Amount is required.', 400));
+        }
+        const numericAmount = Number(amount);
+        if (isNaN(numericAmount)) {
+            return next(new appError_1.default('Amount must be a number.', 400));
+        }
+        if (numericAmount < 100) {
+            return next(new appError_1.default('Amount must be at least 100 paise.', 400));
+        }
+        const currency = 'INR';
+        const receipt = `rcpt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        // Call Razorpay API
+        let order;
+        try {
+            order = await razorpay.orders.create({
+                amount: numericAmount,
+                currency,
+                receipt,
+            });
+        }
+        catch (razorpayError) {
+            logger_1.default.error('Razorpay Order Creation API error:', razorpayError);
+            // Handle Razorpay authentication errors specifically
+            if (razorpayError.statusCode === 401 || (razorpayError.message && razorpayError.message.includes('auth'))) {
+                res.status(401).json({
+                    status: 'fail',
+                    message: 'Razorpay authentication failed. Check API credentials.',
+                });
+                return;
+            }
+            res.status(razorpayError.statusCode || 502).json({
+                status: 'fail',
+                message: razorpayError.message || 'Razorpay order creation failed.',
+            });
+            return;
+        }
+        res.status(200).json({
+            orderId: order.id,
+            amount: order.amount,
+            currency: order.currency,
+        });
+    }
+    catch (error) {
+        logger_1.default.error('Unexpected error in createOrderDirect:', error);
+        next(new appError_1.default(error.message || 'Unexpected exception during order creation.', 500));
+    }
+};
+exports.createOrderDirect = createOrderDirect;
+/**
+ * POST /api/verify-payment
+ * Verify signature, update payment status if applicable
+ */
+const verifyPaymentDirect = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return next(new appError_1.default('Unauthorized', 401));
+        }
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return next(new appError_1.default('Missing required payment fields.', 400));
+        }
+        const keySecret = process.env.RAZORPAY_KEY_SECRET;
+        if (!keySecret) {
+            logger_1.default.error('RAZORPAY_KEY_SECRET is not configured on the server.');
+            return next(new appError_1.default('Razorpay configuration secret key is missing.', 500));
+        }
+        // Verify signature
+        const generated_signature = crypto_1.default
+            .createHmac('sha256', keySecret)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest('hex');
+        const isVerified = generated_signature === razorpay_signature;
+        if (!isVerified) {
+            logger_1.default.warn('Payment verification signature check failed.');
+            res.status(400).json({
+                status: 'fail',
+                message: 'Payment signature verification failed.',
+            });
+            return;
+        }
+        // Update existing payment status if applicable
+        const driver = await Driver_1.default.findOne({ user: req.user._id });
+        if (driver) {
+            driver.paymentStatus = true;
+            driver.subscriptionStatus = 'Active';
+            driver.driverStatus = 'ACTIVE';
+            await driver.save();
+            logger_1.default.info(`Updated driver payment status for user ${req.user._id}`);
+        }
+        const user = await User_1.default.findById(req.user._id);
+        if (user) {
+            user.role = 'driver';
+            user.verifiedDriver = true;
+            await user.save();
+            logger_1.default.info(`Promoted user ${req.user._id} to driver role`);
+        }
+        logger_1.default.info(`Payment verification succeeded for order: ${razorpay_order_id}`);
+        res.status(200).json({
+            status: 'success',
+            message: 'Payment completed successfully. Your driver account is now active!',
+        });
+    }
+    catch (error) {
+        logger_1.default.error('Unexpected error during signature verification:', error);
+        next(new appError_1.default(error.message || 'Unexpected exception during payment verification.', 500));
+    }
+};
+exports.verifyPaymentDirect = verifyPaymentDirect;

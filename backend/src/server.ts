@@ -37,6 +37,9 @@ import notificationRoutes from './routes/notifications';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
 import passport from './config/passport';
+import { protect } from './middleware/auth';
+import { createOrderDirect, verifyPaymentDirect } from './controllers/paymentController';
+
 
 const app = express();
 const server = http.createServer(app);
@@ -133,6 +136,11 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
+
+// Direct Razorpay routes
+app.post('/api/create-order', protect as any, createOrderDirect as any);
+app.post('/api/verify-payment', protect as any, verifyPaymentDirect as any);
+
 
 // Fallback Route handler for 404
 app.all('*', (req: Request, _res: Response, next: NextFunction) => {
