@@ -599,20 +599,7 @@ export const Profile: React.FC = () => {
                         </button>
                       </div>
 
-                      {v.rcImage && (
-                        <div className="mt-4 border-t border-zinc-850 pt-3 flex items-center justify-between">
-                          <span className="text-[10px] text-zinc-500 uppercase font-semibold">RC document attached</span>
-                          <a
-                            href={v.rcImage}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline flex items-center gap-1"
-                          >
-                            View RC Scan
-                          </a>
-                        </div>
-                      )}
-                    </CardContent>
+                     </CardContent>
                   </Card>
                 ))}
               </div>

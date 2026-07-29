@@ -33,7 +33,7 @@ export const DriverRegister: React.FC = () => {
   const [phone, setPhone] = useState(user?.phone || '');
   const [emergencyContact, setEmergencyContact] = useState('');
   const [licenceNumber, setLicenceNumber] = useState('');
-  const [vehicleRCNumber, setVehicleRCNumber] = useState('');
+  const [collegeCardNumber, setCollegeCardNumber] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleColour, setVehicleColour] = useState('');
@@ -43,7 +43,7 @@ export const DriverRegister: React.FC = () => {
   // Files state
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [licenceImage, setLicenceImage] = useState<File | null>(null);
-  const [rcImage, setRcImage] = useState<File | null>(null);
+  const [collegeCardImage, setCollegeCardImage] = useState<File | null>(null);
   const [vehicleImage, setVehicleImage] = useState<File | null>(null);
 
   useEffect(() => {
@@ -57,8 +57,8 @@ export const DriverRegister: React.FC = () => {
     e.preventDefault();
     if (step !== 3) return;
 
-    if (!licenceImage || !rcImage || !vehicleImage) {
-      toast.error('Please upload all required license, RC, and vehicle photos.');
+    if ((!licenceImage && !collegeCardImage) || !vehicleImage) {
+      toast.error('Please upload at least one license/ID proof scan, and your vehicle image.');
       return;
     }
 
@@ -67,8 +67,8 @@ export const DriverRegister: React.FC = () => {
       const formData = new FormData();
       formData.append('phone', phone);
       formData.append('emergencyContact', emergencyContact);
-      formData.append('licenceNumber', licenceNumber);
-      formData.append('vehicleRCNumber', vehicleRCNumber);
+      if (licenceNumber) formData.append('licenceNumber', licenceNumber);
+      if (collegeCardNumber) formData.append('collegeCardNumber', collegeCardNumber);
       formData.append('vehicleNumber', vehicleNumber);
       formData.append('vehicleModel', vehicleModel);
       formData.append('vehicleColour', vehicleColour);
@@ -78,8 +78,8 @@ export const DriverRegister: React.FC = () => {
       if (profilePhoto) {
         formData.append('profilePhoto', profilePhoto);
       }
-      formData.append('licenceImage', licenceImage);
-      formData.append('rcImage', rcImage);
+      if (licenceImage) formData.append('licenceImage', licenceImage);
+      if (collegeCardImage) formData.append('collegeCardImage', collegeCardImage);
       formData.append('vehicleImage', vehicleImage);
 
       const res = await api.post('/users/apply-driver', formData, {
@@ -90,7 +90,6 @@ export const DriverRegister: React.FC = () => {
         toast.success('🎉 Driver application submitted successfully!');
         // Refresh local user state so context knows they have applied
         if (login) {
-          // If a refresh user helper is available in context, or reload page
           window.location.href = '/driver/dashboard';
         } else {
           navigate('/driver/dashboard');
@@ -115,8 +114,12 @@ export const DriverRegister: React.FC = () => {
       }
       setStep(2);
     } else if (step === 2) {
-      if (!licenceNumber || !vehicleRCNumber || !vehicleNumber || !vehicleModel || !vehicleColour || !drivingExperience) {
-        toast.error('All vehicle configuration fields are required');
+      if (!vehicleNumber || !vehicleModel || !vehicleColour || !drivingExperience) {
+        toast.error('All vehicle fields and experience are required');
+        return;
+      }
+      if (!licenceNumber && !collegeCardNumber) {
+        toast.error('Either Driving Licence Number or College ID Card Number must be specified');
         return;
       }
       const exp = Number(drivingExperience);
@@ -214,19 +217,17 @@ export const DriverRegister: React.FC = () => {
                 <div className="flex flex-col gap-4">
                   <Input
                     label="Driving Licence Number"
-                    placeholder="e.g. AP07XX1234"
+                    placeholder="e.g. AP07XX1234 (Optional if College ID specified)"
                     value={licenceNumber}
                     onChange={(e) => setLicenceNumber(e.target.value.toUpperCase())}
                     icon={<FileText className="w-4 h-4" />}
-                    required
                   />
                   <Input
-                    label="Vehicle RC Number"
-                    placeholder="e.g. RC98765432"
-                    value={vehicleRCNumber}
-                    onChange={(e) => setVehicleRCNumber(e.target.value.toUpperCase())}
+                    label="College ID Card Number"
+                    placeholder="e.g. 23MICXXXX (Optional if Licence specified)"
+                    value={collegeCardNumber}
+                    onChange={(e) => setCollegeCardNumber(e.target.value.toUpperCase())}
                     icon={<FileText className="w-4 h-4 text-indigo-400" />}
-                    required
                   />
                   <Input
                     label="Vehicle Number Plate"
@@ -298,7 +299,7 @@ export const DriverRegister: React.FC = () => {
 
                   {/* licenceImage */}
                   <div className="flex flex-col gap-1.5">
-                    <span className="font-semibold text-zinc-400">Driving Licence Image Scan *</span>
+                    <span className="font-semibold text-zinc-400">Driving Licence Image Scan (Optional if ID uploaded)</span>
                     <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
                       <Upload className="w-4 h-4 text-violet-400 shrink-0" />
                       <span className="text-zinc-500 truncate">
@@ -309,25 +310,23 @@ export const DriverRegister: React.FC = () => {
                         accept="image/*"
                         onChange={(e) => setLicenceImage(e.target.files?.[0] || null)}
                         className="hidden"
-                        required
                       />
                     </label>
                   </div>
 
-                  {/* rcImage */}
+                  {/* collegeCardImage */}
                   <div className="flex flex-col gap-1.5">
-                    <span className="font-semibold text-zinc-400">Vehicle RC Image Scan *</span>
+                    <span className="font-semibold text-zinc-400">College ID Image Scan (Optional if Licence uploaded)</span>
                     <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
                       <Upload className="w-4 h-4 text-violet-400 shrink-0" />
                       <span className="text-zinc-500 truncate">
-                        {rcImage ? rcImage.name : 'Select vehicle RC document'}
+                        {collegeCardImage ? collegeCardImage.name : 'Select college ID card photo'}
                       </span>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setRcImage(e.target.files?.[0] || null)}
+                        onChange={(e) => setCollegeCardImage(e.target.files?.[0] || null)}
                         className="hidden"
-                        required
                       />
                     </label>
                   </div>

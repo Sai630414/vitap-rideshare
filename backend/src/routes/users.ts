@@ -24,7 +24,7 @@ router.post(
   upload.fields([
     { name: 'profilePhoto', maxCount: 1 },
     { name: 'licenceImage', maxCount: 1 },
-    { name: 'rcImage', maxCount: 1 },
+    { name: 'collegeCardImage', maxCount: 1 },
     { name: 'vehicleImage', maxCount: 1 },
   ]) as any,
   applyDriver as any

@@ -165,9 +165,21 @@ export const AdminDriverDetails: React.FC = () => {
                 {driver.approvalStatus}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Registered Account: {driver.user?.role} • Status: <span className="capitalize">{driver.user?.status}</span>
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <p className="text-xs text-slate-400">
+                Registered Account: {driver.user?.role} • Status: <span className="capitalize">{driver.user?.status}</span>
+              </p>
+              {driver.licenceImage && (
+                <span className="inline-flex items-center px-2 py-0.5 bg-emerald-600/15 border border-emerald-500/30 text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  Verified by Driving Licence
+                </span>
+              )}
+              {!driver.licenceImage && driver.collegeCardImage && (
+                <span className="inline-flex items-center px-2 py-0.5 bg-blue-600/15 border border-blue-500/30 text-blue-400 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  Verified by College ID Card
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -336,36 +348,40 @@ export const AdminDriverDetails: React.FC = () => {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
               {/* Licence Image */}
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] text-slate-500 font-bold uppercase text-center">Driving Licence Scan</p>
-                <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
-                  <img src={driver.licenceImage} className="w-full h-full object-cover" alt="" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <button
-                      onClick={() => setPreviewImage(driver.licenceImage)}
-                      className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+              {driver.licenceImage && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase text-center">Driving Licence Scan</p>
+                  <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
+                    <img src={driver.licenceImage} className="w-full h-full object-cover" alt="" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                      <button
+                        onClick={() => setPreviewImage(driver.licenceImage || '')}
+                        className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* RC Image */}
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] text-slate-500 font-bold uppercase text-center">Vehicle RC Document</p>
-                <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
-                  <img src={driver.rcImage} className="w-full h-full object-cover" alt="" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <button
-                      onClick={() => setPreviewImage(driver.rcImage)}
-                      className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+              {/* College Card Image */}
+              {driver.collegeCardImage && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase text-center">College ID Card Scan</p>
+                  <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
+                    <img src={driver.collegeCardImage} className="w-full h-full object-cover" alt="" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                      <button
+                        onClick={() => setPreviewImage(driver.collegeCardImage || '')}
+                        className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Vehicle Image */}
               <div className="flex flex-col gap-2">

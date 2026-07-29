@@ -3,16 +3,16 @@ import { Schema, model, Document, Types } from 'mongoose';
 export interface IDriver extends Document {
   user: Types.ObjectId;
   phone: string;
-  licenceNumber: string;
-  vehicleRCNumber: string;
+  licenceNumber?: string;
+  collegeCardNumber?: string;
   vehicleNumber: string;
   vehicleModel: string;
   vehicleColour: string;
   vehicleType: 'bike' | 'car';
   drivingExperience: number;
   emergencyContact: string;
-  licenceImage: string;
-  rcImage: string;
+  licenceImage?: string;
+  collegeCardImage?: string;
   vehicleImage: string;
   approvalStatus: 'Pending' | 'Approved' | 'Rejected' | 'resubmission' | 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
@@ -40,15 +40,11 @@ const driverSchema = new Schema<IDriver>(
     },
     licenceNumber: {
       type: String,
-      required: [true, 'Licence number is required'],
-      unique: true,
       trim: true,
       uppercase: true,
     },
-    vehicleRCNumber: {
+    collegeCardNumber: {
       type: String,
-      required: [true, 'Vehicle RC number is required'],
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -86,11 +82,9 @@ const driverSchema = new Schema<IDriver>(
     },
     licenceImage: {
       type: String,
-      required: [true, 'Licence image is required'],
     },
-    rcImage: {
+    collegeCardImage: {
       type: String,
-      required: [true, 'RC image is required'],
     },
     vehicleImage: {
       type: String,

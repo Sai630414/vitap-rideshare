@@ -18,6 +18,7 @@ import { useToast } from '../context/ToastContext';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import AutocompleteInput from '../components/AutocompleteInput';
 import Badge from '../components/ui/Badge';
 import rideService, { type RideData, type RideSearchParams } from '../services/rideService';
 import MapContainerComponent from '../components/MapContainer';
@@ -108,19 +109,19 @@ export const SearchRides: React.FC = () => {
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSearchSubmit} className="flex flex-col gap-4">
-              <Input
+              <AutocompleteInput
                 label="Leaving From"
                 placeholder="Block 1, Chennai Main gate, etc."
                 value={source}
-                onChange={(e) => setSource(e.target.value)}
-                icon={<MapPin className="w-4 h-4" />}
+                onChange={(val) => setSource(val)}
+                onSelect={(coords, name) => setSource(name)}
               />
-              <Input
+              <AutocompleteInput
                 label="Going To"
                 placeholder="Vijayawada, Guntur, Hostel, etc."
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                icon={<MapPin className="w-4 h-4 text-violet-500" />}
+                onChange={(val) => setDestination(val)}
+                onSelect={(coords, name) => setDestination(name)}
               />
 
               <div className="flex flex-col gap-1.5">

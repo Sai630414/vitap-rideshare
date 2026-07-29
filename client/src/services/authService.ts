@@ -18,16 +18,16 @@ export interface UserProfile {
   status: 'active' | 'banned';
   driverDetails?: {
     phone: string;
-    licenceNumber: string;
-    vehicleRCNumber: string;
+    licenceNumber?: string;
+    collegeCardNumber?: string;
     vehicleNumber: string;
     vehicleModel: string;
     vehicleColour: string;
     vehicleType: 'bike' | 'car';
     drivingExperience: number;
     emergencyContact: string;
-    licenceImage: string;
-    rcImage: string;
+    licenceImage?: string;
+    collegeCardImage?: string;
     vehicleImage: string;
     approvalStatus: 'pending' | 'approved' | 'rejected' | 'resubmission';
     rejectionReason?: string;

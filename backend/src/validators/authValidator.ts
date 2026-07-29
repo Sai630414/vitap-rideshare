@@ -78,13 +78,13 @@ export const driverSignupSchema = z.object({
         ),
       confirmPassword: z.string({ required_error: 'Confirm password is required' }),
       licenceNumber: z
-        .string({ required_error: 'Driving Licence Number is required' })
-        .min(5, 'Licence number is invalid')
-        .toUpperCase(),
-      vehicleRCNumber: z
-        .string({ required_error: 'Vehicle RC Number is required' })
-        .min(5, 'RC number is invalid')
-        .toUpperCase(),
+        .string()
+        .optional()
+        .transform(val => val ? val.toUpperCase() : undefined),
+      collegeCardNumber: z
+        .string()
+        .optional()
+        .transform(val => val ? val.toUpperCase() : undefined),
       vehicleNumber: z
         .string({ required_error: 'Vehicle Number is required' })
         .min(5, 'Vehicle registration plate number is invalid')
@@ -111,6 +111,10 @@ export const driverSignupSchema = z.object({
     .refine((data) => data.password === data.confirmPassword, {
       message: 'Passwords do not match',
       path: ['confirmPassword'],
+    })
+    .refine((data) => data.licenceNumber || data.collegeCardNumber, {
+      message: 'Either Driving Licence or College ID Card details must be provided',
+      path: ['licenceNumber'],
     }),
 });
 

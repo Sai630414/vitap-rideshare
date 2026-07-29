@@ -26,6 +26,7 @@ import SearchRides from '../pages/SearchRides';
 import OfferRide from '../pages/OfferRide';
 import DriverRegister from '../pages/DriverRegister';
 import DriverDashboard from '../pages/driver/DriverDashboard';
+import RideDetails from '../pages/RideDetails';
 
 // Admin Pages
 import AdminLogin from '../pages/admin/AdminLogin';
@@ -155,6 +156,17 @@ export const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <DashboardLayout>
               <Chat />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/ride/:id"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <RideDetails />
             </DashboardLayout>
           </ProtectedRoute>
         }
