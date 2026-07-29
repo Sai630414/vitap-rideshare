@@ -1,53 +1,97 @@
-import nodemailer from 'nodemailer';
+import { BrevoClient } from '@getbrevo/brevo';
 import logger from '../utils/logger';
 
-// Create a transporter using Brevo SMTP environment variables
-const getTransporter = () => {
-  const host = process.env.BREVO_SMTP_HOST;
-  const port = parseInt(process.env.BREVO_SMTP_PORT || '587', 10);
-  const user = process.env.BREVO_SMTP_USER;
-  const pass = process.env.BREVO_SMTP_PASSWORD;
-
-  if (host && user && pass) {
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // true for 465, false for 587
-      auth: {
-        user,
-        pass,
-      },
-    });
+// Initialize Brevo Transactional Email API client
+const getBrevoClient = () => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (apiKey) {
+    return new BrevoClient({ apiKey });
   }
   return null;
 };
 
+const client = getBrevoClient();
+const FROM_EMAIL = process.env.EMAIL_FROM || 'VIT RideShare <noreply@vitapstudent.ac.in>';
 
-const transporter = getTransporter();
+// Helper to parse "Sender Name <sender@email.com>" into { name, email }
+const parseSender = (senderString: string) => {
+  const match = senderString.match(/^(.*?)\s*<(.*?)>$/);
+  if (match) {
+    return { name: match[1].trim(), email: match[2].trim() };
+  }
+  return { name: 'VIT RideShare', email: senderString.trim() };
+};
+
+const sender = parseSender(FROM_EMAIL);
 
 /**
- * Verifies the Nodemailer SMTP connection setup.
+ * Verifies the Brevo API Key connection.
  * Does not throw on failure to prevent server crashes, but logs warnings.
  */
 export const verifyEmailTransporter = async (): Promise<void> => {
-  if (!transporter) {
-    logger.warn('Nodemailer SMTP transporter is not configured. Email services will run in simulation mode.');
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey || !client) {
+    logger.warn('Brevo API key is not configured. Email services will run in simulation mode.');
     return;
   }
   try {
-    await transporter.verify();
-    logger.info('✅ SMTP Connection verified successfully. Nodemailer is ready to send emails.');
+    await client.account.getAccount();
+    logger.info('✅ Brevo REST API connection verified successfully. Account is active.');
   } catch (error) {
-    logger.error(`❌ SMTP Connection verification failed: ${(error as Error).message}`);
+    logger.error(`❌ Brevo API Key verification failed: ${(error as Error).message}`);
     if (process.env.NODE_ENV === 'production') {
-      logger.warn('SMTP verification failed in production. Email features will be unavailable.');
+      logger.warn('Brevo API key verification failed in production. Email features will be unavailable.');
     }
   }
 };
 
+/**
+ * Generic email sending function with input validation and exponential backoff retry logic.
+ */
+export const sendEmail = async (
+  toEmail: string,
+  subject: string,
+  html: string,
+  retries = 3,
+  delay = 1000
+): Promise<void> => {
+  if (!toEmail || !toEmail.includes('@')) {
+    logger.error(`Invalid recipient email address: "${toEmail}"`);
+    return;
+  }
 
+  if (!client) {
+    logger.warn(`[Brevo API not configured] Simulating Email to: ${toEmail} | Subject: ${subject}`);
+    return;
+  }
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'VIT RideShare <noreply@vitapstudent.ac.in>';
+  const payload = {
+    subject,
+    htmlContent: html,
+    sender,
+    to: [{ email: toEmail }],
+  };
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await client.transactionalEmails.sendTransacEmail(payload);
+      logger.info(`Email sent successfully to: ${toEmail} | Subject: ${subject}`);
+      return;
+    } catch (error: any) {
+      const status = error?.response?.statusCode || error?.statusCode || 'unknown';
+      const message = error?.response?.body?.message || error?.message || 'unknown error';
+      logger.error(`Brevo API send email attempt ${attempt} failed: ${message} (Status: ${status})`);
+
+      if (attempt === retries) {
+        throw new Error(`Failed to send email to ${toEmail} after ${retries} attempts: ${message}`);
+      }
+
+      const backoffDelay = delay * Math.pow(2, attempt - 1);
+      logger.info(`Retrying in ${backoffDelay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, backoffDelay));
+    }
+  }
+};
 
 // Common HTML layout wrapper for brand consistency
 const wrapHtmlLayout = (content: string) => `
@@ -176,20 +220,7 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
   `;
 
   const html = wrapHtmlLayout(content);
-
-
-
-  if (transporter) {
-    try {
-      await transporter.sendMail({ from: FROM_EMAIL, to: email, subject, html });
-      logger.info(`Welcome email sent successfully to: ${email}`);
-    } catch (error) {
-      logger.error(`Failed to send Welcome email to ${email}:`, error);
-      throw error;
-    }
-  } else {
-    logger.warn(`[Brevo SMTP not configured] Simulating Welcome Email to: ${email} | Subject: ${subject} | Role: ${role}`);
-  }
+  await sendEmail(email, subject, html);
 };
 
 /**
@@ -207,18 +238,7 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<void> =>
   `;
 
   const html = wrapHtmlLayout(content);
-
-  if (transporter) {
-    try {
-      await transporter.sendMail({ from: FROM_EMAIL, to: email, subject, html });
-      logger.info(`OTP email sent successfully to: ${email}`);
-    } catch (error) {
-      logger.error(`Failed to send OTP email to ${email}:`, error);
-      throw error;
-    }
-  } else {
-    logger.warn(`[Brevo SMTP not configured] Simulating OTP Email to: ${email} | Subject: ${subject} | OTP: ${otp}`);
-  }
+  await sendEmail(email, subject, html);
 };
 
 /**
@@ -237,23 +257,7 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
   `;
 
   const html = wrapHtmlLayout(content);
-
-  if (transporter) {
-    try {
-      await transporter.sendMail({ from: FROM_EMAIL, to: email, subject, html });
-      logger.info(`Password reset email sent successfully to: ${email}`);
-    } catch (error: any) {
-  console.error("FULL SMTP ERROR:", error);
-  console.error("Code:", error?.code);
-  console.error("Command:", error?.command);
-  console.error("Stack:", error?.stack);
-
-  logger.error(`Failed to send password reset email to ${email}: ${error?.message}`);
-  throw error;
-}
-  } else {
-    logger.warn(`[Brevo SMTP not configured] Simulating Password Reset Email to: ${email} | Subject: ${subject} | Link: ${resetUrl}`);
-  }
+  await sendEmail(email, subject, html);
 };
 
 /**
@@ -272,18 +276,7 @@ export const sendDriverApprovalEmail = async (email: string, name: string): Prom
   `;
 
   const html = wrapHtmlLayout(content);
-
-  if (transporter) {
-    try {
-      await transporter.sendMail({ from: FROM_EMAIL, to: email, subject, html });
-      logger.info(`Driver Approval email sent successfully to: ${email}`);
-    } catch (error) {
-      logger.error(`Failed to send Driver Approval email to ${email}:`, error);
-      throw error;
-    }
-  } else {
-    logger.warn(`[Brevo SMTP not configured] Simulating Driver Approval Email to: ${email} | Subject: ${subject} | Name: ${name}`);
-  }
+  await sendEmail(email, subject, html);
 };
 
 /**
@@ -325,16 +318,5 @@ export const sendDriverRejectionEmail = async (
   `;
 
   const html = wrapHtmlLayout(content);
-
-  if (transporter) {
-    try {
-      await transporter.sendMail({ from: FROM_EMAIL, to: email, subject, html });
-      logger.info(`Driver status notification email sent successfully to: ${email}`);
-    } catch (error) {
-      logger.error(`Failed to send Driver rejection/resubmission email to ${email}:`, error);
-      throw error;
-    }
-  } else {
-    logger.warn(`[Brevo SMTP not configured] Simulating Driver Notification to: ${email} | Subject: ${subject} | Reason: ${reason}`);
-  }
+  await sendEmail(email, subject, html);
 };

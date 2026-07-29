@@ -12,10 +12,8 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string({ required_error: 'GOOGLE_CLIENT_SECRET is required' }),
   BACKEND_URL: z.string({ required_error: 'BACKEND_URL is required' }),
   CLIENT_URL: z.string({ required_error: 'CLIENT_URL is required' }),
-  BREVO_SMTP_HOST: z.string({ required_error: 'BREVO_SMTP_HOST is required' }),
-  BREVO_SMTP_PORT: z.string({ required_error: 'BREVO_SMTP_PORT is required' }),
-  BREVO_SMTP_USER: z.string({ required_error: 'BREVO_SMTP_USER is required' }),
-  BREVO_SMTP_PASSWORD: z.string({ required_error: 'BREVO_SMTP_PASSWORD is required' }),
+  BREVO_API_KEY: z.string({ required_error: 'BREVO_API_KEY is required' }),
+  EMAIL_FROM: z.string({ required_error: 'EMAIL_FROM is required' }),
   RAZORPAY_KEY_ID: z.string({ required_error: 'RAZORPAY_KEY_ID is required' }),
   RAZORPAY_KEY_SECRET: z.string({ required_error: 'RAZORPAY_KEY_SECRET is required' }),
 });
