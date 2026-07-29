@@ -136,11 +136,19 @@ app.all('*', (req: Request, _res: Response, next: NextFunction) => {
 // 5) Global Error handler integration
 app.use(globalErrorHandler);
 
+console.log({
+  host: process.env.BREVO_SMTP_HOST,
+  port: process.env.BREVO_SMTP_PORT,
+  user: process.env.BREVO_SMTP_USER,
+  passwordLoaded: !!process.env.BREVO_SMTP_PASSWORD,
+});
+
 // 6) Spin up server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   logger.info(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
+
 
 // Handle unhandled rejections globally
 process.on('unhandledRejection', (err: Error) => {
