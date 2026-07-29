@@ -437,7 +437,7 @@ export const forgotPassword = async (
     user.resetPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/reset-password?token=${resetToken}`;
     await sendPasswordResetEmail(user.email, resetUrl);
 
     res.status(200).json({
@@ -585,7 +585,7 @@ export const googleCallback = (req: Request, res: Response) => {
   });
 
   res.redirect(
-    `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/success?token=${accessToken}`
+    `${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/auth/success?token=${accessToken}`
   );
 };
 

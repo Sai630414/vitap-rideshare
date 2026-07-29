@@ -348,7 +348,7 @@ const forgotPassword = async (req, res, next) => {
         user.resetPasswordToken = hashedToken;
         user.resetPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
         await user.save({ validateBeforeSave: false });
-        const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+        const resetUrl = `${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/reset-password?token=${resetToken}`;
         await (0, emailService_1.sendPasswordResetEmail)(user.email, resetUrl);
         res.status(200).json({
             status: 'success',
@@ -468,7 +468,7 @@ const googleCallback = (req, res) => {
         sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/success?token=${accessToken}`);
+    res.redirect(`${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/auth/success?token=${accessToken}`);
 };
 exports.googleCallback = googleCallback;
 /**

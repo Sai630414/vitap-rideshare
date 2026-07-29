@@ -182,7 +182,7 @@ export const DriverDashboard: React.FC = () => {
 
       // 3. Open Checkout options
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mockkeyid1234',
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'VIT RideShare',

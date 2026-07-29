@@ -7,7 +7,22 @@ const userSockets = new Map<string, string>(); // userId -> socketId
 export const initSocket = (server: any) => {
   io = new SocketIOServer(server, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:5173',
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        const clientUrl = process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app';
+        if (!origin) {
+          return callback(null, true);
+        }
+        if (origin === clientUrl) {
+          return callback(null, true);
+        }
+        if (process.env.NODE_ENV !== 'production') {
+          const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+          if (isLocalhost) {
+            return callback(null, true);
+          }
+        }
+        return callback(new Error('Not allowed by CORS'));
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

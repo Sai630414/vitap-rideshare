@@ -8,7 +8,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const connectDB = async () => {
     try {
-        const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/vit_rideshare';
+        const mongoURI = process.env.MONGO_URI || 'mongodb://database:27017/vit_rideshare';
         mongoose_1.default.set('strictQuery', true);
         await mongoose_1.default.connect(mongoURI);
         logger_1.default.info('Successfully connected to MongoDB database.');
