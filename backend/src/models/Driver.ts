@@ -42,11 +42,13 @@ const driverSchema = new Schema<IDriver>(
       type: String,
       trim: true,
       uppercase: true,
+      index: { unique: true, sparse: true },
     },
     collegeCardNumber: {
       type: String,
       trim: true,
       uppercase: true,
+      index: { unique: true, sparse: true },
     },
     vehicleNumber: {
       type: String,

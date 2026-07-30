@@ -5,6 +5,7 @@ import Ride from '../models/Ride';
 import { Chat } from '../models/Chat';
 import AppError from '../utils/appError';
 import { sendNotificationToUser } from './notificationController';
+import { refundPayment } from './paymentController';
 
 export const createBooking = async (
   req: AuthRequest,
@@ -158,8 +159,14 @@ export const respondToBooking = async (
     }
 
     if (status === 'accepted') {
-      // Re-verify seats availability
-      if (ride.availableSeats < booking.seatNumber) {
+      // Atomically decrement seats if available
+      const updatedRide = await Ride.findOneAndUpdate(
+        { _id: ride._id, availableSeats: { $gte: booking.seatNumber } },
+        { $inc: { availableSeats: -booking.seatNumber } },
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedRide) {
         booking.status = 'rejected';
         await booking.save();
         
@@ -172,12 +179,8 @@ export const respondToBooking = async (
           ride._id
         );
         
-        return next(new AppError('Not enough available seats left. Request rejected auto.', 400));
+        return next(new AppError('Not enough available seats left. Request rejected automatically.', 400));
       }
-
-      // Deduct seats
-      ride.availableSeats -= booking.seatNumber;
-      await ride.save();
 
       booking.status = 'accepted';
       await booking.save();
@@ -237,16 +240,29 @@ export const cancelBooking = async (
     }
 
     const previousStatus = booking.status;
+    const previousPaymentStatus = booking.paymentStatus;
+    
+    // Process refund if passenger already paid
+    if (previousPaymentStatus === 'paid' && booking.razorpayPaymentId) {
+      const rideDetails = booking.ride as any;
+      const totalAmount = booking.seatNumber * (rideDetails?.price || 0);
+      const amountInPaise = totalAmount * 100;
+      
+      const refundSuccess = await refundPayment(booking.razorpayPaymentId, amountInPaise);
+      if (refundSuccess) {
+        booking.paymentStatus = 'refunded';
+      }
+    }
+
     booking.status = 'cancelled';
     await booking.save();
 
     const ride = booking.ride as any;
 
     if (ride) {
-      // If the booking was accepted, restore seats
+      // If the booking was accepted, restore seats atomically
       if (previousStatus === 'accepted') {
-        ride.availableSeats += booking.seatNumber;
-        await ride.save();
+        await Ride.findByIdAndUpdate(ride._id, { $inc: { availableSeats: booking.seatNumber } });
       }
 
       // Notify driver of cancellation

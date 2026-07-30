@@ -11,6 +11,7 @@ const RideRequest_1 = __importDefault(require("../models/RideRequest"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const Booking_1 = __importDefault(require("../models/Booking"));
 const notificationController_1 = require("./notificationController"); // Import our notification trigger helper
+const paymentController_1 = require("./paymentController");
 const offerRide = async (req, res, next) => {
     try {
         const { vehicleId, source, destination, pickupLocation, dropLocation, departureDate, departureTime, price, availableSeats, description, recurring, routePoints, } = req.body;
@@ -114,20 +115,82 @@ const searchRides = async (req, res, next) => {
             sortOptions = { driver: highRatedDrivers.map((d) => d._id) }; // placeholder
         }
         const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-        // If sort by rating is not active, standard find
-        const rides = await Ride_1.default.find(filter)
-            .populate('driver', 'name email profileImage rating verifiedDriver trustScore')
-            .populate('vehicle', 'brand model type numberPlate color')
-            .sort(sort === 'highest_driver_rating' ? {} : sortOptions)
-            .skip(skip)
-            .limit(parseInt(limit, 10));
-        // Manual sort for driver rating if requested
+        let rides;
         if (sort === 'highest_driver_rating') {
-            rides.sort((a, b) => {
-                const ratingA = a.driver?.rating || 0;
-                const ratingB = b.driver?.rating || 0;
-                return ratingB - ratingA;
-            });
+            // Use aggregation pipeline to sort globally by driver rating before skip & limit
+            const pipeline = [
+                { $match: filter },
+                // Lookup driver
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'driver',
+                        foreignField: '_id',
+                        as: 'driverInfo',
+                    },
+                },
+                { $unwind: '$driverInfo' },
+                // Lookup vehicle
+                {
+                    $lookup: {
+                        from: 'vehicles',
+                        localField: 'vehicle',
+                        foreignField: '_id',
+                        as: 'vehicleInfo',
+                    },
+                },
+                { $unwind: '$vehicleInfo' },
+                // Sort by driver rating
+                { $sort: { 'driverInfo.rating': -1, departureDate: 1 } },
+                // Pagination
+                { $skip: skip },
+                { $limit: parseInt(limit, 10) },
+                // Project to map fields like populate
+                {
+                    $project: {
+                        driver: {
+                            _id: '$driverInfo._id',
+                            name: '$driverInfo.name',
+                            email: '$driverInfo.email',
+                            profileImage: '$driverInfo.profileImage',
+                            rating: '$driverInfo.rating',
+                            verifiedDriver: '$driverInfo.verifiedDriver',
+                            trustScore: '$driverInfo.trustScore',
+                        },
+                        vehicle: {
+                            _id: '$vehicleInfo._id',
+                            brand: '$vehicleInfo.brand',
+                            model: '$vehicleInfo.model',
+                            type: '$vehicleInfo.type',
+                            numberPlate: '$vehicleInfo.numberPlate',
+                            color: '$vehicleInfo.color',
+                        },
+                        source: 1,
+                        destination: 1,
+                        pickupLocation: 1,
+                        dropLocation: 1,
+                        departureDate: 1,
+                        departureTime: 1,
+                        price: 1,
+                        availableSeats: 1,
+                        description: 1,
+                        status: 1,
+                        recurring: 1,
+                        routePoints: 1,
+                        createdAt: 1,
+                        updatedAt: 1,
+                    },
+                },
+            ];
+            rides = await Ride_1.default.aggregate(pipeline);
+        }
+        else {
+            rides = await Ride_1.default.find(filter)
+                .populate('driver', 'name email profileImage rating verifiedDriver trustScore')
+                .populate('vehicle', 'brand model type numberPlate color')
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(parseInt(limit, 10));
         }
         const total = await Ride_1.default.countDocuments(filter);
         res.status(200).json({
@@ -177,18 +240,42 @@ const updateRideStatus = async (req, res, next) => {
         }
         ride.status = status;
         await ride.save();
-        // Notify passengers about status change
-        const bookings = await Booking_1.default.find({ ride: ride._id, status: 'accepted' });
-        const passengerIds = bookings.map((b) => b.passenger);
-        for (const passengerId of passengerIds) {
-            await (0, notificationController_1.sendNotificationToUser)(passengerId.toString(), `Ride status updated to ${status}`, `Your ride from ${ride.source} to ${ride.destination} is now ${status}.`, status === 'cancelled' ? 'ride_cancelled' : 'ride_accepted', ride._id);
+        // Find bookings related to this ride that were pending or accepted
+        const bookings = await Booking_1.default.find({ ride: ride._id, status: { $in: ['pending', 'accepted'] } });
+        for (const booking of bookings) {
+            if (status === 'cancelled') {
+                booking.status = 'cancelled';
+                if (booking.paymentStatus === 'paid' && booking.razorpayPaymentId) {
+                    const amountInPaise = booking.seatNumber * ride.price * 100;
+                    const refundSuccess = await (0, paymentController_1.refundPayment)(booking.razorpayPaymentId, amountInPaise);
+                    if (refundSuccess) {
+                        booking.paymentStatus = 'refunded';
+                    }
+                }
+                await booking.save();
+                await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Cancelled by Driver', `Your ride from ${ride.source} to ${ride.destination} has been cancelled by the driver.`, 'ride_cancelled', ride._id);
+            }
+            else if (status === 'completed') {
+                if (booking.status === 'accepted') {
+                    booking.status = 'completed';
+                    await booking.save();
+                    await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Completed', `Your ride from ${ride.source} to ${ride.destination} was completed.`, 'ride_accepted', ride._id);
+                }
+            }
+            else {
+                // ongoing, etc.
+                await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), `Ride status updated to ${status}`, `Your ride from ${ride.source} to ${ride.destination} is now ${status}.`, 'ride_accepted', ride._id);
+            }
         }
         // If completed, increment trip counters
         if (status === 'completed') {
             // Driver trips increment
             await User_1.default.findByIdAndUpdate(ride.driver, { $inc: { totalTrips: 1 } });
-            // Passenger trips increment
-            for (const passengerId of passengerIds) {
+            // Passenger trips increment (only for accepted/completed bookings)
+            const completedPassengerIds = bookings
+                .filter((b) => b.status === 'completed' || b.status === 'accepted')
+                .map((b) => b.passenger);
+            for (const passengerId of completedPassengerIds) {
                 await User_1.default.findByIdAndUpdate(passengerId, { $inc: { totalTrips: 1 } });
             }
         }

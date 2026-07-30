@@ -15,16 +15,26 @@ import {
 import { protect } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 import passport from 'passport';
+import { validateRequest } from '../middleware/validation';
+import {
+  signupSchema,
+  driverSignupSchema,
+  loginSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../validators/authValidator';
 
 const router = Router();
 
 // Student / Generic Auth Routes
-router.post('/signup', signup as any);
-router.post('/verify-otp', verifyOTP as any);
-router.post('/resend-otp', resendOTP as any);
-router.post('/login', login as any);
-router.post('/forgot-password', forgotPassword as any);
-router.post('/reset-password', resetPassword as any);
+router.post('/signup', validateRequest(signupSchema) as any, signup as any);
+router.post('/verify-otp', validateRequest(verifyOtpSchema) as any, verifyOTP as any);
+router.post('/resend-otp', validateRequest(resendOtpSchema) as any, resendOTP as any);
+router.post('/login', validateRequest(loginSchema) as any, login as any);
+router.post('/forgot-password', validateRequest(forgotPasswordSchema) as any, forgotPassword as any);
+router.post('/reset-password', validateRequest(resetPasswordSchema) as any, resetPassword as any);
 router.post('/refresh', refreshToken as any);
 router.post('/logout', logout as any);
 
@@ -37,6 +47,7 @@ router.post(
     { name: 'collegeCardImage', maxCount: 1 },
     { name: 'vehicleImage', maxCount: 1 },
   ]) as any,
+  validateRequest(driverSignupSchema) as any,
   signupDriver as any
 );
 

@@ -39,13 +39,19 @@ const bookingSchema = new mongoose_1.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'paid'],
+        enum: ['pending', 'paid', 'refunded'],
         default: 'pending',
     },
     seatNumber: {
         type: Number,
         default: 1,
         min: [1, 'Seat count must be at least 1'],
+    },
+    razorpayOrderId: {
+        type: String,
+    },
+    razorpayPaymentId: {
+        type: String,
     },
 }, { timestamps: true });
 // We drop the unique index on { ride, passenger } to support sequential request submissions if rejected or cancelled.

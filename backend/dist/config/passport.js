@@ -16,8 +16,10 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
         if (!email) {
             return done(new Error("No email found"));
         }
-        // Allow only VIT-AP students
-        if (!email.endsWith("@vitap.ac.in") && !email.endsWith("@vitapstudent.ac.in")) {
+        // Allow only VIT-AP students & whitelisted administrator
+        if (!email.endsWith("@vitap.ac.in") &&
+            !email.endsWith("@vitapstudent.ac.in") &&
+            email.toLowerCase() !== "saikondareddypala@gmail.com") {
             return done(new Error("Only VIT-AP students can login"));
         }
         let user = await User_1.default.findOne({ email });

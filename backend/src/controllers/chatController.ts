@@ -86,7 +86,7 @@ export const sendMessage = async (
     }
 
     // Verify user is a participant
-    if (!chat.participants.includes(req.user.id as any)) {
+    if (!chat.participants.map(p => p.toString()).includes(req.user.id)) {
       return next(new AppError('You are not authorized in this chat thread', 403));
     }
 
@@ -161,7 +161,7 @@ export const getChatMessages = async (
       return next(new AppError('Chat not found', 404));
     }
 
-    if (!chat.participants.includes(req.user?.id as any)) {
+    if (!chat.participants.map(p => p.toString()).includes(req.user?.id || '')) {
       return next(new AppError('You do not belong to this chat', 403));
     }
 
@@ -226,7 +226,7 @@ export const markAsSeen = async (
       return next(new AppError('Chat not found', 404));
     }
 
-    if (!chat.participants.includes(req.user.id as any)) {
+    if (!chat.participants.map(p => p.toString()).includes(req.user.id)) {
       return next(new AppError('Unauthorized', 403));
     }
 

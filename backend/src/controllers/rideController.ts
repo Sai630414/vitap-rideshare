@@ -8,6 +8,7 @@ import AppError from '../utils/appError';
 import Booking from '../models/Booking';
 import Notification from '../models/Notification';
 import { sendNotificationToUser } from './notificationController'; // Import our notification trigger helper
+import { refundPayment } from './paymentController';
 
 export const offerRide = async (
   req: AuthRequest,
@@ -151,21 +152,82 @@ export const searchRides = async (
 
     const skip = (parseInt(page as string, 10) - 1) * parseInt(limit as string, 10);
 
-    // If sort by rating is not active, standard find
-    const rides = await Ride.find(filter)
-      .populate('driver', 'name email profileImage rating verifiedDriver trustScore')
-      .populate('vehicle', 'brand model type numberPlate color')
-      .sort(sort === 'highest_driver_rating' ? {} : sortOptions)
-      .skip(skip)
-      .limit(parseInt(limit as string, 10));
-
-    // Manual sort for driver rating if requested
+    let rides;
     if (sort === 'highest_driver_rating') {
-      rides.sort((a: any, b: any) => {
-        const ratingA = a.driver?.rating || 0;
-        const ratingB = b.driver?.rating || 0;
-        return ratingB - ratingA;
-      });
+      // Use aggregation pipeline to sort globally by driver rating before skip & limit
+      const pipeline: any[] = [
+        { $match: filter },
+        // Lookup driver
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'driver',
+            foreignField: '_id',
+            as: 'driverInfo',
+          },
+        },
+        { $unwind: '$driverInfo' },
+        // Lookup vehicle
+        {
+          $lookup: {
+            from: 'vehicles',
+            localField: 'vehicle',
+            foreignField: '_id',
+            as: 'vehicleInfo',
+          },
+        },
+        { $unwind: '$vehicleInfo' },
+        // Sort by driver rating
+        { $sort: { 'driverInfo.rating': -1, departureDate: 1 } },
+        // Pagination
+        { $skip: skip },
+        { $limit: parseInt(limit as string, 10) },
+        // Project to map fields like populate
+        {
+          $project: {
+            driver: {
+              _id: '$driverInfo._id',
+              name: '$driverInfo.name',
+              email: '$driverInfo.email',
+              profileImage: '$driverInfo.profileImage',
+              rating: '$driverInfo.rating',
+              verifiedDriver: '$driverInfo.verifiedDriver',
+              trustScore: '$driverInfo.trustScore',
+            },
+            vehicle: {
+              _id: '$vehicleInfo._id',
+              brand: '$vehicleInfo.brand',
+              model: '$vehicleInfo.model',
+              type: '$vehicleInfo.type',
+              numberPlate: '$vehicleInfo.numberPlate',
+              color: '$vehicleInfo.color',
+            },
+            source: 1,
+            destination: 1,
+            pickupLocation: 1,
+            dropLocation: 1,
+            departureDate: 1,
+            departureTime: 1,
+            price: 1,
+            availableSeats: 1,
+            description: 1,
+            status: 1,
+            recurring: 1,
+            routePoints: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        },
+      ];
+
+      rides = await Ride.aggregate(pipeline);
+    } else {
+      rides = await Ride.find(filter)
+        .populate('driver', 'name email profileImage rating verifiedDriver trustScore')
+        .populate('vehicle', 'brand model type numberPlate color')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(parseInt(limit as string, 10));
     }
 
     const total = await Ride.countDocuments(filter);
@@ -229,18 +291,52 @@ export const updateRideStatus = async (
     ride.status = status;
     await ride.save();
 
-    // Notify passengers about status change
-    const bookings = await Booking.find({ ride: ride._id, status: 'accepted' });
-    const passengerIds = bookings.map((b) => b.passenger);
+    // Find bookings related to this ride that were pending or accepted
+    const bookings = await Booking.find({ ride: ride._id, status: { $in: ['pending', 'accepted'] } });
 
-    for (const passengerId of passengerIds) {
-      await sendNotificationToUser(
-        passengerId.toString(),
-        `Ride status updated to ${status}`,
-        `Your ride from ${ride.source} to ${ride.destination} is now ${status}.`,
-        status === 'cancelled' ? 'ride_cancelled' : 'ride_accepted',
-        ride._id
-      );
+    for (const booking of bookings) {
+      if (status === 'cancelled') {
+        booking.status = 'cancelled';
+        
+        if (booking.paymentStatus === 'paid' && booking.razorpayPaymentId) {
+          const amountInPaise = booking.seatNumber * ride.price * 100;
+          const refundSuccess = await refundPayment(booking.razorpayPaymentId, amountInPaise);
+          if (refundSuccess) {
+            booking.paymentStatus = 'refunded';
+          }
+        }
+        await booking.save();
+
+        await sendNotificationToUser(
+          booking.passenger.toString(),
+          'Ride Cancelled by Driver',
+          `Your ride from ${ride.source} to ${ride.destination} has been cancelled by the driver.`,
+          'ride_cancelled',
+          ride._id
+        );
+      } else if (status === 'completed') {
+        if (booking.status === 'accepted') {
+          booking.status = 'completed';
+          await booking.save();
+
+          await sendNotificationToUser(
+            booking.passenger.toString(),
+            'Ride Completed',
+            `Your ride from ${ride.source} to ${ride.destination} was completed.`,
+            'ride_accepted',
+            ride._id
+          );
+        }
+      } else {
+        // ongoing, etc.
+        await sendNotificationToUser(
+          booking.passenger.toString(),
+          `Ride status updated to ${status}`,
+          `Your ride from ${ride.source} to ${ride.destination} is now ${status}.`,
+          'ride_accepted',
+          ride._id
+        );
+      }
     }
 
     // If completed, increment trip counters
@@ -248,8 +344,12 @@ export const updateRideStatus = async (
       // Driver trips increment
       await User.findByIdAndUpdate(ride.driver, { $inc: { totalTrips: 1 } });
       
-      // Passenger trips increment
-      for (const passengerId of passengerIds) {
+      // Passenger trips increment (only for accepted/completed bookings)
+      const completedPassengerIds = bookings
+        .filter((b) => b.status === 'completed' || b.status === 'accepted')
+        .map((b) => b.passenger);
+
+      for (const passengerId of completedPassengerIds) {
         await User.findByIdAndUpdate(passengerId, { $inc: { totalTrips: 1 } });
       }
     }

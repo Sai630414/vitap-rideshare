@@ -8,8 +8,10 @@ export interface IBooking extends Document {
   drop: string;
   message?: string;
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed' | 'expired';
-  paymentStatus: 'pending' | 'paid';
+  paymentStatus: 'pending' | 'paid' | 'refunded';
   seatNumber: number; // seatCount
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,13 +54,19 @@ const bookingSchema = new Schema<IBooking>(
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid'],
+      enum: ['pending', 'paid', 'refunded'],
       default: 'pending',
     },
     seatNumber: {
       type: Number,
       default: 1,
       min: [1, 'Seat count must be at least 1'],
+    },
+    razorpayOrderId: {
+      type: String,
+    },
+    razorpayPaymentId: {
+      type: String,
     },
   },
   { timestamps: true }

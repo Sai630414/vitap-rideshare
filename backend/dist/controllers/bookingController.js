@@ -9,6 +9,7 @@ const Ride_1 = __importDefault(require("../models/Ride"));
 const Chat_1 = require("../models/Chat");
 const appError_1 = __importDefault(require("../utils/appError"));
 const notificationController_1 = require("./notificationController");
+const paymentController_1 = require("./paymentController");
 const createBooking = async (req, res, next) => {
     try {
         const { rideId, seatNumber = 1, pickup, drop, message } = req.body;
@@ -123,17 +124,15 @@ const respondToBooking = async (req, res, next) => {
             return next(new appError_1.default(`This booking request is already ${booking.status}`, 400));
         }
         if (status === 'accepted') {
-            // Re-verify seats availability
-            if (ride.availableSeats < booking.seatNumber) {
+            // Atomically decrement seats if available
+            const updatedRide = await Ride_1.default.findOneAndUpdate({ _id: ride._id, availableSeats: { $gte: booking.seatNumber } }, { $inc: { availableSeats: -booking.seatNumber } }, { new: true, runValidators: true });
+            if (!updatedRide) {
                 booking.status = 'rejected';
                 await booking.save();
                 // Notify passenger about rejection due to no seats
                 await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Booking Declined', `Your booking request for the ride to ${ride.destination} was auto-declined because the seats are full.`, 'ride_cancelled', ride._id);
-                return next(new appError_1.default('Not enough available seats left. Request rejected auto.', 400));
+                return next(new appError_1.default('Not enough available seats left. Request rejected automatically.', 400));
             }
-            // Deduct seats
-            ride.availableSeats -= booking.seatNumber;
-            await ride.save();
             booking.status = 'accepted';
             await booking.save();
             // Notify passenger
@@ -171,14 +170,24 @@ const cancelBooking = async (req, res, next) => {
             return next(new appError_1.default('Booking is already cancelled', 400));
         }
         const previousStatus = booking.status;
+        const previousPaymentStatus = booking.paymentStatus;
+        // Process refund if passenger already paid
+        if (previousPaymentStatus === 'paid' && booking.razorpayPaymentId) {
+            const rideDetails = booking.ride;
+            const totalAmount = booking.seatNumber * (rideDetails?.price || 0);
+            const amountInPaise = totalAmount * 100;
+            const refundSuccess = await (0, paymentController_1.refundPayment)(booking.razorpayPaymentId, amountInPaise);
+            if (refundSuccess) {
+                booking.paymentStatus = 'refunded';
+            }
+        }
         booking.status = 'cancelled';
         await booking.save();
         const ride = booking.ride;
         if (ride) {
-            // If the booking was accepted, restore seats
+            // If the booking was accepted, restore seats atomically
             if (previousStatus === 'accepted') {
-                ride.availableSeats += booking.seatNumber;
-                await ride.save();
+                await Ride_1.default.findByIdAndUpdate(ride._id, { $inc: { availableSeats: booking.seatNumber } });
             }
             // Notify driver of cancellation
             await (0, notificationController_1.sendNotificationToUser)(ride.driver.toString(), 'Booking Cancelled', `Passenger ${req.user.name} cancelled their booking on your ride to ${ride.destination}.`, 'ride_cancelled', booking._id);

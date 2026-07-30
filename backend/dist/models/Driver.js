@@ -18,11 +18,13 @@ const driverSchema = new mongoose_1.Schema({
         type: String,
         trim: true,
         uppercase: true,
+        index: { unique: true, sparse: true },
     },
     collegeCardNumber: {
         type: String,
         trim: true,
         uppercase: true,
+        index: { unique: true, sparse: true },
     },
     vehicleNumber: {
         type: String,

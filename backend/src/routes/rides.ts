@@ -9,6 +9,8 @@ import {
   deleteRideRequest,
 } from '../controllers/rideController';
 import { protect, requireVerifiedDriver } from '../middleware/auth';
+import { validateRequest } from '../middleware/validation';
+import { offerRideSchema, createRideRequestSchema } from '../validators/businessValidator';
 
 const router = Router();
 
@@ -18,11 +20,11 @@ router.get('/requests', protect as any, getActiveRideRequests as any);
 router.get('/:id', protect as any, getRideDetails as any);
 
 // Driver restricted routes
-router.post('/', protect as any, requireVerifiedDriver as any, offerRide as any);
+router.post('/', protect as any, requireVerifiedDriver as any, validateRequest(offerRideSchema) as any, offerRide as any);
 router.patch('/:id/status', protect as any, updateRideStatus as any);
 
 // Ride requests from passengers
-router.post('/requests', protect as any, createRideRequest as any);
+router.post('/requests', protect as any, validateRequest(createRideRequestSchema) as any, createRideRequest as any);
 router.delete('/requests/:id', protect as any, deleteRideRequest as any);
 
 export default router;

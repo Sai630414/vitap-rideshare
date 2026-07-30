@@ -70,7 +70,7 @@ const sendMessage = async (req, res, next) => {
             return next(new appError_1.default('Chat not found', 404));
         }
         // Verify user is a participant
-        if (!chat.participants.includes(req.user.id)) {
+        if (!chat.participants.map(p => p.toString()).includes(req.user.id)) {
             return next(new appError_1.default('You are not authorized in this chat thread', 403));
         }
         let imageUrl = '';
@@ -120,7 +120,7 @@ const getChatMessages = async (req, res, next) => {
         if (!chat) {
             return next(new appError_1.default('Chat not found', 404));
         }
-        if (!chat.participants.includes(req.user?.id)) {
+        if (!chat.participants.map(p => p.toString()).includes(req.user?.id || '')) {
             return next(new appError_1.default('You do not belong to this chat', 403));
         }
         const messages = await Chat_1.Message.find({ chat: chatId })
@@ -175,7 +175,7 @@ const markAsSeen = async (req, res, next) => {
         if (!chat) {
             return next(new appError_1.default('Chat not found', 404));
         }
-        if (!chat.participants.includes(req.user.id)) {
+        if (!chat.participants.map(p => p.toString()).includes(req.user.id)) {
             return next(new appError_1.default('Unauthorized', 403));
         }
         // Set messages from other participants to seen

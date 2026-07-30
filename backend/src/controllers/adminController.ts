@@ -18,6 +18,7 @@ import {
   sendDriverApprovalEmail,
   sendDriverRejectionEmail,
 } from '../services/emailService';
+import { refundPayment } from './paymentController';
 
 /**
  * POST /api/admin/login
@@ -670,9 +671,20 @@ export const cancelRideAdmin = async (
       return next(new AppError('Ride record not found', 404));
     }
 
-    // Alert passengers
-    const bookings = await Booking.find({ ride: ride._id, status: 'accepted' });
+    // Find and update bookings instead of deleting
+    const bookings = await Booking.find({ ride: ride._id, status: { $in: ['pending', 'accepted'] } });
     for (const booking of bookings) {
+      booking.status = 'cancelled';
+      
+      if (booking.paymentStatus === 'paid' && booking.razorpayPaymentId) {
+        const amountInPaise = booking.seatNumber * ride.price * 100;
+        const refundSuccess = await refundPayment(booking.razorpayPaymentId, amountInPaise);
+        if (refundSuccess) {
+          booking.paymentStatus = 'refunded';
+        }
+      }
+      await booking.save();
+
       await sendNotificationToUser(
         booking.passenger.toString(),
         'Ride Cancelled by Admin',
@@ -682,10 +694,9 @@ export const cancelRideAdmin = async (
       );
     }
 
-    // Delete bookings
-    await Booking.deleteMany({ ride: ride._id });
-    // Remove ride
-    await Ride.findByIdAndDelete(id);
+    // Update ride status to cancelled instead of deleting
+    ride.status = 'cancelled';
+    await ride.save();
 
     // Audit Log
     await AuditLog.create({

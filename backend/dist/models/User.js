@@ -92,6 +92,7 @@ const userSchema = new mongoose_1.Schema({
     },
     googleId: {
         type: String,
+        index: { unique: true, sparse: true },
     },
     password: {
         type: String,

@@ -117,6 +117,7 @@ const userSchema = new Schema<IUser>(
     },
     googleId: {
       type: String,
+      index: { unique: true, sparse: true },
     },
     password: {
       type: String,

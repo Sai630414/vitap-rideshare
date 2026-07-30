@@ -18,6 +18,7 @@ const notificationController_1 = require("./notificationController");
 const logger_1 = __importDefault(require("../utils/logger"));
 const jwt_1 = require("../utils/jwt");
 const emailService_1 = require("../services/emailService");
+const paymentController_1 = require("./paymentController");
 /**
  * POST /api/admin/login
  * Dedicated Administrator Authenticator
@@ -541,15 +542,23 @@ const cancelRideAdmin = async (req, res, next) => {
         if (!ride) {
             return next(new appError_1.default('Ride record not found', 404));
         }
-        // Alert passengers
-        const bookings = await Booking_1.default.find({ ride: ride._id, status: 'accepted' });
+        // Find and update bookings instead of deleting
+        const bookings = await Booking_1.default.find({ ride: ride._id, status: { $in: ['pending', 'accepted'] } });
         for (const booking of bookings) {
+            booking.status = 'cancelled';
+            if (booking.paymentStatus === 'paid' && booking.razorpayPaymentId) {
+                const amountInPaise = booking.seatNumber * ride.price * 100;
+                const refundSuccess = await (0, paymentController_1.refundPayment)(booking.razorpayPaymentId, amountInPaise);
+                if (refundSuccess) {
+                    booking.paymentStatus = 'refunded';
+                }
+            }
+            await booking.save();
             await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Cancelled by Admin', `The ride from ${ride.source} to ${ride.destination} has been cancelled by an administrator.`, 'ride_cancelled', ride._id);
         }
-        // Delete bookings
-        await Booking_1.default.deleteMany({ ride: ride._id });
-        // Remove ride
-        await Ride_1.default.findByIdAndDelete(id);
+        // Update ride status to cancelled instead of deleting
+        ride.status = 'cancelled';
+        await ride.save();
         // Audit Log
         await AuditLog_1.default.create({
             admin: req.user?._id,
