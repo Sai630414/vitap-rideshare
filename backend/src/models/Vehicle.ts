@@ -9,7 +9,6 @@ export interface IVehicle {
   color: string;
   seats: number;
   insuranceExpiry?: Date;
-  rcImage?: string;
   verified: boolean;
   status: 'pending' | 'verified' | 'rejected';
 }
