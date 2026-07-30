@@ -55,10 +55,6 @@ const vehicleSchema = new Schema<IVehicle>(
     insuranceExpiry: {
       type: Date,
     },
-    rcImage: {
-      type: String,
-      default: '',
-    },
     verified: {
       type: Boolean,
       default: false,
