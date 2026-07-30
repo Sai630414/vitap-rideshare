@@ -196,7 +196,22 @@ export const createOrderDirect = async (
         receipt,
       });
     } catch (razorpayError: any) {
-      logger.error('Razorpay Order Creation API error:', razorpayError);
+     logger.error("========== RAZORPAY ERROR ==========");
+
+logger.error({
+  message: razorpayError.message,
+  statusCode: razorpayError.statusCode,
+  error: razorpayError.error,
+  description: razorpayError.error?.description,
+  reason: razorpayError.error?.reason,
+  source: razorpayError.error?.source,
+  field: razorpayError.error?.field,
+  step: razorpayError.error?.step,
+  metadata: razorpayError.error?.metadata,
+  stack: razorpayError.stack,
+});
+
+logger.error("====================================");
       
       if (razorpayError.statusCode === 401 || (razorpayError.message && razorpayError.message.includes('auth'))) {
         res.status(401).json({
