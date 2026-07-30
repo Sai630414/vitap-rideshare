@@ -25,9 +25,12 @@ export const authenticate = async (
     }
 
     // Verify token
+    if (!process.env.JWT_SECRET) {
+      return next(new AppError('Server JWT configuration error.', 500));
+    }
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'super_secret_access_token_key_change_in_production'
+      process.env.JWT_SECRET
     ) as { id: string };
 
     // Check if user still exists

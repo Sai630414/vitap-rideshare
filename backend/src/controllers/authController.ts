@@ -224,41 +224,51 @@ export const signupDriver = async (
     const assignedRole = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'driver';
 
     // 1) Create User credential
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: assignedRole,
-      isVerified: false,
-      profileImage: profilePhotoUrl,
-      verificationOTP: otp,
-      verificationOTPExpiry: otpExpiry,
-      verifiedStudent: true, // Drivers verify college email
-      verifiedDriver: false, // Pending admin approval
-    });
+    let user;
+    try {
+      user = await User.create({
+        name,
+        email,
+        password,
+        role: assignedRole,
+        isVerified: false,
+        profileImage: profilePhotoUrl,
+        phone,
+        verificationOTP: otp,
+        verificationOTPExpiry: otpExpiry,
+        verifiedStudent: true,
+        verifiedDriver: false,
+      });
 
-    // 2) Create Driver document
-    await Driver.create({
-      user: user._id,
-      phone,
-      licenceNumber: licenceNumber || undefined,
-      collegeCardNumber: collegeCardNumber || undefined,
-      vehicleNumber,
-      vehicleModel,
-      vehicleColour,
-      vehicleType,
-      drivingExperience: Number(drivingExperience),
-      emergencyContact,
-      licenceImage: licenceImageUrl || undefined,
-      collegeCardImage: collegeCardImageUrl || undefined,
-      vehicleImage: vehicleImageUrl,
-      approvalStatus: 'Pending',
-      driverStatus: 'PENDING_APPROVAL',
-      paymentStatus: false,
-      documentsUploaded: true,
-      emailVerified: false,
-      subscriptionStatus: 'Inactive',
-    });
+      // 2) Create Driver document
+      await Driver.create({
+        user: user._id,
+        phone,
+        licenceNumber: licenceNumber || undefined,
+        collegeCardNumber: collegeCardNumber || undefined,
+        vehicleNumber,
+        vehicleModel,
+        vehicleColour,
+        vehicleType,
+        drivingExperience: Number(drivingExperience),
+        emergencyContact,
+        licenceImage: licenceImageUrl || undefined,
+        collegeCardImage: collegeCardImageUrl || undefined,
+        vehicleImage: vehicleImageUrl,
+        approvalStatus: 'pending',
+        driverStatus: 'PENDING_APPROVAL',
+        paymentStatus: false,
+        documentsUploaded: true,
+        emailVerified: false,
+        subscriptionStatus: 'Inactive',
+      });
+    } catch (createError) {
+      // Roll back orphaned user if driver create fails after user create
+      if (user?._id) {
+        await User.findByIdAndDelete(user._id).catch(() => undefined);
+      }
+      throw createError;
+    }
     logger.info("Driver Saved");
 
     await sendOTPEmail(email, otp);
@@ -465,7 +475,7 @@ export const resetPassword = async (
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpiry: { $gt: new Date() },
-    });
+    }).select('+resetPasswordToken +password');
 
     if (!user) {
       return next(new AppError('The password reset link is invalid or has expired.', 400));
@@ -505,8 +515,10 @@ export const refreshToken = async (
       return next(new AppError('No refresh token. Please log in.', 401));
     }
 
-    const refreshTokenSecret =
-      process.env.JWT_REFRESH_SECRET || 'super_secret_refresh_token_key_change_in_production';
+    const refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
+    if (!refreshTokenSecret) {
+      return next(new AppError('Server JWT configuration error.', 500));
+    }
 
     const decoded = jwt.verify(token, refreshTokenSecret) as { id: string };
 
@@ -623,17 +635,31 @@ export const applyDriver = async (
     let driver = await Driver.findOne({ user: userId });
     
     if (driver) {
-      if (driver.approvalStatus === 'Approved') {
+      if (driver.approvalStatus === 'approved') {
         return next(new AppError('You are already an approved driver.', 400));
       }
-      if (driver.approvalStatus === 'Pending') {
+      if (driver.approvalStatus === 'pending') {
         return next(new AppError('Your application is already pending approval.', 400));
+      }
+      // Allow resubmission / rejected only
+      if (!['rejected', 'resubmission'].includes(driver.approvalStatus)) {
+        return next(new AppError(`Cannot re-apply while application status is ${driver.approvalStatus}.`, 400));
       }
     }
 
     if (!driver && (!files || (!files.licenceImage && !files.collegeCardImage) || !files.vehicleImage)) {
       cleanupUploadedFiles(files);
-      return next(new AppError('Profile photo, vehicle photo, and at least one identity document (Driving Licence or College ID Card) are required.', 400));
+      return next(new AppError('Vehicle photo and at least one identity document (Driving Licence or College ID Card) are required.', 400));
+    }
+
+    if (!phone || !vehicleNumber || !vehicleModel || !vehicleColour || !vehicleType || drivingExperience === undefined || !emergencyContact) {
+      cleanupUploadedFiles(files);
+      return next(new AppError('Phone, vehicle details, driving experience, and emergency contact are required.', 400));
+    }
+
+    if (!licenceNumber && !collegeCardNumber) {
+      cleanupUploadedFiles(files);
+      return next(new AppError('Either Driving Licence or College ID Card details must be provided.', 400));
     }
 
     // Check unique fields in Driver collection
@@ -701,7 +727,7 @@ export const applyDriver = async (
         licenceImage: licenceImageUrl || undefined,
         collegeCardImage: collegeCardImageUrl || undefined,
         vehicleImage: vehicleImageUrl,
-        approvalStatus: 'Pending',
+        approvalStatus: 'pending',
         driverStatus: 'PENDING_APPROVAL',
         paymentStatus: false,
         documentsUploaded: true,
@@ -717,17 +743,20 @@ export const applyDriver = async (
       driver.vehicleModel = vehicleModel || driver.vehicleModel;
       driver.vehicleColour = vehicleColour || driver.vehicleColour;
       driver.vehicleType = vehicleType || driver.vehicleType;
-      driver.drivingExperience = drivingExperience ? Number(drivingExperience) : driver.drivingExperience;
+      driver.drivingExperience = drivingExperience !== undefined && drivingExperience !== ''
+        ? Number(drivingExperience)
+        : driver.drivingExperience;
       driver.emergencyContact = emergencyContact || driver.emergencyContact;
       driver.licenceImage = licenceImageUrl || driver.licenceImage;
       driver.collegeCardImage = collegeCardImageUrl || driver.collegeCardImage;
       driver.vehicleImage = vehicleImageUrl || driver.vehicleImage;
-      driver.approvalStatus = 'Pending';
+      driver.approvalStatus = 'pending';
       driver.driverStatus = 'PENDING_APPROVAL';
       driver.paymentStatus = false;
       driver.documentsUploaded = true;
       driver.emailVerified = req.user.isVerified;
       driver.subscriptionStatus = 'Inactive';
+      driver.rejectionReason = undefined;
       await driver.save();
       logger.info(`Driver Saved in MongoDB (Updated) for user: ${userId}`);
     }

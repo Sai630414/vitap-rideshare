@@ -1,12 +1,8 @@
 import jwt from "jsonwebtoken";
 import { IUser } from "../models/User";
 
-const ACCESS_TOKEN_SECRET =
-  process.env.JWT_SECRET || "super_secret_access_token_key_change_in_production";
-
-const REFRESH_TOKEN_SECRET =
-  process.env.JWT_REFRESH_SECRET ||
-  "super_secret_refresh_token_key_change_in_production";
+const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET!;
+const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET!;
 
 const ACCESS_TOKEN_EXPIRY =
   process.env.ACCESS_TOKEN_EXPIRY || "15m";

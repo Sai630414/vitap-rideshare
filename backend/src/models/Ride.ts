@@ -115,6 +115,9 @@ const rideSchema = new Schema<IRide>(
 // Index for query searching
 rideSchema.index({ 'pickupLocation.coordinates': '2dsphere' });
 rideSchema.index({ 'dropLocation.coordinates': '2dsphere' });
+rideSchema.index({ driver: 1, status: 1, departureDate: 1 });
+rideSchema.index({ status: 1, departureDate: 1 });
+rideSchema.index({ source: 1, destination: 1, departureDate: 1 });
 
 export const Ride = model<IRide>('Ride', rideSchema);
 export default Ride;

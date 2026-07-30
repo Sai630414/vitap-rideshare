@@ -48,9 +48,9 @@ export const getOrCreateChat = async (
       }
     }
 
-    // Check if chat already exists
+    // Check if chat already exists (exactly these two participants)
     let chat = await Chat.findOne({
-      participants: { $all: [req.user.id, recipientId] },
+      participants: { $all: [req.user.id, recipientId], $size: 2 },
     });
 
     if (!chat) {
@@ -118,9 +118,13 @@ export const sendMessage = async (
       'name email profileImage role'
     );
 
-    // Emit via Socket.io
-    const io = getIO();
-    io.to(chatId).emit('new_message', populatedMessage);
+    // Emit via Socket.io (non-fatal if socket layer is unavailable)
+    try {
+      const io = getIO();
+      io.to(chatId).emit('new_message', populatedMessage);
+    } catch (socketError) {
+      // Socket may be unavailable in some deploy modes
+    }
 
     // Send notifications to recipient(s)
     const recipients = chat.participants.filter(
@@ -237,11 +241,15 @@ export const markAsSeen = async (
     );
 
     // Emit seen state to socket room
-    const io = getIO();
-    io.to(chatId).emit('messages_seen', {
-      chatId,
-      seenBy: req.user.id,
-    });
+    try {
+      const io = getIO();
+      io.to(chatId).emit('messages_seen', {
+        chatId,
+        seenBy: req.user.id,
+      });
+    } catch {
+      // ignore socket errors
+    }
 
     res.status(200).json({
       status: 'success',

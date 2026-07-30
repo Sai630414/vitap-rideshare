@@ -73,5 +73,8 @@ const vehicleSchema = new Schema<IVehicle>(
   { timestamps: true }
 );
 
+vehicleSchema.index({ owner: 1 });
+vehicleSchema.index({ owner: 1, status: 1 });
+
 export const Vehicle = model<IVehicle>('Vehicle', vehicleSchema);
 export default Vehicle;

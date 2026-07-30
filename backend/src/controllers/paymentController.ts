@@ -34,8 +34,12 @@ export const createOrder = async (
       return next(new AppError('Driver application profile not found', 404));
     }
 
-    if (driver.approvalStatus !== 'Approved' && driver.approvalStatus !== 'approved') {
+    if (driver.approvalStatus !== 'approved') {
       return next(new AppError('Your application has not been approved yet.', 400));
+    }
+
+    if (driver.paymentStatus && driver.subscriptionStatus === 'Active') {
+      return next(new AppError('Subscription is already active. No payment required.', 400));
     }
 
     const amount = 50; // standard subscription fee: ₹50
@@ -110,6 +114,19 @@ export const verifyPayment = async (
       return next(new AppError('Payment signature verification failed.', 400));
     }
 
+    if (driver.approvalStatus !== 'approved') {
+      return next(new AppError('Your application has not been approved yet.', 400));
+    }
+
+    if (driver.paymentStatus && driver.subscriptionStatus === 'Active' && driver.driverStatus === 'ACTIVE') {
+      res.status(200).json({
+        status: 'success',
+        message: 'Subscription already active.',
+        data: { driver },
+      });
+      return;
+    }
+
     // Set statuses
     driver.paymentStatus = true;
     driver.subscriptionStatus = 'Active';
@@ -141,7 +158,7 @@ export const verifyPayment = async (
 
 /**
  * POST /api/create-order
- * Create a Razorpay order from requested amount
+ * Create a Razorpay order for driver subscription only (fixed amount)
  */
 export const createOrderDirect = async (
   req: AuthRequest,
@@ -153,37 +170,34 @@ export const createOrderDirect = async (
       return next(new AppError('Unauthorized', 401));
     }
 
-    const { amount } = req.body;
-
-    // Validate amount
-    if (amount === undefined || amount === null) {
-      return next(new AppError('Amount is required.', 400));
+    const driver = await Driver.findOne({ user: req.user._id });
+    if (!driver) {
+      return next(new AppError('Driver application profile not found', 404));
     }
 
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount)) {
-      return next(new AppError('Amount must be a number.', 400));
+    if (driver.approvalStatus !== 'approved') {
+      return next(new AppError('Your application has not been approved yet.', 400));
     }
 
-    if (numericAmount < 100) {
-      return next(new AppError('Amount must be at least 100 paise.', 400));
+    if (driver.paymentStatus && driver.subscriptionStatus === 'Active') {
+      return next(new AppError('Subscription is already active.', 400));
     }
 
+    // Fixed subscription fee — ignore arbitrary client amounts
+    const amountInPaise = 50 * 100;
     const currency = 'INR';
-    const receipt = `rcpt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const receipt = `rcpt_${req.user._id}_${Date.now()}`;
 
-    // Call Razorpay API
     let order;
     try {
       order = await razorpay.orders.create({
-        amount: numericAmount,
+        amount: amountInPaise,
         currency,
         receipt,
       });
     } catch (razorpayError: any) {
       logger.error('Razorpay Order Creation API error:', razorpayError);
       
-      // Handle Razorpay authentication errors specifically
       if (razorpayError.statusCode === 401 || (razorpayError.message && razorpayError.message.includes('auth'))) {
         res.status(401).json({
           status: 'fail',
@@ -252,14 +266,21 @@ export const verifyPaymentDirect = async (
       return;
     }
 
-    // Update existing payment status if applicable
     const driver = await Driver.findOne({ user: req.user._id });
     if (!driver) {
       return next(new AppError('Driver application profile not found. You must apply first.', 404));
     }
 
-    if (driver.approvalStatus !== 'Approved' && driver.approvalStatus !== 'approved') {
+    if (driver.approvalStatus !== 'approved') {
       return next(new AppError('Your driver profile has not been approved by an administrator yet.', 400));
+    }
+
+    if (driver.paymentStatus && driver.subscriptionStatus === 'Active' && driver.driverStatus === 'ACTIVE') {
+      res.status(200).json({
+        status: 'success',
+        message: 'Payment completed successfully. Your driver account is now active!',
+      });
+      return;
     }
 
     driver.paymentStatus = true;
@@ -426,6 +447,24 @@ export const verifyBookingPayment = async (
 
     if (!isVerified) {
       return next(new AppError('Payment signature verification failed.', 400));
+    }
+
+    // Bind payment to the order created for this booking
+    if (booking.razorpayOrderId && booking.razorpayOrderId !== razorpay_order_id) {
+      return next(new AppError('Payment order does not match this booking.', 400));
+    }
+
+    if (booking.paymentStatus === 'paid') {
+      res.status(200).json({
+        status: 'success',
+        message: 'Booking is already paid.',
+        data: { booking },
+      });
+      return;
+    }
+
+    if (booking.status !== 'accepted') {
+      return next(new AppError('You can only pay for accepted bookings', 400));
     }
 
     // Set statuses

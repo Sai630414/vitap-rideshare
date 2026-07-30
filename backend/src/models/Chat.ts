@@ -64,6 +64,7 @@ const messageSchema = new Schema<IMessage>(
 
 // Compound index to speed up participant queries
 chatSchema.index({ participants: 1 });
+chatSchema.index({ updatedAt: -1 });
 
 export const Chat = model<IChat>('Chat', chatSchema);
 export const Message = model<IMessage>('Message', messageSchema);

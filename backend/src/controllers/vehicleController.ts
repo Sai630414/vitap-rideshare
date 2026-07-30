@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Vehicle from '../models/Vehicle';
+import Ride from '../models/Ride';
 import AppError from '../utils/appError';
 import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
 
@@ -117,6 +118,16 @@ export const deleteVehicle = async (
 
     if (vehicle.owner.toString() !== req.user?.id && req.user?.role !== 'admin') {
       return next(new AppError('You are not authorized to delete this vehicle', 403));
+    }
+
+    const activeRide = await Ride.findOne({
+      vehicle: vehicle._id,
+      status: { $in: ['scheduled', 'ongoing'] },
+    });
+    if (activeRide) {
+      return next(
+        new AppError('Cannot delete a vehicle that has scheduled or ongoing rides', 400)
+      );
     }
 
     await Vehicle.findByIdAndDelete(id);

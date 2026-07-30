@@ -175,3 +175,49 @@ export const resetPasswordSchema = z.object({
       path: ['confirmPassword'],
     }),
 });
+
+/**
+ * Logged-in student applying to become a driver (no password/email required)
+ */
+export const applyDriverSchema = z.object({
+  body: z
+    .object({
+      phone: z
+        .string({ required_error: 'Phone number is required' })
+        .min(10, 'Phone number must be at least 10 digits'),
+      licenceNumber: z
+        .string()
+        .optional()
+        .transform((val) => (val ? val.toUpperCase() : undefined)),
+      collegeCardNumber: z
+        .string()
+        .optional()
+        .transform((val) => (val ? val.toUpperCase() : undefined)),
+      vehicleNumber: z
+        .string({ required_error: 'Vehicle Number is required' })
+        .min(5, 'Vehicle registration plate number is invalid')
+        .toUpperCase(),
+      vehicleModel: z
+        .string({ required_error: 'Vehicle Model is required' })
+        .min(2, 'Vehicle model description must be specified'),
+      vehicleColour: z
+        .string({ required_error: 'Vehicle Colour is required' })
+        .min(2, 'Vehicle color must be specified'),
+      vehicleType: z.enum(['bike', 'car'], {
+        required_error: 'Vehicle type must be bike or car',
+      }),
+      drivingExperience: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .refine((val) => !isNaN(val) && val >= 0, {
+          message: 'Driving experience must be a non-negative number of years',
+        }),
+      emergencyContact: z
+        .string({ required_error: 'Emergency Contact phone is required' })
+        .min(10, 'Emergency contact phone is invalid'),
+    })
+    .refine((data) => data.licenceNumber || data.collegeCardNumber, {
+      message: 'Either Driving Licence or College ID Card details must be provided',
+      path: ['licenceNumber'],
+    }),
+});

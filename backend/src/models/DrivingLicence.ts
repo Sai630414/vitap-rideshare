@@ -27,6 +27,10 @@ const drivingLicenceSchema = new Schema<IDrivingLicence>(
       unique: true,
       trim: true,
       uppercase: true,
+      validate: {
+        validator: (v: string) => typeof v === 'string' && v.trim().length >= 5,
+        message: 'Licence number must be at least 5 characters',
+      },
     },
     expiry: {
       type: Date,

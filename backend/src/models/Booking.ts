@@ -2,14 +2,14 @@ import { Schema, model, Document } from 'mongoose';
 
 export interface IBooking extends Document {
   ride: Schema.Types.ObjectId;
-  passenger: Schema.Types.ObjectId; // student
+  passenger: Schema.Types.ObjectId;
   driver: Schema.Types.ObjectId;
   pickup: string;
   drop: string;
   message?: string;
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed' | 'expired';
   paymentStatus: 'pending' | 'paid' | 'refunded';
-  seatNumber: number; // seatCount
+  seatNumber: number;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   createdAt: Date;
@@ -22,16 +22,19 @@ const bookingSchema = new Schema<IBooking>(
       type: Schema.Types.ObjectId,
       ref: 'Ride',
       required: [true, 'Ride reference is required'],
+      index: true,
     },
     passenger: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Passenger reference is required'],
+      index: true,
     },
     driver: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Driver reference is required'],
+      index: true,
     },
     pickup: {
       type: String,
@@ -51,6 +54,7 @@ const bookingSchema = new Schema<IBooking>(
       type: String,
       enum: ['pending', 'accepted', 'rejected', 'cancelled', 'completed', 'expired'],
       default: 'pending',
+      index: true,
     },
     paymentStatus: {
       type: String,
@@ -64,16 +68,26 @@ const bookingSchema = new Schema<IBooking>(
     },
     razorpayOrderId: {
       type: String,
+      index: { unique: true, sparse: true },
     },
     razorpayPaymentId: {
       type: String,
+      index: { unique: true, sparse: true },
     },
   },
   { timestamps: true }
 );
 
-// We drop the unique index on { ride, passenger } to support sequential request submissions if rejected or cancelled.
-// Instead of an index constraint, we will validate uniqueness of ACTIVE booking requests in the controller.
+// Prevent duplicate active bookings for the same passenger on the same ride
+bookingSchema.index(
+  { ride: 1, passenger: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ['pending', 'accepted'] },
+    },
+  }
+);
 
 export const Booking = model<IBooking>('Booking', bookingSchema);
 export default Booking;

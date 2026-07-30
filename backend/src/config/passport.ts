@@ -34,6 +34,7 @@ passport.use(
             email,
             name: profile.displayName,
             profileImage: profile.photos?.[0]?.value,
+            googleId: profile.id,
             role: isAdmin ? 'admin' : 'student',
             isVerified: true,
             verifiedStudent: true,
@@ -42,8 +43,16 @@ passport.use(
           // Update profile image and name if changed
           user.name = profile.displayName;
           user.profileImage = profile.photos?.[0]?.value || user.profileImage;
+          if (!user.googleId) {
+            user.googleId = profile.id;
+          }
           if (isAdmin && user.role !== 'admin') {
             user.role = 'admin';
+          }
+          // Google login implies verified email
+          if (!user.isVerified) {
+            user.isVerified = true;
+            user.verifiedStudent = true;
           }
           await user.save();
         }

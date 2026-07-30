@@ -33,7 +33,12 @@ export const createBooking = async (
       return next(new AppError('You cannot book seats in your own ride', 400));
     }
 
-    if (ride.availableSeats < seatNumber) {
+    const requestedSeats = Number(seatNumber) || 1;
+    if (requestedSeats < 1) {
+      return next(new AppError('Seat count must be at least 1', 400));
+    }
+
+    if (ride.availableSeats < requestedSeats) {
       return next(new AppError('Not enough available seats in this ride', 400));
     }
 
@@ -61,18 +66,18 @@ export const createBooking = async (
       pickup,
       drop,
       message,
-      seatNumber,
+      seatNumber: requestedSeats,
       status: 'pending',
       paymentStatus: 'pending',
     });
 
     // Automatically create a Chat conversation between passenger and driver
     let chat = await Chat.findOne({
-      participants: { $all: [req.user.id, ride.driver.toString()] },
+      participants: { $all: [req.user.id, ride.driver], $size: 2 },
     });
     if (!chat) {
       await Chat.create({
-        participants: [req.user.id, ride.driver.toString()],
+        participants: [req.user.id, ride.driver],
       });
     }
 
@@ -80,7 +85,7 @@ export const createBooking = async (
     await sendNotificationToUser(
       ride.driver.toString(),
       'New Ride Request 🚗',
-      `${req.user.name} requested ${seatNumber} seat(s) on your ride from ${ride.source} to ${ride.destination}.`,
+      `${req.user.name} requested ${requestedSeats} seat(s) on your ride from ${ride.source} to ${ride.destination}.`,
       'booking_request',
       booking._id
     );
@@ -156,6 +161,10 @@ export const respondToBooking = async (
 
     if (booking.status !== 'pending') {
       return next(new AppError(`This booking request is already ${booking.status}`, 400));
+    }
+
+    if (ride.status !== 'scheduled') {
+      return next(new AppError(`Cannot respond to bookings for a ride that is ${ride.status}`, 400));
     }
 
     if (status === 'accepted') {
@@ -235,8 +244,15 @@ export const cancelBooking = async (
       return next(new AppError('You are not authorized to cancel this booking', 403));
     }
 
-    if (booking.status === 'cancelled') {
-      return next(new AppError('Booking is already cancelled', 400));
+    if (!['pending', 'accepted'].includes(booking.status)) {
+      return next(
+        new AppError(`Cannot cancel a booking with status "${booking.status}"`, 400)
+      );
+    }
+
+    const rideDoc = booking.ride as any;
+    if (rideDoc && ['completed', 'cancelled'].includes(rideDoc.status)) {
+      return next(new AppError('Cannot cancel a booking for a completed or cancelled ride', 400));
     }
 
     const previousStatus = booking.status;
@@ -249,9 +265,10 @@ export const cancelBooking = async (
       const amountInPaise = totalAmount * 100;
       
       const refundSuccess = await refundPayment(booking.razorpayPaymentId, amountInPaise);
-      if (refundSuccess) {
-        booking.paymentStatus = 'refunded';
+      if (!refundSuccess) {
+        return next(new AppError('Refund failed. Booking was not cancelled. Please contact support.', 502));
       }
+      booking.paymentStatus = 'refunded';
     }
 
     booking.status = 'cancelled';

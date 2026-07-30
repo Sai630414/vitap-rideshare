@@ -28,15 +28,15 @@ export const createReview = async (
       return next(new AppError('You can only review completed rides', 400));
     }
 
-    // Verify passenger had an accepted booking
+    // Verify passenger completed this ride (status becomes 'completed' after ride completion)
     const booking = await Booking.findOne({
       ride: ride._id,
       passenger: req.user.id,
-      status: 'accepted',
+      status: 'completed',
     });
 
     if (!booking) {
-      return next(new AppError('You did not have an accepted seat booking in this ride', 403));
+      return next(new AppError('You can only review rides you completed as a passenger', 403));
     }
 
     // Check if already reviewed

@@ -7,7 +7,7 @@ import {
   getRideBookings,
   getDriverRequests,
 } from '../controllers/bookingController';
-import { protect } from '../middleware/auth';
+import { protect, requireVerifiedStudent } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { createBookingSchema, respondToBookingSchema } from '../validators/businessValidator';
 
@@ -15,7 +15,7 @@ const router = Router();
 
 router.use(protect as any);
 
-router.post('/', validateRequest(createBookingSchema) as any, createBooking as any);
+router.post('/', requireVerifiedStudent as any, validateRequest(createBookingSchema) as any, createBooking as any);
 router.get('/my-bookings', getMyBookings as any);
 router.get('/driver-requests', getDriverRequests as any);
 router.get('/ride/:rideId', getRideBookings as any);

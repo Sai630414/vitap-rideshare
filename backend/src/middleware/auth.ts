@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User, IUser } from '../models/User';
+import Driver from '../models/Driver';
 import AppError from '../utils/appError';
 
 export interface AuthRequest extends Request {
@@ -28,9 +29,12 @@ export const protect = async (
     }
 
     // 2) Verify token
+    if (!process.env.JWT_SECRET) {
+      return next(new AppError('Server JWT configuration error.', 500));
+    }
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'super_secret_access_token_key_change_in_production'
+      process.env.JWT_SECRET
     ) as { id: string };
 
     // 3) Check if user still exists
@@ -63,17 +67,35 @@ export const restrictTo = (...roles: ('student' | 'driver' | 'admin')[]) => {
   };
 };
 
-export const requireVerifiedDriver = (
+export const requireVerifiedDriver = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): void => {
-  if (!req.user || req.user.role !== 'driver' || !req.user.verifiedDriver) {
-    return next(
-      new AppError('You must be a verified driver to offer rides. Please upload your documents and wait for approval.', 403)
-    );
+): Promise<void> => {
+  try {
+    if (!req.user || req.user.role !== 'driver' || !req.user.verifiedDriver) {
+      return next(
+        new AppError(
+          'You must be a verified driver to offer rides. Please upload your documents, get approved, and complete subscription payment.',
+          403
+        )
+      );
+    }
+
+    const driver = await Driver.findOne({ user: req.user._id });
+    if (!driver || driver.driverStatus !== 'ACTIVE' || driver.subscriptionStatus !== 'Active') {
+      return next(
+        new AppError(
+          'Your driver subscription is not active. Complete payment after admin approval to offer rides.',
+          403
+        )
+      );
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 };
 
 export const requireVerifiedStudent = (

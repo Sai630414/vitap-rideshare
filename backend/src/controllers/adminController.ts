@@ -14,7 +14,6 @@ import { sendNotificationToUser } from './notificationController';
 import logger from '../utils/logger';
 import { createAccessToken, createRefreshToken } from '../utils/jwt';
 import {
-  sendWelcomeEmail,
   sendDriverApprovalEmail,
   sendDriverRejectionEmail,
 } from '../services/emailService';
@@ -109,11 +108,14 @@ export const getDashboardStats = async (
     todayStart.setHours(0, 0, 0, 0);
     const todayTrips = await Ride.countDocuments({ createdAt: { $gte: todayStart } });
 
-    // Calculate revenue
-    const bookings = await Booking.find({ status: 'accepted' }).populate('ride').exec();
+    // Revenue from completed paid bookings (status becomes 'completed' after ride completion)
+    const paidCompletedBookings = await Booking.find({
+      status: 'completed',
+      paymentStatus: 'paid',
+    }).populate('ride').exec();
     let revenue = 0;
-    bookings.forEach((booking: any) => {
-      if (booking.ride && booking.ride.status === 'completed') {
+    paidCompletedBookings.forEach((booking: any) => {
+      if (booking.ride) {
         revenue += (booking.seatNumber || 1) * (booking.ride.price || 0);
       }
     });
@@ -286,48 +288,59 @@ export const approveDriver = async (
       return next(new AppError('User profile linked to driver not found', 404));
     }
 
-    // Set statuses
-    driver.approvalStatus = 'Approved';
+    if (!driver.emailVerified && !user.isVerified) {
+      return next(new AppError('Driver email is not verified yet. Ask them to verify OTP first.', 400));
+    }
+
+    if (driver.approvalStatus === 'approved') {
+      return next(new AppError('Driver application is already approved.', 400));
+    }
+
+    // Set statuses — payment still required before hosting rides
+    driver.approvalStatus = 'approved';
     driver.driverStatus = 'PAYMENT_PENDING';
     driver.rejectionReason = undefined;
     await driver.save();
-    logger.info("Driver Approved");
+    logger.info('Driver Approved');
 
-    user.verifiedDriver = false; // Must pay first before role upgrades
+    user.verifiedDriver = false; // Must pay subscription before role upgrades
     await user.save();
 
-    // Create or sync details
-    await DrivingLicence.findOneAndUpdate(
-      { user: user._id },
-      {
-        licenceNumber: driver.licenceNumber,
-        expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year fallback
-        frontImage: driver.licenceImage,
-        backImage: driver.licenceImage,
-        status: 'verified',
-        verifiedBy: req.user?.id as any,
-        verifiedAt: new Date(),
-      },
-      { upsert: true, new: true }
-    );
+    // Sync DrivingLicence only when real licence data exists (avoid unique/required failures)
+    if (driver.licenceNumber && driver.licenceImage) {
+      await DrivingLicence.findOneAndUpdate(
+        { user: user._id },
+        {
+          licenceNumber: driver.licenceNumber,
+          expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          frontImage: driver.licenceImage,
+          backImage: driver.licenceImage,
+          status: 'verified',
+          verifiedBy: req.user?._id,
+          verifiedAt: new Date(),
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
 
+    // Upsert vehicle by numberPlate to avoid clobbering unrelated vehicles
     await Vehicle.findOneAndUpdate(
-      { owner: user._id },
+      { numberPlate: driver.vehicleNumber },
       {
+        owner: user._id,
         type: driver.vehicleType,
         brand: driver.vehicleModel.split(' ')[0] || 'Unknown',
         model: driver.vehicleModel,
         numberPlate: driver.vehicleNumber,
         color: driver.vehicleColour,
         seats: driver.vehicleType === 'car' ? 4 : 1,
-        rcImage: driver.collegeCardImage || driver.licenceImage || '',
+        rcImage: driver.vehicleImage || '',
         verified: true,
         status: 'verified',
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Audit Log
     await AuditLog.create({
       admin: req.user?._id,
       action: 'APPROVE_DRIVER',
@@ -336,12 +349,11 @@ export const approveDriver = async (
       ipAddress: req.ip,
     });
 
-    // Notify user
     await sendDriverApprovalEmail(user.email, user.name);
     await sendNotificationToUser(
       user._id.toString(),
       'Driver Registration Approved!',
-      'Your driver account has been successfully approved. You are ready to host rides.',
+      'Your documents were approved. Complete the ₹50 subscription payment to activate your driver account and start offering rides.',
       'verification_approved',
       driver._id
     );
@@ -383,22 +395,25 @@ export const rejectDriver = async (
       return next(new AppError('User profile linked to driver not found', 404));
     }
 
-    driver.approvalStatus = 'Rejected';
+    driver.approvalStatus = 'rejected';
     driver.driverStatus = 'PENDING_APPROVAL';
     driver.rejectionReason = reason;
+    driver.paymentStatus = false;
+    driver.subscriptionStatus = 'Inactive';
     await driver.save();
-    logger.info("Driver Rejected");
+    logger.info('Driver Rejected');
 
     user.verifiedDriver = false;
-    // Don't force reset their role to student if they have active trips, but standard behavior:
     if (user.role === 'driver') {
       user.role = 'student';
     }
     await user.save();
 
-    // Clear vehicles & licences
-    await DrivingLicence.findOneAndDelete({ user: user._id });
-    await Vehicle.findOneAndDelete({ owner: user._id });
+    // Only remove synced docs tied to this application — do not wipe unrelated vehicles
+    if (driver.licenceNumber) {
+      await DrivingLicence.findOneAndDelete({ user: user._id, licenceNumber: driver.licenceNumber });
+    }
+    await Vehicle.findOneAndDelete({ owner: user._id, numberPlate: driver.vehicleNumber });
 
     // Audit Log
     await AuditLog.create({
@@ -457,9 +472,12 @@ export const requestResubmission = async (
     }
 
     driver.approvalStatus = 'resubmission';
+    driver.driverStatus = 'PENDING_APPROVAL';
     driver.rejectionReason = reason;
+    driver.paymentStatus = false;
+    driver.subscriptionStatus = 'Inactive';
     await driver.save();
-    logger.info("Driver Resubmission Requested");
+    logger.info('Driver Resubmission Requested');
 
     user.verifiedDriver = false;
     if (user.role === 'driver') {
@@ -674,6 +692,7 @@ export const cancelRideAdmin = async (
     // Find and update bookings instead of deleting
     const bookings = await Booking.find({ ride: ride._id, status: { $in: ['pending', 'accepted'] } });
     for (const booking of bookings) {
+      const previousStatus = booking.status;
       booking.status = 'cancelled';
       
       if (booking.paymentStatus === 'paid' && booking.razorpayPaymentId) {
@@ -684,6 +703,10 @@ export const cancelRideAdmin = async (
         }
       }
       await booking.save();
+
+      if (previousStatus === 'accepted') {
+        await Ride.findByIdAndUpdate(ride._id, { $inc: { availableSeats: booking.seatNumber } });
+      }
 
       await sendNotificationToUser(
         booking.passenger.toString(),
@@ -822,7 +845,7 @@ export const getApprovals = async (
   try {
     logger.info("Admin Query Executed");
     // Filter Pending/pending approval status
-    const query = { approvalStatus: { $in: ['Pending', 'pending'] } };
+    const query = { approvalStatus: 'pending' };
     const total = await Driver.countDocuments(query);
     logger.info(`Pending Applications Found: ${total}`);
 

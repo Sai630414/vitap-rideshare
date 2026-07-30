@@ -12,7 +12,7 @@ import { applyDriver } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 import { validateRequest } from '../middleware/validation';
-import { updateProfileSchema, driverSignupSchema } from '../validators/authValidator';
+import { updateProfileSchema, applyDriverSchema } from '../validators/authValidator';
 
 const router = Router();
 
@@ -27,7 +27,7 @@ router.post(
     { name: 'collegeCardImage', maxCount: 1 },
     { name: 'vehicleImage', maxCount: 1 },
   ]) as any,
-  validateRequest(driverSignupSchema) as any,
+  validateRequest(applyDriverSchema) as any,
   applyDriver as any
 );
 

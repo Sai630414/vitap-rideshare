@@ -117,11 +117,13 @@ const userSchema = new Schema<IUser>(
     },
     googleId: {
       type: String,
+      // sparse unique: many users have no Google link
       index: { unique: true, sparse: true },
     },
     password: {
       type: String,
-      select: false, // hide by default
+      select: false,
+      minlength: [8, 'Password must be at least 8 characters'],
     },
     isVerified: {
       type: Boolean,
@@ -144,6 +146,8 @@ const userSchema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+userSchema.index({ role: 1, status: 1 });
 
 // Encrypt password before saving
 userSchema.pre('save', async function (next) {
