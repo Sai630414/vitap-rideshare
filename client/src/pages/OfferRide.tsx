@@ -210,6 +210,7 @@ export const OfferRide: React.FC = () => {
                 onSelect={(coords, name) => {
                   setPickupCoords(coords);
                   setPickupAddress(name);
+                  setSource(name); // sync text field with selected autocomplete result
                 }}
                 required
               />
@@ -222,6 +223,7 @@ export const OfferRide: React.FC = () => {
                 onSelect={(coords, name) => {
                   setDropCoords(coords);
                   setDropAddress(name);
+                  setDestination(name); // sync text field with selected autocomplete result
                 }}
                 required
               />
@@ -291,7 +293,7 @@ export const OfferRide: React.FC = () => {
                 onChange={(e) => setDescription(e.target.value)}
               />
 
-              <Button type="submit" loading={loading} className="w-full py-3 mt-2" onClick={() => navigate('/search')}>
+              <Button type="submit" loading={loading} className="w-full py-3 mt-2">
                 List Ride Offer
               </Button>
             </form>

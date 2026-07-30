@@ -68,6 +68,11 @@ export const rideService = {
     return response.data;
   },
 
+  getMyRides: async () => {
+    const response = await api.get('/rides/mine');
+    return response.data;
+  },
+
   getRideDetails: async (id: string) => {
     const response = await api.get(`/rides/${id}`);
     return response.data;

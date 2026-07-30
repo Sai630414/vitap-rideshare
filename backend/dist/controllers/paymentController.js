@@ -37,7 +37,7 @@ const createOrder = async (req, res, next) => {
         }
         const amount = 50; // standard subscription fee: ₹50
         const currency = 'INR';
-        const receipt = `rcpt_${req.user._id}_${Date.now()}`;
+        const receipt = `R${Date.now()}`;
         const amountInPaise = amount * 100;
         if (amountInPaise < 100) {
             return next(new appError_1.default('Amount must be at least 100 paise.', 400));
@@ -154,7 +154,7 @@ const createOrderDirect = async (req, res, next) => {
         // Fixed subscription fee — ignore arbitrary client amounts
         const amountInPaise = 50 * 100;
         const currency = 'INR';
-        const receipt = `rcpt_${req.user._id}_${Date.now()}`;
+        const receipt = `R${Date.now()}`;
         let order;
         try {
             order = await razorpay.orders.create({
@@ -164,7 +164,20 @@ const createOrderDirect = async (req, res, next) => {
             });
         }
         catch (razorpayError) {
-            logger_1.default.error('Razorpay Order Creation API error:', razorpayError);
+            logger_1.default.error("========== RAZORPAY ERROR ==========");
+            logger_1.default.error({
+                message: razorpayError.message,
+                statusCode: razorpayError.statusCode,
+                error: razorpayError.error,
+                description: razorpayError.error?.description,
+                reason: razorpayError.error?.reason,
+                source: razorpayError.error?.source,
+                field: razorpayError.error?.field,
+                step: razorpayError.error?.step,
+                metadata: razorpayError.error?.metadata,
+                stack: razorpayError.stack,
+            });
+            logger_1.default.error("====================================");
             if (razorpayError.statusCode === 401 || (razorpayError.message && razorpayError.message.includes('auth'))) {
                 res.status(401).json({
                     status: 'fail',
@@ -313,7 +326,7 @@ const createBookingOrder = async (req, res, next) => {
         const totalAmount = booking.seatNumber * ride.price;
         const amountInPaise = totalAmount * 100;
         const currency = 'INR';
-        const receipt = `rcpt_booking_${booking._id}_${Date.now()}`;
+        const receipt = `R${Date.now()}`;
         // Call Razorpay API
         const order = await razorpay.orders.create({
             amount: amountInPaise,

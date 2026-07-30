@@ -95,6 +95,32 @@ export const offerRide = async (
   }
 };
 
+// Get rides offered by the currently authenticated driver
+export const getMyRides = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const rides = await Ride.find({ driver: req.user.id })
+      .populate('vehicle', 'brand model type numberPlate color seats')
+      .populate('driver', 'name email profileImage rating verifiedDriver trustScore')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      status: 'success',
+      results: rides.length,
+      data: {
+        rides,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const searchRides = async (
   req: AuthRequest,
   res: Response,

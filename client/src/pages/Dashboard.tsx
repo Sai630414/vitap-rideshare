@@ -332,16 +332,16 @@ const InlineDriverDashboard: React.FC<{ user: any; toast: any; navigate: any }> 
   useEffect(() => {
     const fetchDriverRides = async () => {
       try {
-        // Query rides and filter locally for simplicity and safety
-        const response = await api.get('/rides');
-        if (response.data.status === 'success') {
-          const allRides: RideData[] = response.data.data.rides;
-          const filtered = allRides.filter((ride) => ride.driver._id === user._id);
-          setMyRides(filtered);
+        // Use dedicated /rides/mine endpoint — returns only this driver's rides, server-side filtered
+        const response = await rideService.getMyRides();
+        if (response.status === 'success') {
+          const driverRides: RideData[] = response.data.rides;
+          setMyRides(driverRides);
 
-          // Calculate mock earnings based on completed rides
-          const completed = filtered.filter((r) => r.status === 'completed');
-          setEarnings(completed.length * 150); // assume avg ₹150 profit per ride
+          // Calculate real earnings from completed rides (price * seats booked)
+          const completed = driverRides.filter((r) => r.status === 'completed');
+          const totalEarnings = completed.reduce((sum, r) => sum + (r.price || 0), 0);
+          setEarnings(totalEarnings);
         }
       } catch (err) {
         console.error('Failed to load driver rides:', err);
@@ -686,8 +686,5 @@ export const Dashboard: React.FC = () => {
     </>
   );
 };
-
-// Helper for axios calls in Driver stats
-import api from '../services/api';
 
 export default Dashboard;

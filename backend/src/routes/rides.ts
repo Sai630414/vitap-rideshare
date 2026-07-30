@@ -3,6 +3,7 @@ import {
   offerRide,
   searchRides,
   getRideDetails,
+  getMyRides,
   updateRideStatus,
   createRideRequest,
   getActiveRideRequests,
@@ -17,6 +18,8 @@ const router = Router();
 // Public routes for authenticated users
 router.get('/', protect as any, searchRides as any);
 router.get('/requests', protect as any, getActiveRideRequests as any);
+// My rides — must come before /:id to avoid 'mine' being parsed as an ObjectId
+router.get('/mine', protect as any, getMyRides as any);
 router.get('/:id', protect as any, getRideDetails as any);
 
 // Driver restricted routes
@@ -28,3 +31,4 @@ router.post('/requests', protect as any, validateRequest(createRideRequestSchema
 router.delete('/requests/:id', protect as any, deleteRideRequest as any);
 
 export default router;
+
