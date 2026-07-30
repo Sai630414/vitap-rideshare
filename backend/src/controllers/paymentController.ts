@@ -44,7 +44,7 @@ export const createOrder = async (
 
     const amount = 50; // standard subscription fee: ₹50
     const currency = 'INR';
-   const receipt = `R${Date.now()}`;
+    const receipt = `R${Date.now()}`;
     const amountInPaise = amount * 100;
 
     if (amountInPaise < 100) {
@@ -186,7 +186,7 @@ export const createOrderDirect = async (
     // Fixed subscription fee — ignore arbitrary client amounts
     const amountInPaise = 50 * 100;
     const currency = 'INR';
-    const receipt = `rcpt_${req.user._id}_${Date.now()}`;
+    const receipt = `R${Date.now()}`;
 
     let order;
     try {
@@ -389,7 +389,7 @@ export const createBookingOrder = async (
     const totalAmount = booking.seatNumber * ride.price;
     const amountInPaise = totalAmount * 100;
     const currency = 'INR';
-    const receipt = `rcpt_booking_${booking._id}_${Date.now()}`;
+    const receipt = `R${Date.now()}`;
 
     // Call Razorpay API
     const order = await razorpay.orders.create({
