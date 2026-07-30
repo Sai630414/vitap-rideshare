@@ -283,70 +283,94 @@ export const DriverRegister: React.FC = () => {
                   {/* profilePhoto (optional) */}
                   <div className="flex flex-col gap-1.5">
                     <span className="font-semibold text-zinc-400">Optional: Update Profile Photo</span>
-                    <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
-                      <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                      <span className="text-zinc-500 truncate">
-                        {profilePhoto ? profilePhoto.name : 'Select profile photo scan'}
-                      </span>
+                    <div className="flex items-center gap-3">
                       <input
                         type="file"
                         accept="image/*"
+                        id="profilePhotoInput"
                         onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
                         className="hidden"
                       />
-                    </label>
+                      <label
+                        htmlFor="profilePhotoInput"
+                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
+                      >
+                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
+                        <span className="text-zinc-500 truncate">
+                          {profilePhoto ? profilePhoto.name : 'Select profile photo scan'}
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* licenceImage */}
                   <div className="flex flex-col gap-1.5">
                     <span className="font-semibold text-zinc-400">Driving Licence Image Scan (Optional if ID uploaded)</span>
-                    <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
-                      <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                      <span className="text-zinc-500 truncate">
-                        {licenceImage ? licenceImage.name : 'Select licence card photo'}
-                      </span>
+                    <div className="flex items-center gap-3">
                       <input
                         type="file"
                         accept="image/*"
+                        id="licenceImageInput"
                         onChange={(e) => setLicenceImage(e.target.files?.[0] || null)}
                         className="hidden"
                       />
-                    </label>
+                      <label
+                        htmlFor="licenceImageInput"
+                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
+                      >
+                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
+                        <span className="text-zinc-500 truncate">
+                          {licenceImage ? licenceImage.name : 'Select licence card photo'}
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* collegeCardImage */}
                   <div className="flex flex-col gap-1.5">
                     <span className="font-semibold text-zinc-400">College ID Image Scan (Optional if Licence uploaded)</span>
-                    <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
-                      <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                      <span className="text-zinc-500 truncate">
-                        {collegeCardImage ? collegeCardImage.name : 'Select college ID card photo'}
-                      </span>
+                    <div className="flex items-center gap-3">
                       <input
                         type="file"
                         accept="image/*"
+                        id="collegeCardImageInput"
                         onChange={(e) => setCollegeCardImage(e.target.files?.[0] || null)}
                         className="hidden"
                       />
-                    </label>
+                      <label
+                        htmlFor="collegeCardImageInput"
+                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
+                      >
+                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
+                        <span className="text-zinc-500 truncate">
+                          {collegeCardImage ? collegeCardImage.name : 'Select college ID card photo'}
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* vehicleImage */}
                   <div className="flex flex-col gap-1.5">
                     <span className="font-semibold text-zinc-400">Vehicle Photo Scan *</span>
-                    <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
-                      <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                      <span className="text-zinc-500 truncate">
-                        {vehicleImage ? vehicleImage.name : 'Select vehicle photo'}
-                      </span>
+                    <div className="flex items-center gap-3">
                       <input
                         type="file"
                         accept="image/*"
+                        id="vehicleImageInput"
                         onChange={(e) => setVehicleImage(e.target.files?.[0] || null)}
                         className="hidden"
                         required
                       />
-                    </label>
+                      <label
+                        htmlFor="vehicleImageInput"
+                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
+                      >
+                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
+                        <span className="text-zinc-500 truncate">
+                          {vehicleImage ? vehicleImage.name : 'Select vehicle photo'}
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}
