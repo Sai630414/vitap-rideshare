@@ -44,7 +44,7 @@ export const createOrder = async (
 
     const amount = 50; // standard subscription fee: ₹50
     const currency = 'INR';
-    const receipt = `rcpt_${req.user._id}_${Date.now()}`;
+   const receipt = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
     const amountInPaise = amount * 100;
 
     if (amountInPaise < 100) {
