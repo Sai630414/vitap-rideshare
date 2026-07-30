@@ -66,8 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.loginWithGoogle(idToken);
       if (response.status === 'success' && response.token) {
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        setUser(response.data.user);
+        // Fetch fully-populated user (including driverDetails) from getMe
+        await refreshUser();
       }
     } finally {
       setLoading(false);
@@ -88,8 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.verifyOtp(email, otp);
       if (response.status === 'success' && response.token) {
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        setUser(response.data.user);
+        // Fetch fully-populated user (including driverDetails) from getMe
+        await refreshUser();
       }
       return response;
     } finally {
@@ -107,8 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.login(email, password);
       if (response.status === 'success' && response.token) {
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        setUser(response.data.user);
+        // Fetch fully-populated user (including driverDetails) from getMe
+        await refreshUser();
       }
       return response;
     } finally {
@@ -122,8 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.adminLogin(email, password);
       if (response.status === 'success' && response.token) {
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        setUser(response.data.user);
+        // Fetch fully-populated user (including driverDetails) from getMe
+        await refreshUser();
       }
       return response;
     } finally {
