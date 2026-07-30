@@ -10,7 +10,7 @@ const User_1 = __importDefault(require("../models/User"));
 const RideRequest_1 = __importDefault(require("../models/RideRequest"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const Booking_1 = __importDefault(require("../models/Booking"));
-const notificationController_1 = require("./notificationController"); // Import our notification trigger helper
+const notificationController_1 = require("./notificationController");
 const paymentController_1 = require("./paymentController");
 const offerRide = async (req, res, next) => {
     try {
@@ -28,6 +28,23 @@ const offerRide = async (req, res, next) => {
         if (vehicle.status !== 'verified') {
             return next(new appError_1.default('Your vehicle must be approved by an admin before you can offer a ride.', 403));
         }
+        const seats = Number(availableSeats);
+        if (!Number.isFinite(seats) || seats < 1) {
+            return next(new appError_1.default('Available seats must be at least 1', 400));
+        }
+        if (seats > vehicle.seats) {
+            return next(new appError_1.default(`Available seats cannot exceed vehicle capacity (${vehicle.seats})`, 400));
+        }
+        // Reject past departure times
+        const departure = new Date(departureDate);
+        if (Number.isNaN(departure.getTime())) {
+            return next(new appError_1.default('Invalid departure date', 400));
+        }
+        const [hh, mm] = String(departureTime).split(':').map(Number);
+        departure.setHours(hh || 0, mm || 0, 0, 0);
+        if (departure.getTime() < Date.now()) {
+            return next(new appError_1.default('Departure time must be in the future', 400));
+        }
         const ride = await Ride_1.default.create({
             driver: req.user.id,
             vehicle: vehicle._id,
@@ -38,7 +55,7 @@ const offerRide = async (req, res, next) => {
             departureDate: new Date(departureDate),
             departureTime,
             price,
-            availableSeats,
+            availableSeats: seats,
             description,
             recurring: recurring || { isRecurring: false },
             routePoints: routePoints || { coordinates: [] },
@@ -230,7 +247,11 @@ exports.getRideDetails = getRideDetails;
 const updateRideStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { status } = req.body; // ongoing, completed, cancelled
+        const { status } = req.body;
+        const allowedStatuses = ['ongoing', 'completed', 'cancelled'];
+        if (!allowedStatuses.includes(status)) {
+            return next(new appError_1.default('Status must be ongoing, completed, or cancelled', 400));
+        }
         const ride = await Ride_1.default.findById(id);
         if (!ride) {
             return next(new appError_1.default('Ride not found', 404));
@@ -238,13 +259,24 @@ const updateRideStatus = async (req, res, next) => {
         if (ride.driver.toString() !== req.user?.id && req.user?.role !== 'admin') {
             return next(new appError_1.default('You are not authorized to update this ride status', 403));
         }
+        const transitions = {
+            scheduled: ['ongoing', 'cancelled'],
+            ongoing: ['completed', 'cancelled'],
+            completed: [],
+            cancelled: [],
+        };
+        if (!transitions[ride.status]?.includes(status)) {
+            return next(new appError_1.default(`Cannot change ride status from "${ride.status}" to "${status}"`, 400));
+        }
+        const bookings = await Booking_1.default.find({
+            ride: ride._id,
+            status: { $in: ['pending', 'accepted'] },
+        });
         ride.status = status;
         await ride.save();
-        // Find bookings related to this ride that were pending or accepted
-        const bookings = await Booking_1.default.find({ ride: ride._id, status: { $in: ['pending', 'accepted'] } });
         for (const booking of bookings) {
+            const previousBookingStatus = booking.status;
             if (status === 'cancelled') {
-                booking.status = 'cancelled';
                 if (booking.paymentStatus === 'paid' && booking.razorpayPaymentId) {
                     const amountInPaise = booking.seatNumber * ride.price * 100;
                     const refundSuccess = await (0, paymentController_1.refundPayment)(booking.razorpayPaymentId, amountInPaise);
@@ -252,28 +284,37 @@ const updateRideStatus = async (req, res, next) => {
                         booking.paymentStatus = 'refunded';
                     }
                 }
+                booking.status = 'cancelled';
                 await booking.save();
+                if (previousBookingStatus === 'accepted') {
+                    await Ride_1.default.findByIdAndUpdate(ride._id, {
+                        $inc: { availableSeats: booking.seatNumber },
+                    });
+                }
                 await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Cancelled by Driver', `Your ride from ${ride.source} to ${ride.destination} has been cancelled by the driver.`, 'ride_cancelled', ride._id);
             }
             else if (status === 'completed') {
-                if (booking.status === 'accepted') {
+                if (previousBookingStatus === 'accepted') {
                     booking.status = 'completed';
                     await booking.save();
                     await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Completed', `Your ride from ${ride.source} to ${ride.destination} was completed.`, 'ride_accepted', ride._id);
                 }
+                else {
+                    booking.status = 'expired';
+                    await booking.save();
+                }
             }
             else {
-                // ongoing, etc.
-                await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), `Ride status updated to ${status}`, `Your ride from ${ride.source} to ${ride.destination} is now ${status}.`, 'ride_accepted', ride._id);
+                // ongoing
+                if (previousBookingStatus === 'accepted') {
+                    await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Started', `Your ride from ${ride.source} to ${ride.destination} is now ongoing.`, 'ride_accepted', ride._id);
+                }
             }
         }
-        // If completed, increment trip counters
         if (status === 'completed') {
-            // Driver trips increment
             await User_1.default.findByIdAndUpdate(ride.driver, { $inc: { totalTrips: 1 } });
-            // Passenger trips increment (only for accepted/completed bookings)
             const completedPassengerIds = bookings
-                .filter((b) => b.status === 'completed' || b.status === 'accepted')
+                .filter((b) => b.status === 'completed')
                 .map((b) => b.passenger);
             for (const passengerId of completedPassengerIds) {
                 await User_1.default.findByIdAndUpdate(passengerId, { $inc: { totalTrips: 1 } });

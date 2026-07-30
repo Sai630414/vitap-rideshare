@@ -19,7 +19,10 @@ const authenticate = async (req, res, next) => {
             return next(new appError_1.default('Unauthorized: Please log in to gain admin access.', 401));
         }
         // Verify token
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'super_secret_access_token_key_change_in_production');
+        if (!process.env.JWT_SECRET) {
+            return next(new appError_1.default('Server JWT configuration error.', 500));
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
         // Check if user still exists
         const currentUser = await User_1.User.findById(decoded.id);
         if (!currentUser) {

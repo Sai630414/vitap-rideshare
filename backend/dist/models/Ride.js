@@ -84,5 +84,8 @@ const rideSchema = new mongoose_1.Schema({
 // Index for query searching
 rideSchema.index({ 'pickupLocation.coordinates': '2dsphere' });
 rideSchema.index({ 'dropLocation.coordinates': '2dsphere' });
+rideSchema.index({ driver: 1, status: 1, departureDate: 1 });
+rideSchema.index({ status: 1, departureDate: 1 });
+rideSchema.index({ source: 1, destination: 1, departureDate: 1 });
 exports.Ride = (0, mongoose_1.model)('Ride', rideSchema);
 exports.default = exports.Ride;

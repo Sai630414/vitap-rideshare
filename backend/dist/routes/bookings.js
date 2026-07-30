@@ -7,7 +7,7 @@ const validation_1 = require("../middleware/validation");
 const businessValidator_1 = require("../validators/businessValidator");
 const router = (0, express_1.Router)();
 router.use(auth_1.protect);
-router.post('/', (0, validation_1.validateRequest)(businessValidator_1.createBookingSchema), bookingController_1.createBooking);
+router.post('/', auth_1.requireVerifiedStudent, (0, validation_1.validateRequest)(businessValidator_1.createBookingSchema), bookingController_1.createBooking);
 router.get('/my-bookings', bookingController_1.getMyBookings);
 router.get('/driver-requests', bookingController_1.getDriverRequests);
 router.get('/ride/:rideId', bookingController_1.getRideBookings);

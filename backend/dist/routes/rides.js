@@ -12,7 +12,7 @@ router.get('/requests', auth_1.protect, rideController_1.getActiveRideRequests);
 router.get('/:id', auth_1.protect, rideController_1.getRideDetails);
 // Driver restricted routes
 router.post('/', auth_1.protect, auth_1.requireVerifiedDriver, (0, validation_1.validateRequest)(businessValidator_1.offerRideSchema), rideController_1.offerRide);
-router.patch('/:id/status', auth_1.protect, rideController_1.updateRideStatus);
+router.patch('/:id/status', auth_1.protect, (0, validation_1.validateRequest)(businessValidator_1.updateRideStatusSchema), rideController_1.updateRideStatus);
 // Ride requests from passengers
 router.post('/requests', auth_1.protect, (0, validation_1.validateRequest)(businessValidator_1.createRideRequestSchema), rideController_1.createRideRequest);
 router.delete('/requests/:id', auth_1.protect, rideController_1.deleteRideRequest);

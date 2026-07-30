@@ -43,10 +43,6 @@ const vehicleSchema = new mongoose_1.Schema({
     insuranceExpiry: {
         type: Date,
     },
-    rcImage: {
-        type: String,
-        default: '',
-    },
     verified: {
         type: Boolean,
         default: false,
@@ -57,5 +53,7 @@ const vehicleSchema = new mongoose_1.Schema({
         default: 'pending',
     },
 }, { timestamps: true });
+vehicleSchema.index({ owner: 1 });
+vehicleSchema.index({ owner: 1, status: 1 });
 exports.Vehicle = (0, mongoose_1.model)('Vehicle', vehicleSchema);
 exports.default = exports.Vehicle;

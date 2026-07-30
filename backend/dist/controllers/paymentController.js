@@ -29,8 +29,11 @@ const createOrder = async (req, res, next) => {
         if (!driver) {
             return next(new appError_1.default('Driver application profile not found', 404));
         }
-        if (driver.approvalStatus !== 'Approved' && driver.approvalStatus !== 'approved') {
+        if (driver.approvalStatus !== 'approved') {
             return next(new appError_1.default('Your application has not been approved yet.', 400));
+        }
+        if (driver.paymentStatus && driver.subscriptionStatus === 'Active') {
+            return next(new appError_1.default('Subscription is already active. No payment required.', 400));
         }
         const amount = 50; // standard subscription fee: ₹50
         const currency = 'INR';
@@ -91,6 +94,17 @@ const verifyPayment = async (req, res, next) => {
         if (!isVerified) {
             return next(new appError_1.default('Payment signature verification failed.', 400));
         }
+        if (driver.approvalStatus !== 'approved') {
+            return next(new appError_1.default('Your application has not been approved yet.', 400));
+        }
+        if (driver.paymentStatus && driver.subscriptionStatus === 'Active' && driver.driverStatus === 'ACTIVE') {
+            res.status(200).json({
+                status: 'success',
+                message: 'Subscription already active.',
+                data: { driver },
+            });
+            return;
+        }
         // Set statuses
         driver.paymentStatus = true;
         driver.subscriptionStatus = 'Active';
@@ -120,39 +134,37 @@ const verifyPayment = async (req, res, next) => {
 exports.verifyPayment = verifyPayment;
 /**
  * POST /api/create-order
- * Create a Razorpay order from requested amount
+ * Create a Razorpay order for driver subscription only (fixed amount)
  */
 const createOrderDirect = async (req, res, next) => {
     try {
         if (!req.user) {
             return next(new appError_1.default('Unauthorized', 401));
         }
-        const { amount } = req.body;
-        // Validate amount
-        if (amount === undefined || amount === null) {
-            return next(new appError_1.default('Amount is required.', 400));
+        const driver = await Driver_1.default.findOne({ user: req.user._id });
+        if (!driver) {
+            return next(new appError_1.default('Driver application profile not found', 404));
         }
-        const numericAmount = Number(amount);
-        if (isNaN(numericAmount)) {
-            return next(new appError_1.default('Amount must be a number.', 400));
+        if (driver.approvalStatus !== 'approved') {
+            return next(new appError_1.default('Your application has not been approved yet.', 400));
         }
-        if (numericAmount < 100) {
-            return next(new appError_1.default('Amount must be at least 100 paise.', 400));
+        if (driver.paymentStatus && driver.subscriptionStatus === 'Active') {
+            return next(new appError_1.default('Subscription is already active.', 400));
         }
+        // Fixed subscription fee — ignore arbitrary client amounts
+        const amountInPaise = 50 * 100;
         const currency = 'INR';
-        const receipt = `rcpt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        // Call Razorpay API
+        const receipt = `rcpt_${req.user._id}_${Date.now()}`;
         let order;
         try {
             order = await razorpay.orders.create({
-                amount: numericAmount,
+                amount: amountInPaise,
                 currency,
                 receipt,
             });
         }
         catch (razorpayError) {
             logger_1.default.error('Razorpay Order Creation API error:', razorpayError);
-            // Handle Razorpay authentication errors specifically
             if (razorpayError.statusCode === 401 || (razorpayError.message && razorpayError.message.includes('auth'))) {
                 res.status(401).json({
                     status: 'fail',
@@ -210,13 +222,19 @@ const verifyPaymentDirect = async (req, res, next) => {
             });
             return;
         }
-        // Update existing payment status if applicable
         const driver = await Driver_1.default.findOne({ user: req.user._id });
         if (!driver) {
             return next(new appError_1.default('Driver application profile not found. You must apply first.', 404));
         }
-        if (driver.approvalStatus !== 'Approved' && driver.approvalStatus !== 'approved') {
+        if (driver.approvalStatus !== 'approved') {
             return next(new appError_1.default('Your driver profile has not been approved by an administrator yet.', 400));
+        }
+        if (driver.paymentStatus && driver.subscriptionStatus === 'Active' && driver.driverStatus === 'ACTIVE') {
+            res.status(200).json({
+                status: 'success',
+                message: 'Payment completed successfully. Your driver account is now active!',
+            });
+            return;
         }
         driver.paymentStatus = true;
         driver.subscriptionStatus = 'Active';
@@ -355,6 +373,21 @@ const verifyBookingPayment = async (req, res, next) => {
         const isVerified = generated_signature === razorpay_signature;
         if (!isVerified) {
             return next(new appError_1.default('Payment signature verification failed.', 400));
+        }
+        // Bind payment to the order created for this booking
+        if (booking.razorpayOrderId && booking.razorpayOrderId !== razorpay_order_id) {
+            return next(new appError_1.default('Payment order does not match this booking.', 400));
+        }
+        if (booking.paymentStatus === 'paid') {
+            res.status(200).json({
+                status: 'success',
+                message: 'Booking is already paid.',
+                data: { booking },
+            });
+            return;
+        }
+        if (booking.status !== 'accepted') {
+            return next(new appError_1.default('You can only pay for accepted bookings', 400));
         }
         // Set statuses
         booking.paymentStatus = 'paid';

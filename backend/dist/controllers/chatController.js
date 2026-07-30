@@ -38,9 +38,9 @@ const getOrCreateChat = async (req, res, next) => {
                 return next(new appError_1.default('You are not authorized to start a chat with this user as there is no active ride booking connection between you.', 403));
             }
         }
-        // Check if chat already exists
+        // Check if chat already exists (exactly these two participants)
         let chat = await Chat_1.Chat.findOne({
-            participants: { $all: [req.user.id, recipientId] },
+            participants: { $all: [req.user.id, recipientId], $size: 2 },
         });
         if (!chat) {
             chat = await Chat_1.Chat.create({
@@ -93,9 +93,14 @@ const sendMessage = async (req, res, next) => {
         await chat.save();
         // Populate message sender for socket emission
         const populatedMessage = await Chat_1.Message.findById(message._id).populate('sender', 'name email profileImage role');
-        // Emit via Socket.io
-        const io = (0, socketService_1.getIO)();
-        io.to(chatId).emit('new_message', populatedMessage);
+        // Emit via Socket.io (non-fatal if socket layer is unavailable)
+        try {
+            const io = (0, socketService_1.getIO)();
+            io.to(chatId).emit('new_message', populatedMessage);
+        }
+        catch (socketError) {
+            // Socket may be unavailable in some deploy modes
+        }
         // Send notifications to recipient(s)
         const recipients = chat.participants.filter((p) => p.toString() !== req.user?.id);
         for (const recipientId of recipients) {
@@ -181,11 +186,16 @@ const markAsSeen = async (req, res, next) => {
         // Set messages from other participants to seen
         await Chat_1.Message.updateMany({ chat: chatId, sender: { $ne: req.user.id }, seen: false }, { $set: { seen: true } });
         // Emit seen state to socket room
-        const io = (0, socketService_1.getIO)();
-        io.to(chatId).emit('messages_seen', {
-            chatId,
-            seenBy: req.user.id,
-        });
+        try {
+            const io = (0, socketService_1.getIO)();
+            io.to(chatId).emit('messages_seen', {
+                chatId,
+                seenBy: req.user.id,
+            });
+        }
+        catch {
+            // ignore socket errors
+        }
         res.status(200).json({
             status: 'success',
             message: 'Messages marked as seen',

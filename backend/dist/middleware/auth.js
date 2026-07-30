@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireVerifiedStudent = exports.requireVerifiedDriver = exports.restrictTo = exports.protect = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
+const Driver_1 = __importDefault(require("../models/Driver"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const protect = async (req, res, next) => {
     try {
@@ -19,7 +20,10 @@ const protect = async (req, res, next) => {
             return next(new appError_1.default('You are not logged in! Please log in to get access.', 401));
         }
         // 2) Verify token
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'super_secret_access_token_key_change_in_production');
+        if (!process.env.JWT_SECRET) {
+            return next(new appError_1.default('Server JWT configuration error.', 500));
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
         // 3) Check if user still exists
         const currentUser = await User_1.User.findById(decoded.id);
         if (!currentUser) {
@@ -47,11 +51,20 @@ const restrictTo = (...roles) => {
     };
 };
 exports.restrictTo = restrictTo;
-const requireVerifiedDriver = (req, res, next) => {
-    if (!req.user || req.user.role !== 'driver' || !req.user.verifiedDriver) {
-        return next(new appError_1.default('You must be a verified driver to offer rides. Please upload your documents and wait for approval.', 403));
+const requireVerifiedDriver = async (req, res, next) => {
+    try {
+        if (!req.user || req.user.role !== 'driver' || !req.user.verifiedDriver) {
+            return next(new appError_1.default('You must be a verified driver to offer rides. Please upload your documents, get approved, and complete subscription payment.', 403));
+        }
+        const driver = await Driver_1.default.findOne({ user: req.user._id });
+        if (!driver || driver.driverStatus !== 'ACTIVE' || driver.subscriptionStatus !== 'Active') {
+            return next(new appError_1.default('Your driver subscription is not active. Complete payment after admin approval to offer rides.', 403));
+        }
+        next();
     }
-    next();
+    catch (error) {
+        next(error);
+    }
 };
 exports.requireVerifiedDriver = requireVerifiedDriver;
 const requireVerifiedStudent = (req, res, next) => {

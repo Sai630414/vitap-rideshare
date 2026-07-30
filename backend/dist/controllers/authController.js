@@ -172,40 +172,51 @@ const signupDriver = async (req, res, next) => {
         // Auto promote to admin if matching ADMIN_EMAIL (highly unlikely but standard guard)
         const assignedRole = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'driver';
         // 1) Create User credential
-        const user = await User_1.default.create({
-            name,
-            email,
-            password,
-            role: assignedRole,
-            isVerified: false,
-            profileImage: profilePhotoUrl,
-            verificationOTP: otp,
-            verificationOTPExpiry: otpExpiry,
-            verifiedStudent: true, // Drivers verify college email
-            verifiedDriver: false, // Pending admin approval
-        });
-        // 2) Create Driver document
-        await Driver_1.default.create({
-            user: user._id,
-            phone,
-            licenceNumber: licenceNumber || undefined,
-            collegeCardNumber: collegeCardNumber || undefined,
-            vehicleNumber,
-            vehicleModel,
-            vehicleColour,
-            vehicleType,
-            drivingExperience: Number(drivingExperience),
-            emergencyContact,
-            licenceImage: licenceImageUrl || undefined,
-            collegeCardImage: collegeCardImageUrl || undefined,
-            vehicleImage: vehicleImageUrl,
-            approvalStatus: 'Pending',
-            driverStatus: 'PENDING_APPROVAL',
-            paymentStatus: false,
-            documentsUploaded: true,
-            emailVerified: false,
-            subscriptionStatus: 'Inactive',
-        });
+        let user;
+        try {
+            user = await User_1.default.create({
+                name,
+                email,
+                password,
+                role: assignedRole,
+                isVerified: false,
+                profileImage: profilePhotoUrl,
+                phone,
+                verificationOTP: otp,
+                verificationOTPExpiry: otpExpiry,
+                verifiedStudent: true,
+                verifiedDriver: false,
+            });
+            // 2) Create Driver document
+            await Driver_1.default.create({
+                user: user._id,
+                phone,
+                licenceNumber: licenceNumber || undefined,
+                collegeCardNumber: collegeCardNumber || undefined,
+                vehicleNumber,
+                vehicleModel,
+                vehicleColour,
+                vehicleType,
+                drivingExperience: Number(drivingExperience),
+                emergencyContact,
+                licenceImage: licenceImageUrl || undefined,
+                collegeCardImage: collegeCardImageUrl || undefined,
+                vehicleImage: vehicleImageUrl,
+                approvalStatus: 'pending',
+                driverStatus: 'PENDING_APPROVAL',
+                paymentStatus: false,
+                documentsUploaded: true,
+                emailVerified: false,
+                subscriptionStatus: 'Inactive',
+            });
+        }
+        catch (createError) {
+            // Roll back orphaned user if driver create fails after user create
+            if (user?._id) {
+                await User_1.default.findByIdAndDelete(user._id).catch(() => undefined);
+            }
+            throw createError;
+        }
         logger_1.default.info("Driver Saved");
         await (0, emailService_1.sendOTPEmail)(email, otp);
         logger_1.default.info("Application Created");
@@ -370,7 +381,7 @@ const resetPassword = async (req, res, next) => {
         const user = await User_1.default.findOne({
             resetPasswordToken: hashedToken,
             resetPasswordExpiry: { $gt: new Date() },
-        });
+        }).select('+resetPasswordToken +password');
         if (!user) {
             return next(new appError_1.default('The password reset link is invalid or has expired.', 400));
         }
@@ -401,7 +412,10 @@ const refreshToken = async (req, res, next) => {
         if (!token) {
             return next(new appError_1.default('No refresh token. Please log in.', 401));
         }
-        const refreshTokenSecret = process.env.JWT_REFRESH_SECRET || 'super_secret_refresh_token_key_change_in_production';
+        const refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
+        if (!refreshTokenSecret) {
+            return next(new appError_1.default('Server JWT configuration error.', 500));
+        }
         const decoded = jsonwebtoken_1.default.verify(token, refreshTokenSecret);
         const user = await User_1.default.findById(decoded.id);
         if (!user) {
@@ -486,16 +500,28 @@ const applyDriver = async (req, res, next) => {
         // Check if driver document already exists
         let driver = await Driver_1.default.findOne({ user: userId });
         if (driver) {
-            if (driver.approvalStatus === 'Approved') {
+            if (driver.approvalStatus === 'approved') {
                 return next(new appError_1.default('You are already an approved driver.', 400));
             }
-            if (driver.approvalStatus === 'Pending') {
+            if (driver.approvalStatus === 'pending') {
                 return next(new appError_1.default('Your application is already pending approval.', 400));
+            }
+            // Allow resubmission / rejected only
+            if (!['rejected', 'resubmission'].includes(driver.approvalStatus)) {
+                return next(new appError_1.default(`Cannot re-apply while application status is ${driver.approvalStatus}.`, 400));
             }
         }
         if (!driver && (!files || (!files.licenceImage && !files.collegeCardImage) || !files.vehicleImage)) {
             cleanupUploadedFiles(files);
-            return next(new appError_1.default('Profile photo, vehicle photo, and at least one identity document (Driving Licence or College ID Card) are required.', 400));
+            return next(new appError_1.default('Vehicle photo and at least one identity document (Driving Licence or College ID Card) are required.', 400));
+        }
+        if (!phone || !vehicleNumber || !vehicleModel || !vehicleColour || !vehicleType || drivingExperience === undefined || !emergencyContact) {
+            cleanupUploadedFiles(files);
+            return next(new appError_1.default('Phone, vehicle details, driving experience, and emergency contact are required.', 400));
+        }
+        if (!licenceNumber && !collegeCardNumber) {
+            cleanupUploadedFiles(files);
+            return next(new appError_1.default('Either Driving Licence or College ID Card details must be provided.', 400));
         }
         // Check unique fields in Driver collection
         if (licenceNumber) {
@@ -555,7 +581,7 @@ const applyDriver = async (req, res, next) => {
                 licenceImage: licenceImageUrl || undefined,
                 collegeCardImage: collegeCardImageUrl || undefined,
                 vehicleImage: vehicleImageUrl,
-                approvalStatus: 'Pending',
+                approvalStatus: 'pending',
                 driverStatus: 'PENDING_APPROVAL',
                 paymentStatus: false,
                 documentsUploaded: true,
@@ -572,17 +598,20 @@ const applyDriver = async (req, res, next) => {
             driver.vehicleModel = vehicleModel || driver.vehicleModel;
             driver.vehicleColour = vehicleColour || driver.vehicleColour;
             driver.vehicleType = vehicleType || driver.vehicleType;
-            driver.drivingExperience = drivingExperience ? Number(drivingExperience) : driver.drivingExperience;
+            driver.drivingExperience = drivingExperience !== undefined && drivingExperience !== ''
+                ? Number(drivingExperience)
+                : driver.drivingExperience;
             driver.emergencyContact = emergencyContact || driver.emergencyContact;
             driver.licenceImage = licenceImageUrl || driver.licenceImage;
             driver.collegeCardImage = collegeCardImageUrl || driver.collegeCardImage;
             driver.vehicleImage = vehicleImageUrl || driver.vehicleImage;
-            driver.approvalStatus = 'Pending';
+            driver.approvalStatus = 'pending';
             driver.driverStatus = 'PENDING_APPROVAL';
             driver.paymentStatus = false;
             driver.documentsUploaded = true;
             driver.emailVerified = req.user.isVerified;
             driver.subscriptionStatus = 'Inactive';
+            driver.rejectionReason = undefined;
             await driver.save();
             logger_1.default.info(`Driver Saved in MongoDB (Updated) for user: ${userId}`);
         }

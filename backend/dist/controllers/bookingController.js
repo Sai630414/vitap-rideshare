@@ -28,7 +28,11 @@ const createBooking = async (req, res, next) => {
         if (ride.driver.toString() === req.user.id) {
             return next(new appError_1.default('You cannot book seats in your own ride', 400));
         }
-        if (ride.availableSeats < seatNumber) {
+        const requestedSeats = Number(seatNumber) || 1;
+        if (requestedSeats < 1) {
+            return next(new appError_1.default('Seat count must be at least 1', 400));
+        }
+        if (ride.availableSeats < requestedSeats) {
             return next(new appError_1.default('Not enough available seats in this ride', 400));
         }
         // Check if passenger already has a booking for this ride that is not rejected/cancelled/expired
@@ -48,21 +52,21 @@ const createBooking = async (req, res, next) => {
             pickup,
             drop,
             message,
-            seatNumber,
+            seatNumber: requestedSeats,
             status: 'pending',
             paymentStatus: 'pending',
         });
         // Automatically create a Chat conversation between passenger and driver
         let chat = await Chat_1.Chat.findOne({
-            participants: { $all: [req.user.id, ride.driver.toString()] },
+            participants: { $all: [req.user.id, ride.driver], $size: 2 },
         });
         if (!chat) {
             await Chat_1.Chat.create({
-                participants: [req.user.id, ride.driver.toString()],
+                participants: [req.user.id, ride.driver],
             });
         }
         // Notify the driver
-        await (0, notificationController_1.sendNotificationToUser)(ride.driver.toString(), 'New Ride Request 🚗', `${req.user.name} requested ${seatNumber} seat(s) on your ride from ${ride.source} to ${ride.destination}.`, 'booking_request', booking._id);
+        await (0, notificationController_1.sendNotificationToUser)(ride.driver.toString(), 'New Ride Request 🚗', `${req.user.name} requested ${requestedSeats} seat(s) on your ride from ${ride.source} to ${ride.destination}.`, 'booking_request', booking._id);
         res.status(201).json({
             status: 'success',
             data: {
@@ -123,6 +127,9 @@ const respondToBooking = async (req, res, next) => {
         if (booking.status !== 'pending') {
             return next(new appError_1.default(`This booking request is already ${booking.status}`, 400));
         }
+        if (ride.status !== 'scheduled') {
+            return next(new appError_1.default(`Cannot respond to bookings for a ride that is ${ride.status}`, 400));
+        }
         if (status === 'accepted') {
             // Atomically decrement seats if available
             const updatedRide = await Ride_1.default.findOneAndUpdate({ _id: ride._id, availableSeats: { $gte: booking.seatNumber } }, { $inc: { availableSeats: -booking.seatNumber } }, { new: true, runValidators: true });
@@ -166,8 +173,12 @@ const cancelBooking = async (req, res, next) => {
         if (booking.passenger.toString() !== req.user?.id) {
             return next(new appError_1.default('You are not authorized to cancel this booking', 403));
         }
-        if (booking.status === 'cancelled') {
-            return next(new appError_1.default('Booking is already cancelled', 400));
+        if (!['pending', 'accepted'].includes(booking.status)) {
+            return next(new appError_1.default(`Cannot cancel a booking with status "${booking.status}"`, 400));
+        }
+        const rideDoc = booking.ride;
+        if (rideDoc && ['completed', 'cancelled'].includes(rideDoc.status)) {
+            return next(new appError_1.default('Cannot cancel a booking for a completed or cancelled ride', 400));
         }
         const previousStatus = booking.status;
         const previousPaymentStatus = booking.paymentStatus;
@@ -177,9 +188,10 @@ const cancelBooking = async (req, res, next) => {
             const totalAmount = booking.seatNumber * (rideDetails?.price || 0);
             const amountInPaise = totalAmount * 100;
             const refundSuccess = await (0, paymentController_1.refundPayment)(booking.razorpayPaymentId, amountInPaise);
-            if (refundSuccess) {
-                booking.paymentStatus = 'refunded';
+            if (!refundSuccess) {
+                return next(new appError_1.default('Refund failed. Booking was not cancelled. Please contact support.', 502));
             }
+            booking.paymentStatus = 'refunded';
         }
         booking.status = 'cancelled';
         await booking.save();

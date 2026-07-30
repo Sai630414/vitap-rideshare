@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.resendOtpSchema = exports.verifyOtpSchema = exports.loginSchema = exports.driverSignupSchema = exports.signupSchema = exports.updateProfileSchema = exports.googleLoginSchema = void 0;
+exports.applyDriverSchema = exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.resendOtpSchema = exports.verifyOtpSchema = exports.loginSchema = exports.driverSignupSchema = exports.signupSchema = exports.updateProfileSchema = exports.googleLoginSchema = void 0;
 const zod_1 = require("zod");
 const studentEmailRegex = /^[a-zA-Z0-9._%+-]+@vitapstudent\.ac\.in$/;
 const collegeEmailRegex = /^[a-zA-Z0-9._%+-]+@(vitapstudent\.ac\.in|vitap\.ac\.in)$/;
@@ -157,5 +157,50 @@ exports.resetPasswordSchema = zod_1.z.object({
         .refine((data) => data.password === data.confirmPassword, {
         message: 'Passwords do not match',
         path: ['confirmPassword'],
+    }),
+});
+/**
+ * Logged-in student applying to become a driver (no password/email required)
+ */
+exports.applyDriverSchema = zod_1.z.object({
+    body: zod_1.z
+        .object({
+        phone: zod_1.z
+            .string({ required_error: 'Phone number is required' })
+            .min(10, 'Phone number must be at least 10 digits'),
+        licenceNumber: zod_1.z
+            .string()
+            .optional()
+            .transform((val) => (val ? val.toUpperCase() : undefined)),
+        collegeCardNumber: zod_1.z
+            .string()
+            .optional()
+            .transform((val) => (val ? val.toUpperCase() : undefined)),
+        vehicleNumber: zod_1.z
+            .string({ required_error: 'Vehicle Number is required' })
+            .min(5, 'Vehicle registration plate number is invalid')
+            .toUpperCase(),
+        vehicleModel: zod_1.z
+            .string({ required_error: 'Vehicle Model is required' })
+            .min(2, 'Vehicle model description must be specified'),
+        vehicleColour: zod_1.z
+            .string({ required_error: 'Vehicle Colour is required' })
+            .min(2, 'Vehicle color must be specified'),
+        vehicleType: zod_1.z.enum(['bike', 'car'], {
+            required_error: 'Vehicle type must be bike or car',
+        }),
+        drivingExperience: zod_1.z
+            .union([zod_1.z.string(), zod_1.z.number()])
+            .transform((val) => Number(val))
+            .refine((val) => !isNaN(val) && val >= 0, {
+            message: 'Driving experience must be a non-negative number of years',
+        }),
+        emergencyContact: zod_1.z
+            .string({ required_error: 'Emergency Contact phone is required' })
+            .min(10, 'Emergency contact phone is invalid'),
+    })
+        .refine((data) => data.licenceNumber || data.collegeCardNumber, {
+        message: 'Either Driving Licence or College ID Card details must be provided',
+        path: ['licenceNumber'],
     }),
 });

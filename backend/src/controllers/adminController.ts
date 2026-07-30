@@ -334,7 +334,6 @@ export const approveDriver = async (
         numberPlate: driver.vehicleNumber,
         color: driver.vehicleColour,
         seats: driver.vehicleType === 'car' ? 4 : 1,
-        rcImage: driver.vehicleImage || '',
         verified: true,
         status: 'verified',
       },

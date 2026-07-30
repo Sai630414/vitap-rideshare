@@ -18,6 +18,7 @@ const driverSchema = new mongoose_1.Schema({
         type: String,
         trim: true,
         uppercase: true,
+        // sparse unique: multiple docs may omit this field
         index: { unique: true, sparse: true },
     },
     collegeCardNumber: {
@@ -70,8 +71,9 @@ const driverSchema = new mongoose_1.Schema({
     },
     approvalStatus: {
         type: String,
-        enum: ['Pending', 'Approved', 'Rejected', 'resubmission', 'pending', 'approved', 'rejected'],
-        default: 'Pending',
+        enum: ['pending', 'approved', 'rejected', 'resubmission'],
+        default: 'pending',
+        index: true,
     },
     rejectionReason: {
         type: String,
@@ -84,10 +86,11 @@ const driverSchema = new mongoose_1.Schema({
         type: String,
         enum: ['PENDING_APPROVAL', 'PAYMENT_PENDING', 'ACTIVE', 'SUSPENDED'],
         default: 'PENDING_APPROVAL',
+        index: true,
     },
     documentsUploaded: {
         type: Boolean,
-        default: true,
+        default: false,
     },
     emailVerified: {
         type: Boolean,
@@ -99,5 +102,20 @@ const driverSchema = new mongoose_1.Schema({
         default: 'Inactive',
     },
 }, { timestamps: true });
+// Normalize legacy mixed-case approval values before validate/save
+driverSchema.pre('validate', function (next) {
+    if (typeof this.approvalStatus === 'string') {
+        const normalized = this.approvalStatus.toLowerCase();
+        if (normalized === 'pending' || normalized === 'approved' || normalized === 'rejected' || normalized === 'resubmission') {
+            this.approvalStatus = normalized;
+        }
+    }
+    // Treat empty strings as unset so sparse unique indexes work
+    if (this.licenceNumber === '')
+        this.licenceNumber = undefined;
+    if (this.collegeCardNumber === '')
+        this.collegeCardNumber = undefined;
+    next();
+});
 exports.Driver = (0, mongoose_1.model)('Driver', driverSchema);
 exports.default = exports.Driver;

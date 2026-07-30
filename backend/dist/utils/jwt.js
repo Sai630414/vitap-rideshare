@@ -5,9 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyRefreshToken = exports.verifyAccessToken = exports.createRefreshToken = exports.createAccessToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || "super_secret_access_token_key_change_in_production";
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET ||
-    "super_secret_refresh_token_key_change_in_production";
+const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET;
+const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET;
 const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || "15m";
 const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || "7d";
 /**

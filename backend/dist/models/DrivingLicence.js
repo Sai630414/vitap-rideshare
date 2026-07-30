@@ -15,6 +15,10 @@ const drivingLicenceSchema = new mongoose_1.Schema({
         unique: true,
         trim: true,
         uppercase: true,
+        validate: {
+            validator: (v) => typeof v === 'string' && v.trim().length >= 5,
+            message: 'Licence number must be at least 5 characters',
+        },
     },
     expiry: {
         type: Date,

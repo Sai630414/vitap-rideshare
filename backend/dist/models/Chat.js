@@ -42,5 +42,6 @@ const messageSchema = new mongoose_1.Schema({
 }, { timestamps: { createdAt: true, updatedAt: false } });
 // Compound index to speed up participant queries
 chatSchema.index({ participants: 1 });
+chatSchema.index({ updatedAt: -1 });
 exports.Chat = (0, mongoose_1.model)('Chat', chatSchema);
 exports.Message = (0, mongoose_1.model)('Message', messageSchema);

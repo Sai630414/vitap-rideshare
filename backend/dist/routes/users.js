@@ -15,7 +15,7 @@ router.post('/apply-driver', upload_1.upload.fields([
     { name: 'licenceImage', maxCount: 1 },
     { name: 'collegeCardImage', maxCount: 1 },
     { name: 'vehicleImage', maxCount: 1 },
-]), (0, validation_1.validateRequest)(authValidator_1.driverSignupSchema), authController_1.applyDriver);
+]), (0, validation_1.validateRequest)(authValidator_1.applyDriverSchema), authController_1.applyDriver);
 router.put('/profile', (0, validation_1.validateRequest)(authValidator_1.updateProfileSchema), userController_1.updateProfile);
 router.post('/avatar', upload_1.upload.single('avatar'), userController_1.uploadAvatar);
 router.get('/blocked', userController_1.getBlocklist);

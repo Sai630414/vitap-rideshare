@@ -7,16 +7,19 @@ const bookingSchema = new mongoose_1.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Ride',
         required: [true, 'Ride reference is required'],
+        index: true,
     },
     passenger: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User',
         required: [true, 'Passenger reference is required'],
+        index: true,
     },
     driver: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User',
         required: [true, 'Driver reference is required'],
+        index: true,
     },
     pickup: {
         type: String,
@@ -36,6 +39,7 @@ const bookingSchema = new mongoose_1.Schema({
         type: String,
         enum: ['pending', 'accepted', 'rejected', 'cancelled', 'completed', 'expired'],
         default: 'pending',
+        index: true,
     },
     paymentStatus: {
         type: String,
@@ -49,12 +53,19 @@ const bookingSchema = new mongoose_1.Schema({
     },
     razorpayOrderId: {
         type: String,
+        index: { unique: true, sparse: true },
     },
     razorpayPaymentId: {
         type: String,
+        index: { unique: true, sparse: true },
     },
 }, { timestamps: true });
-// We drop the unique index on { ride, passenger } to support sequential request submissions if rejected or cancelled.
-// Instead of an index constraint, we will validate uniqueness of ACTIVE booking requests in the controller.
+// Prevent duplicate active bookings for the same passenger on the same ride
+bookingSchema.index({ ride: 1, passenger: 1 }, {
+    unique: true,
+    partialFilterExpression: {
+        status: { $in: ['pending', 'accepted'] },
+    },
+});
 exports.Booking = (0, mongoose_1.model)('Booking', bookingSchema);
 exports.default = exports.Booking;
