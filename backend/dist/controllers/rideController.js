@@ -97,7 +97,7 @@ const getMyRides = async (req, res, next) => {
 exports.getMyRides = getMyRides;
 const searchRides = async (req, res, next) => {
     try {
-        const { source, destination, date, vehicleType, seats, minPrice, maxPrice, sort, page = 1, limit = 10, } = req.query;
+        const { source, destination, date, vehicleType, seats, minPrice, maxPrice, sort, minDriverRating, page = 1, limit = 10, } = req.query;
         if (!req.user)
             return next(new appError_1.default('Unauthorized', 401));
         // 1) Find users who blocked me or whom I blocked to exclude them
@@ -146,6 +146,9 @@ const searchRides = async (req, res, next) => {
         else if (sort === 'earliest_time') {
             sortOptions = { departureDate: 1, departureTime: 1 };
         }
+        else if (sort === 'recently_posted') {
+            sortOptions = { createdAt: -1 };
+        }
         else if (sort === 'highest_driver_rating') {
             // Sorted on driver rating inside populate, or sort manual. 
             // For mongoose, sort by driver rating requires an aggregation pipeline, but we can do a default sort
@@ -154,9 +157,11 @@ const searchRides = async (req, res, next) => {
             sortOptions = { driver: highRatedDrivers.map((d) => d._id) }; // placeholder
         }
         const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        const minRating = minDriverRating ? parseFloat(minDriverRating) : null;
         let rides;
-        if (sort === 'highest_driver_rating') {
+        if (sort === 'highest_driver_rating' || minRating !== null) {
             // Use aggregation pipeline to sort globally by driver rating before skip & limit
+            // Also handles minDriverRating filter
             const pipeline = [
                 { $match: filter },
                 // Lookup driver
@@ -179,48 +184,63 @@ const searchRides = async (req, res, next) => {
                     },
                 },
                 { $unwind: '$vehicleInfo' },
-                // Sort by driver rating
-                { $sort: { 'driverInfo.rating': -1, departureDate: 1 } },
-                // Pagination
-                { $skip: skip },
-                { $limit: parseInt(limit, 10) },
-                // Project to map fields like populate
-                {
-                    $project: {
-                        driver: {
-                            _id: '$driverInfo._id',
-                            name: '$driverInfo.name',
-                            email: '$driverInfo.email',
-                            profileImage: '$driverInfo.profileImage',
-                            rating: '$driverInfo.rating',
-                            verifiedDriver: '$driverInfo.verifiedDriver',
-                            trustScore: '$driverInfo.trustScore',
-                        },
-                        vehicle: {
-                            _id: '$vehicleInfo._id',
-                            brand: '$vehicleInfo.brand',
-                            model: '$vehicleInfo.model',
-                            type: '$vehicleInfo.type',
-                            numberPlate: '$vehicleInfo.numberPlate',
-                            color: '$vehicleInfo.color',
-                        },
-                        source: 1,
-                        destination: 1,
-                        pickupLocation: 1,
-                        dropLocation: 1,
-                        departureDate: 1,
-                        departureTime: 1,
-                        price: 1,
-                        availableSeats: 1,
-                        description: 1,
-                        status: 1,
-                        recurring: 1,
-                        routePoints: 1,
-                        createdAt: 1,
-                        updatedAt: 1,
-                    },
-                },
             ];
+            // Apply minDriverRating filter after driver lookup
+            if (minRating !== null) {
+                pipeline.push({ $match: { 'driverInfo.rating': { $gte: minRating } } });
+            }
+            // Sort
+            if (sort === 'highest_driver_rating') {
+                pipeline.push({ $sort: { 'driverInfo.rating': -1, departureDate: 1 } });
+            }
+            else if (sort === 'lowest_price') {
+                pipeline.push({ $sort: { price: 1 } });
+            }
+            else if (sort === 'recently_posted') {
+                pipeline.push({ $sort: { createdAt: -1 } });
+            }
+            else {
+                pipeline.push({ $sort: { departureDate: 1, departureTime: 1 } });
+            }
+            // Pagination
+            pipeline.push({ $skip: skip });
+            pipeline.push({ $limit: parseInt(limit, 10) });
+            // Project to map fields like populate
+            pipeline.push({
+                $project: {
+                    driver: {
+                        _id: '$driverInfo._id',
+                        name: '$driverInfo.name',
+                        email: '$driverInfo.email',
+                        profileImage: '$driverInfo.profileImage',
+                        rating: '$driverInfo.rating',
+                        verifiedDriver: '$driverInfo.verifiedDriver',
+                        trustScore: '$driverInfo.trustScore',
+                    },
+                    vehicle: {
+                        _id: '$vehicleInfo._id',
+                        brand: '$vehicleInfo.brand',
+                        model: '$vehicleInfo.model',
+                        type: '$vehicleInfo.type',
+                        numberPlate: '$vehicleInfo.numberPlate',
+                        color: '$vehicleInfo.color',
+                    },
+                    source: 1,
+                    destination: 1,
+                    pickupLocation: 1,
+                    dropLocation: 1,
+                    departureDate: 1,
+                    departureTime: 1,
+                    price: 1,
+                    availableSeats: 1,
+                    description: 1,
+                    status: 1,
+                    recurring: 1,
+                    routePoints: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                },
+            });
             rides = await Ride_1.default.aggregate(pipeline);
         }
         else {
@@ -319,7 +339,7 @@ const updateRideStatus = async (req, res, next) => {
                 if (previousBookingStatus === 'accepted') {
                     booking.status = 'completed';
                     await booking.save();
-                    await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Completed', `Your ride from ${ride.source} to ${ride.destination} was completed.`, 'ride_accepted', ride._id);
+                    await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), '🏁 Ride Completed', `Your ride from ${ride.source} to ${ride.destination} has been completed. Please rate your driver!`, 'ride_completed', ride._id);
                 }
                 else {
                     booking.status = 'expired';
@@ -329,7 +349,7 @@ const updateRideStatus = async (req, res, next) => {
             else {
                 // ongoing
                 if (previousBookingStatus === 'accepted') {
-                    await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Ride Started', `Your ride from ${ride.source} to ${ride.destination} is now ongoing.`, 'ride_accepted', ride._id);
+                    await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), '🚗 Driver Started the Ride', `Your ride from ${ride.source} to ${ride.destination} is now underway! Track your driver's location.`, 'driver_started', ride._id);
                 }
             }
         }

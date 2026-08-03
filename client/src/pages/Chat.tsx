@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import chatService from '../services/chatService';
+import fcmPushService from '../services/fcmPushService';
 import type { ChatData, MessageData } from '../services/chatService';
 
 export const Chat: React.FC = () => {
@@ -94,9 +95,16 @@ export const Chat: React.FC = () => {
 
   const handleSelectChat = (chat: ChatData) => {
     setSelectedChat(chat);
+    fcmPushService.setActiveChatRoom(chat._id);
     fetchMessages(chat._id);
     if (socket) socket.emit('join_chat', chat._id);
   };
+
+  useEffect(() => {
+    return () => {
+      fcmPushService.setActiveChatRoom(null);
+    };
+  }, []);
 
   useEffect(() => {
     if (!socket) return;

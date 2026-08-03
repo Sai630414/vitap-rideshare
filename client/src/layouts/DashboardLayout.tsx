@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
 import notificationService from '../services/notificationService';
+import fcmPushService from '../services/fcmPushService';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -26,10 +27,16 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const [showSosModal, setShowSosModal] = useState(false);
   const [sosLoading, setSosLoading] = useState(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.documentElement.classList.remove('dark');
     document.documentElement.classList.add('light');
-  }, []);
+
+    if (user) {
+      fcmPushService.initFCM((path) => navigate(path));
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -132,7 +139,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </main>
 
         {/* Material 3 Native Fixed Bottom Navigation Bar */}
-        <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 z-50 px-2 h-20 flex items-center justify-around rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.06)] pb-safe">
+        <nav className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 z-50 px-2 h-20 flex items-center justify-around rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.06)] pb-safe shrink-0">
           
           {/* Home Tab */}
           <Link

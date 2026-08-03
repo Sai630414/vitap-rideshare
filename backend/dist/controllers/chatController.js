@@ -104,7 +104,7 @@ const sendMessage = async (req, res, next) => {
         // Send notifications to recipient(s)
         const recipients = chat.participants.filter((p) => p.toString() !== req.user?.id);
         for (const recipientId of recipients) {
-            await (0, notificationController_1.sendNotificationToUser)(recipientId.toString(), `Message from ${req.user.name}`, text || 'Sent an image', 'chat_message', chat._id);
+            await (0, notificationController_1.sendNotificationToUser)(recipientId.toString(), `Message from ${req.user.name}`, text || 'Sent an image', 'new_message', chat._id);
         }
         res.status(201).json({
             status: 'success',

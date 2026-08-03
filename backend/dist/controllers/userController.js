@@ -34,7 +34,7 @@ const updateProfile = async (req, res, next) => {
             return next(new appError_1.default('Unauthorized', 401));
         }
         // Filtered body parameters to restrict role or verification modification
-        const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch'];
+        const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch', 'fcmToken'];
         const updateData = {};
         Object.keys(req.body).forEach((key) => {
             if (allowedFields.includes(key)) {

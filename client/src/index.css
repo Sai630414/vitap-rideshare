@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    /* Premium Material Design 3 Light Palette (Rapido/Uber style) */
-    --background: 220 20% 97%; /* #F3F4F8 */
-    --foreground: 222 47% 11%; /* #0F172A */
+    /* Premium Material Design 3 Palette */
+    --background: 210 40% 98%;    /* #F8FAFC */
+    --foreground: 222 47% 11%;    /* #0F172A */
     
-    --card: 0 0% 100%;         /* #FFFFFF */
+    --card: 0 0% 100%;            /* #FFFFFF */
     --card-foreground: 222 47% 11%;
     
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
     
-    --primary: 154 64% 38%;    /* #15A061 (Rapido / Uber Green) */
+    --primary: 154 64% 38%;       /* #15A061 Emerald */
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 217 91% 60%;  /* #3B82F6 */
+    --secondary: 221 83% 53%;     /* #2563EB Blue */
     --secondary-foreground: 0 0% 100%;
     
-    --muted: 215 16% 47%;      /* #64748B */
-    --muted-foreground: 215 16% 56%;
+    --muted: 215 20% 65%;         /* Slate muted */
+    --muted-foreground: 215 16% 47%;
     
-    --accent: 45 100% 51%;     /* #FFC107 Vibrant Yellow */
+    --accent: 45 100% 51%;        /* #FFC107 Vibrant Amber */
     --accent-foreground: 222 47% 11%;
     
     --destructive: 0 84% 60%;
@@ -33,22 +33,7 @@
     --input: 214 32% 91%;
     --ring: 154 64% 38%;
     
-    --radius: 1.25rem; /* 20px rounded cards */
-  }
-
-  .dark {
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
-    
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    
-    --primary: 154 64% 45%;
-    --primary-foreground: 0 0% 100%;
-    
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 154 64% 45%;
+    --radius: 1.25rem;
   }
 }
 
@@ -58,7 +43,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-slate-900 text-foreground font-sans antialiased selection:bg-primary selection:text-white;
+    @apply bg-slate-950 text-slate-900 font-sans antialiased selection:bg-emerald-600 selection:text-white;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }

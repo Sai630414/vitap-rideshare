@@ -37,6 +37,7 @@ const chat_1 = __importDefault(require("./routes/chat"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const payments_1 = __importDefault(require("./routes/payments"));
+const weather_1 = __importDefault(require("./routes/weather"));
 const passport_1 = __importDefault(require("./config/passport"));
 const auth_2 = require("./middleware/auth");
 const paymentController_1 = require("./controllers/paymentController");
@@ -120,6 +121,7 @@ app.use('/api/chat', chat_1.default);
 app.use('/api/notifications', notifications_1.default);
 app.use('/api/admin', admin_1.default);
 app.use('/api/payments', payments_1.default);
+app.use('/api/weather', weather_1.default);
 // Direct Razorpay routes
 app.post('/api/create-order', auth_2.protect, paymentController_1.createOrderDirect);
 app.post('/api/verify-payment', auth_2.protect, paymentController_1.verifyPaymentDirect);

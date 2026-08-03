@@ -18,6 +18,7 @@ exports.updateProfileSchema = zod_1.z.object({
         registrationNumber: zod_1.z.string().min(5, 'Registration number must be valid').optional(),
         year: zod_1.z.number().min(1).max(4).optional(),
         branch: zod_1.z.string().min(2, 'Branch name must be valid').optional(),
+        fcmToken: zod_1.z.string().optional(),
     }),
 });
 /**

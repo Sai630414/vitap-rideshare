@@ -30,6 +30,7 @@ export interface IUser extends Document {
   verificationOTPExpiry?: Date;
   resetPasswordToken?: string;
   resetPasswordExpiry?: Date;
+  fcmToken?: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -165,6 +166,10 @@ const userSchema = new Schema<IUser>(
     },
     resetPasswordExpiry: {
       type: Date,
+    },
+    fcmToken: {
+      type: String,
+      default: '',
     },
   },
   { timestamps: true }

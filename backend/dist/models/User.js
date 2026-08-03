@@ -104,6 +104,24 @@ const userSchema = new mongoose_1.Schema({
         type: Boolean,
         default: false,
     },
+    phoneVerified: {
+        type: Boolean,
+        default: false,
+    },
+    phoneVerifiedAt: {
+        type: Date,
+    },
+    phoneOTP: {
+        type: String,
+        select: false,
+    },
+    phoneOTPExpiry: {
+        type: Date,
+    },
+    phoneVerificationAttempts: {
+        type: Number,
+        default: 0,
+    },
     verificationOTP: {
         type: String,
         select: false,
@@ -117,6 +135,10 @@ const userSchema = new mongoose_1.Schema({
     },
     resetPasswordExpiry: {
         type: Date,
+    },
+    fcmToken: {
+        type: String,
+        default: '',
     },
 }, { timestamps: true });
 userSchema.index({ role: 1, status: 1 });

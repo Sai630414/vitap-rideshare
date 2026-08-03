@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import Notification from '../models/Notification';
 import AppError from '../utils/appError';
 import { sendToUser } from '../services/socketService';
+import { sendFCMPushNotification } from '../services/fcmService';
 import logger from '../utils/logger';
 
 type NotificationType =
@@ -41,6 +42,15 @@ export const sendNotificationToUser = async (
 
     // Send real-time socket alert
     sendToUser(userId, 'notification', notification);
+
+    // Trigger FCM Push Notification
+    sendFCMPushNotification({
+      userId,
+      title,
+      body,
+      type,
+      referenceId: referenceId ? String(referenceId) : undefined,
+    }).catch((err) => logger.error(`[FCM] Push dispatch error: ${err.message}`));
     
     return notification;
   } catch (error) {

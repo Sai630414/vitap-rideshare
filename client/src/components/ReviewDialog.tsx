@@ -58,22 +58,22 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
+      <div className="bg-white border border-slate-100 rounded-3xl w-full max-w-md shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <div>
-            <h2 className="text-base font-bold text-zinc-100">
+            <h2 className="text-base font-extrabold text-slate-900">
               {existingReview ? 'Edit Your Review' : `Rate ${reviewType === 'driver' ? 'Driver' : 'Passenger'}`}
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">{targetName}</p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">{targetName}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -82,18 +82,18 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
         {submitted && !existingReview ? (
           // Success state
           <div className="p-8 flex flex-col items-center text-center gap-3">
-            <CheckCircle className="w-14 h-14 text-emerald-400" />
-            <h3 className="text-base font-bold text-zinc-100">Review Submitted!</h3>
-            <p className="text-xs text-zinc-400">
+            <CheckCircle className="w-14 h-14 text-emerald-600 animate-bounce" />
+            <h3 className="text-base font-extrabold text-slate-900">Review Submitted!</h3>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
               Thank you for your feedback. It helps build a safer campus community.
             </p>
             <Button onClick={onClose} className="mt-2 w-full">Close</Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
+          <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
             {/* Star Rating */}
-            <div className="flex flex-col gap-3">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+            <div className="flex flex-col gap-2.5">
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                 Your Rating
               </label>
               <div className="flex items-center justify-center gap-2">
@@ -110,20 +110,20 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
                       className={`w-9 h-9 transition-colors duration-150 ${
                         star <= activeRating
                           ? 'text-amber-400 fill-amber-400'
-                          : 'text-zinc-700'
+                          : 'text-slate-200'
                       }`}
                     />
                   </button>
                 ))}
               </div>
-              <p className="text-center text-sm font-semibold text-amber-400 min-h-[1.25rem]">
+              <p className="text-center text-xs font-black text-amber-600 min-h-[1.25rem]">
                 {ratingLabels[activeRating] || ''}
               </p>
             </div>
 
             {/* Comment */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                 Comments (Optional)
               </label>
               <textarea
@@ -135,28 +135,28 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
                     : 'Share your experience — passenger behaviour, communication...'
                 }
                 rows={3}
-                className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm resize-none"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-medium placeholder-slate-400 focus:outline-none focus:bg-white focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 transition-all text-xs resize-none"
               />
             </div>
 
             {/* Edit window notice */}
             {existingReview && canEdit && (
-              <div className="flex items-center gap-2 p-3 bg-violet-950/30 border border-violet-800/30 rounded-xl">
-                <Pencil className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                <p className="text-[11px] text-violet-300">
+              <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                <Pencil className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <p className="text-[11px] text-emerald-800 font-medium">
                   You can edit this review within 24 hours of submission.
                 </p>
               </div>
             )}
             {existingReview && !canEdit && (
-              <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-zinc-700 rounded-xl">
-                <p className="text-[11px] text-zinc-400">
+              <div className="flex items-center gap-2 p-3 bg-slate-100 border border-slate-200 rounded-2xl">
+                <p className="text-[11px] text-slate-500 font-medium">
                   The 24-hour edit window has expired for this review.
                 </p>
               </div>
             )}
 
-            <div className="flex gap-3 mt-1">
+            <div className="flex gap-2.5 mt-1">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Cancel
               </Button>

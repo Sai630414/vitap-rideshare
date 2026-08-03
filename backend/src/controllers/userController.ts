@@ -41,7 +41,7 @@ export const updateProfile = async (
     }
 
     // Filtered body parameters to restrict role or verification modification
-    const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch'];
+    const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch', 'fcmToken'];
     const updateData: Record<string, any> = {};
 
     Object.keys(req.body).forEach((key) => {

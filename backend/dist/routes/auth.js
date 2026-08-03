@@ -32,4 +32,7 @@ router.get("/google", passport_1.default.authenticate("google", { scope: ["profi
 router.get("/google/callback", passport_1.default.authenticate("google", { session: false, failureRedirect: `${process.env.CLIENT_URL}/login` }), authController_1.googleCallback);
 // Profile
 router.get('/me', auth_1.protect, authController_1.getMe);
+// Phone OTP Verification (Feature 8)
+router.post('/send-phone-otp', auth_1.protect, authController_1.sendPhoneOTP);
+router.post('/verify-phone-otp', auth_1.protect, authController_1.verifyPhoneOTP);
 exports.default = router;
