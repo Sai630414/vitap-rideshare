@@ -448,7 +448,7 @@ export const forgotPassword = async (
     user.resetPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://vitap-rideshare.vercel.app'}/reset-password?token=${resetToken}`;
     await sendPasswordResetEmail(user.email, resetUrl);
 
     res.status(200).json({
@@ -590,27 +590,32 @@ export const googleCallback = (req: Request, res: Response) => {
   const accessToken = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
 
+  // Set Refresh Token Cookie
   res.cookie("jwt", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  // Mobile login
-  if (req.query.mobile === "true") {
+  const isMobile = req.query.mobile === "true";
+
+  const webClientUrl =
+    process.env.WEB_CLIENT_URL ||
+    "https://vitap-rideshare.vercel.app";
+
+  const mobileAppUrl =
+    process.env.MOBILE_APP_URL ||
+    "waygo://auth";
+
+  if (isMobile) {
     return res.redirect(
-      `waygo://auth/success?token=${accessToken}`
+      `${mobileAppUrl}/success?token=${encodeURIComponent(accessToken)}`
     );
   }
 
-  // Get the first web client URL
-  const clientUrl =
-    process.env.CLIENT_URL?.split(",")[0].trim() ||
-    "https://vitap-rideshare.vercel.app";
-
   return res.redirect(
-    `${clientUrl}/auth/success?token=${accessToken}`
+    `${webClientUrl}/auth/success?token=${encodeURIComponent(accessToken)}`
   );
 };
 
