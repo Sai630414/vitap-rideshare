@@ -234,6 +234,17 @@ export const RideDetails: React.FC = () => {
         setRide(res.data.ride);
         toast.success(`Ride status updated to: ${status.toUpperCase()}`);
         fetchRideAndBookings();
+
+        if (status === 'completed') {
+          if (isDriver) {
+            const acceptedBooking = bookings.find((b) => b.status === 'accepted');
+            if (acceptedBooking) {
+              openPassengerReviewDialog(acceptedBooking.passenger._id, acceptedBooking.passenger.name);
+            }
+          } else {
+            openDriverReviewDialog();
+          }
+        }
       }
     } catch (err) {
       toast.error('Failed to update trip status.');
@@ -494,12 +505,23 @@ export const RideDetails: React.FC = () => {
                             {booking.status}
                           </span>
                           {booking.status === 'accepted' && (
-                            <button
-                              onClick={() => handleLaunchChat(booking.passenger._id)}
-                              className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleLaunchChat(booking.passenger._id)}
+                                className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                              {ride.status === 'completed' && (
+                                <button
+                                  onClick={() => openPassengerReviewDialog(booking.passenger._id, booking.passenger.name)}
+                                  className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-extrabold flex items-center gap-1"
+                                >
+                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                  <span>{passengerReviewedMap[booking.passenger._id] ? 'Reviewed' : 'Rate'}</span>
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       )}

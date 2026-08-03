@@ -123,10 +123,23 @@ export const DriverDashboard: React.FC = () => {
     try {
       const response = await rideService.updateRideStatus(rideId, newStatus);
       if (response.status === 'success') {
-        toast.success(`Ride marked as ${newStatus}`);
+        toast.success(`Ride marked as ${newStatus.toUpperCase()}`);
         setMyRides((prev) =>
           prev.map((r) => (r._id === rideId ? { ...r, status: newStatus } : r))
         );
+
+        if (newStatus === 'completed') {
+          // Find first passenger for this completed ride to review
+          const matchedReq = requests.find(req => (req.ride?._id === rideId || req.ride === rideId) && req.status === 'accepted');
+          if (matchedReq && matchedReq.passenger) {
+            setReviewTarget({
+              rideId,
+              passengerId: matchedReq.passenger._id,
+              name: matchedReq.passenger.name,
+            });
+            setReviewDialogOpen(true);
+          }
+        }
       }
     } catch (err) {
       toast.error('Failed to update ride status');
@@ -591,6 +604,23 @@ export const DriverDashboard: React.FC = () => {
                         Approve
                       </button>
                     </div>
+                  )}
+
+                  {req.status === 'accepted' && (
+                    <button
+                      onClick={() => {
+                        setReviewTarget({
+                          rideId: req.ride?._id || req.ride,
+                          passengerId: req.passenger._id,
+                          name: req.passenger.name,
+                        });
+                        setReviewDialogOpen(true);
+                      }}
+                      className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-extrabold flex items-center gap-1"
+                    >
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span>{reviewedPassengers[req.passenger?._id] ? 'Reviewed' : 'Rate Passenger'}</span>
+                    </button>
                   )}
                 </div>
               </div>
