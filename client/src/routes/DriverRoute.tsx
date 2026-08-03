@@ -29,7 +29,8 @@ export const DriverRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   // If driver details exist but account is not approved or paid yet, route to status checker / payment gateway
-  if (user.role !== 'driver' || !user.verifiedDriver) {
+  const hasPaid = !!user.driverDetails?.paymentStatus;
+  if (user.role !== 'driver' || !user.verifiedDriver || !hasPaid) {
     return <Navigate to="/driver/dashboard" replace />;
   }
 
