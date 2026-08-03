@@ -362,222 +362,238 @@ export const DriverDashboard: React.FC = () => {
 
   // State 6: Full Driver Dashboard (Approved + Paid)
   return (
-    <div className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header Banner */}
-      <section className="bg-primary rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-primary/30">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="primary" className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Verified Driver</Badge>
-              <div className="flex items-center gap-1 text-white/80 font-black text-[10px] uppercase tracking-widest">
-                <ShieldCheck className="w-3 h-3" />
-                Active
-              </div>
-            </div>
-            <h1 className="text-3xl font-black tracking-tight">Driver Control Center</h1>
-            <p className="text-white/70 font-medium mt-1">Host rides and manage passenger requests</p>
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
+      
+      {/* Driver Header Banner Card */}
+      <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-5 text-white shadow-md shadow-emerald-600/20 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-md">
+            <ShieldCheck className="w-3.5 h-3.5 text-white" />
+            <span className="text-[10px] font-extrabold tracking-wider uppercase">Verified Driver</span>
           </div>
+
           <Link to="/offer-ride">
-            <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 px-8 py-4 rounded-[1.5rem] shadow-xl">
-              <PlusCircle className="w-5 h-5 mr-2" />
-              List a New Ride
-            </Button>
+            <button className="px-3 py-1.5 bg-white text-emerald-700 rounded-xl text-xs font-black shadow-sm active:scale-95 transition-transform flex items-center gap-1">
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Offer Ride</span>
+            </button>
           </Link>
         </div>
-      </section>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <h1 className="text-xl font-black tracking-tight">Driver Control Center</h1>
+          <p className="text-xs text-white/80 font-bold mt-0.5">Manage your hosted trips and passenger bookings</p>
+        </div>
+      </div>
+
+      {/* Stats Quick Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
-          { label: 'Rating', val: user?.rating || 5.0, icon: Star, color: 'text-accent', bg: 'bg-accent/10' },
-          { label: 'Live Rides', val: myRides.filter(r => r.status === 'scheduled' || r.status === 'ongoing').length, icon: Car, color: 'text-secondary', bg: 'bg-secondary/10' },
-          { label: 'Finished', val: myRides.filter(r => r.status === 'completed').length, icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Earnings', val: `₹${earnings}`, icon: CircleDollarSign, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Rating', val: `${user?.rating || 5.0} ⭐`, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'Active Trips', val: myRides.filter(r => r.status === 'scheduled' || r.status === 'ongoing').length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Completed', val: myRides.filter(r => r.status === 'completed').length, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Earnings', val: `₹${earnings}`, color: 'text-teal-600', bg: 'bg-teal-50' },
         ].map((stat, i) => (
-          <Card key={i} className="border-none shadow-soft hover:shadow-premium transition-all duration-300">
-            <CardContent className="p-6 flex flex-col gap-4">
-              <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center ${stat.color}`}>
-                <stat.icon className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-black text-foreground mt-1">{stat.val}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={i} className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-1">
+            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">{stat.label}</span>
+            <span className={`text-base font-black ${stat.color}`}>{stat.val}</span>
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <Card className="border-none">
-            <CardHeader className="flex flex-row items-center justify-between pb-0 px-8 pt-8">
-              <div className="flex gap-8">
-                {[
-                  { id: 'rides', label: 'My Rides', icon: Car },
-                  { id: 'requests', label: 'Bookings', icon: MessageSquare, count: pendingRequestsCount },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`relative pb-6 text-sm font-black transition-all ${
-                      activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                       <tab.icon className="w-4 h-4" />
-                       {tab.label}
-                       {tab.count !== undefined && tab.count > 0 && (
-                         <span className="bg-primary text-white text-[9px] px-1.5 py-0.5 rounded-full animate-pulse">{tab.count}</span>
-                       )}
-                    </span>
-                    {activeTab === tab.id && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full"></div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-            <div className="h-px bg-border mx-8"></div>
-            <CardContent className="p-8">
-              {activeTab === 'rides' ? (
-                loadingRides ? (
-                  <div className="space-y-4">
-                    {[1, 2].map(i => <div key={i} className="h-20 bg-muted/5 rounded-[1.5rem] animate-pulse"></div>)}
-                  </div>
-                ) : myRides.length === 0 ? (
-                  <div className="text-center py-20">
-                     <div className="w-20 h-20 bg-muted/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Calendar className="w-10 h-10 text-muted-foreground/20" />
-                     </div>
-                     <h4 className="text-lg font-bold text-muted-foreground">No rides scheduled</h4>
-                     <Button variant="ghost" className="mt-4 font-black uppercase tracking-widest text-primary" onClick={() => navigate('/offer-ride')}>Schedule Now</Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {myRides.map((ride) => (
-                      <div key={ride._id} className="p-6 bg-white border border-border rounded-[2rem] hover:border-primary/20 transition-all duration-300 shadow-soft">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                          <div className="flex-1 space-y-4">
-                            <div className="flex items-center gap-3">
-                              <Badge variant={ride.status === 'completed' ? 'success' : ride.status === 'ongoing' ? 'primary' : 'warning'}>
-                                {ride.status}
-                              </Badge>
-                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {new Date(ride.departureDate).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {ride.departureTime}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                               <div className="flex flex-col items-center gap-1">
-                                  <div className="w-2.5 h-2.5 rounded-full border-2 border-primary bg-white"></div>
-                                  <div className="w-0.5 h-4 bg-border"></div>
-                                  <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
-                               </div>
-                               <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-bold">{ride.source}</span>
-                                  <span className="text-xs font-bold">{ride.destination}</span>
-                               </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 self-stretch justify-end border-t sm:border-t-0 pt-4 sm:pt-0">
-                             {ride.status === 'scheduled' && (
-                                <button onClick={() => handleUpdateStatus(ride._id, 'ongoing')} className="px-6 py-3 bg-primary text-white rounded-xl text-xs font-black shadow-lg shadow-primary/20 active:scale-95 transition-all">Start</button>
-                             )}
-                             {ride.status === 'ongoing' && (
-                                <button onClick={() => handleUpdateStatus(ride._id, 'completed')} className="px-6 py-3 bg-secondary text-white rounded-xl text-xs font-black shadow-lg shadow-secondary/20 active:scale-95 transition-all">Complete</button>
-                             )}
-                             <Button variant="ghost" size="sm" className="px-2" onClick={() => navigate(`/ride/${ride._id}`)}><ChevronRight /></Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : (
-                loadingRequests ? (
-                  <div className="space-y-4">
-                    {[1, 2].map(i => <div key={i} className="h-20 bg-muted/5 rounded-[1.5rem] animate-pulse"></div>)}
-                  </div>
-                ) : requests.length === 0 ? (
-                  <div className="text-center py-20">
-                     <div className="w-20 h-20 bg-muted/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Users className="w-10 h-10 text-muted-foreground/20" />
-                     </div>
-                     <h4 className="text-lg font-bold text-muted-foreground">No bookings yet</h4>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {requests.map((req) => (
-                      <div key={req._id} className="p-6 bg-white border border-border rounded-[2rem] shadow-soft">
-                        <div className="flex items-center gap-4 mb-6">
-                           <img src={req.passenger?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${req.passenger?.name}`} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" alt="" />
-                           <div className="flex-1">
-                              <h4 className="font-black text-foreground">{req.passenger?.name}</h4>
-                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{req.passenger?.email}</p>
-                           </div>
-                           <Badge variant={req.status === 'accepted' ? 'success' : 'warning'}>{req.status}</Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6">
-                           <div className="space-y-1">
-                              <p>Pickup</p>
-                              <p className="text-foreground normal-case text-sm font-bold">{req.pickup}</p>
-                           </div>
-                           <div className="space-y-1">
-                              <p>Drop</p>
-                              <p className="text-foreground normal-case text-sm font-bold">{req.drop}</p>
-                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                           {req.status === 'pending' && (
-                             <>
-                               <Button variant="primary" size="sm" className="flex-1 rounded-xl" onClick={() => handleRespondToRequest(req._id, 'accepted')}>Accept</Button>
-                               <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => handleRespondToRequest(req._id, 'rejected')}>Reject</Button>
-                             </>
-                           )}
-                           <Button variant="ghost" size="sm" className="w-12 rounded-xl" onClick={() => handleLaunchChat(req.passenger?._id)}><MessageSquare className="w-5 h-5" /></Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      {/* Tab Selector */}
+      <div className="bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-1">
+        <button
+          onClick={() => setActiveTab('rides')}
+          className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+            activeTab === 'rides'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Car className="w-4 h-4" />
+          <span>My Offered Rides ({myRides.length})</span>
+        </button>
 
-        <div className="flex flex-col gap-8">
-           <Card className="border-none shadow-soft">
-              <CardHeader>
-                 <CardTitle className="text-xl">Vehicle Details</CardTitle>
-                 <CardDescription>Verified Transport</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                 <div className="p-6 bg-muted/5 rounded-[2rem] border border-border text-center">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Plate Number</p>
-                    <p className="text-2xl font-black text-foreground mt-1 select-all">{driver?.vehicleNumber}</p>
-                 </div>
-                 <div className="space-y-4">
-                    {[
-                      { l: 'Model', v: driver?.vehicleModel },
-                      { l: 'Color', v: driver?.vehicleColour },
-                      { l: 'Type', v: driver?.vehicleType },
-                    ].map((item, i) => (
-                      <div key={i} className="flex justify-between items-center px-2">
-                         <span className="text-xs font-bold text-muted-foreground">{item.l}</span>
-                         <span className="text-sm font-black capitalize">{item.v}</span>
-                      </div>
-                    ))}
-                 </div>
-                 <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border">
-                    <img src={driver?.vehicleImage} className="w-full h-24 object-cover rounded-2xl border border-border" alt="" />
-                    <img src={driver?.licenceImage} className="w-full h-24 object-cover rounded-2xl border border-border" alt="" />
-                 </div>
-              </CardContent>
-           </Card>
-        </div>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 relative ${
+            activeTab === 'requests'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>Passenger Bookings</span>
+          {pendingRequestsCount > 0 && (
+            <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+          )}
+        </button>
       </div>
+
+      {/* Rides / Bookings Content List */}
+      {activeTab === 'rides' ? (
+        loadingRides ? (
+          <div className="space-y-2.5">
+            {[1, 2].map(i => <div key={i} className="h-24 bg-slate-100 rounded-3xl animate-pulse" />)}
+          </div>
+        ) : myRides.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Car className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-500">No rides listed yet</p>
+            <button
+              onClick={() => navigate('/offer-ride')}
+              className="mt-3 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-extrabold"
+            >
+              List Your First Ride
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {myRides.map((ride) => (
+              <div key={ride._id} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{new Date(ride.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span>•</span>
+                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{ride.departureTime}</span>
+                  </div>
+
+                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold capitalize ${
+                    ride.status === 'completed' ? 'bg-blue-50 text-blue-700' :
+                    ride.status === 'ongoing' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                  }`}>
+                    {ride.status}
+                  </span>
+                </div>
+
+                {/* Route Path */}
+                <div className="bg-slate-50 p-2.5 rounded-2xl flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                      <span className="truncate">{ride.source}</span>
+                      <span className="text-slate-400">→</span>
+                      <span className="truncate">{ride.destination}</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 pl-2">
+                    <span className="text-xs font-black text-slate-900 block">₹{ride.price}</span>
+                    <span className="text-[9px] font-bold text-slate-400 block">{ride.availableSeats} seats left</span>
+                  </div>
+                </div>
+
+                {/* Driver Action Controls */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <button
+                    onClick={() => navigate(`/ride/${ride._id}`)}
+                    className="text-xs font-extrabold text-emerald-600 flex items-center gap-1"
+                  >
+                    <span>View Trip Details</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {ride.status === 'scheduled' && (
+                      <button
+                        onClick={() => handleUpdateStatus(ride._id, 'ongoing')}
+                        className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm active:scale-95 transition-transform"
+                      >
+                        Start Trip
+                      </button>
+                    )}
+                    {ride.status === 'ongoing' && (
+                      <button
+                        onClick={() => handleUpdateStatus(ride._id, 'completed')}
+                        className="px-3.5 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-extrabold shadow-sm active:scale-95 transition-transform"
+                      >
+                        Complete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        loadingRequests ? (
+          <div className="space-y-2.5">
+            {[1, 2].map(i => <div key={i} className="h-24 bg-slate-100 rounded-3xl animate-pulse" />)}
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-500">No passenger booking requests yet</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {requests.map((req) => (
+              <div key={req._id} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img
+                      src={req.passenger?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(req.passenger?.name || 'pass')}`}
+                      className="w-8 h-8 rounded-full object-cover border border-slate-100"
+                      alt=""
+                    />
+                    <div className="min-w-0">
+                      <span className="text-xs font-black text-slate-900 block truncate">{req.passenger?.name}</span>
+                      <span className="text-[9px] font-bold text-slate-400 truncate block">{req.passenger?.email}</span>
+                    </div>
+                  </div>
+
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold capitalize ${
+                    req.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {req.status}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 p-2.5 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-800">
+                  <div className="truncate">
+                    <span className="text-[9px] font-extrabold text-slate-400 block uppercase">Pickup</span>
+                    <span className="truncate block">{req.pickup}</span>
+                  </div>
+                  <div className="truncate text-right pl-2">
+                    <span className="text-[9px] font-extrabold text-slate-400 block uppercase">Dropoff</span>
+                    <span className="truncate block">{req.drop}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => handleLaunchChat(req.passenger?._id)}
+                    className="text-xs font-extrabold text-indigo-600 flex items-center gap-1"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Open Chat</span>
+                  </button>
+
+                  {req.status === 'pending' && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleRespondToRequest(req._id, 'rejected')}
+                        className="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-xl text-xs font-extrabold"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => handleRespondToRequest(req._id, 'accepted')}
+                        className="px-3 py-1 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm"
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
 
       {reviewTarget && (
         <ReviewDialog
