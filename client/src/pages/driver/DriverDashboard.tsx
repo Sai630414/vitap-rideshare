@@ -87,12 +87,11 @@ export const DriverDashboard: React.FC = () => {
     if (user?.role === 'driver' && user?.verifiedDriver && hasPaid) {
       const fetchDriverRides = async () => {
         try {
-          const response = await api.get('/rides');
+          const response = await api.get('/rides/mine');
           if (response.data.status === 'success') {
             const allRides: RideData[] = response.data.data.rides;
-            const filtered = allRides.filter((ride) => ride.driver._id === user._id);
-            setMyRides(filtered);
-            const completed = filtered.filter((r) => r.status === 'completed');
+            setMyRides(allRides);
+            const completed = allRides.filter((r) => r.status === 'completed');
             setEarnings(completed.length * 150);
           }
         } catch (err) {
@@ -451,7 +450,12 @@ export const DriverDashboard: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-3">
             {myRides.map((ride) => (
-              <div key={ride._id} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+              <div
+                key={ride._id}
+                className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col gap-3 transition-all ${
+                  ride.status === 'ongoing' ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' : 'border-slate-100'
+                }`}
+              >
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
@@ -464,9 +468,9 @@ export const DriverDashboard: React.FC = () => {
 
                   <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold capitalize ${
                     ride.status === 'completed' ? 'bg-blue-50 text-blue-700' :
-                    ride.status === 'ongoing' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                    ride.status === 'ongoing' ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse' : 'bg-emerald-50 text-emerald-700'
                   }`}>
-                    {ride.status}
+                    {ride.status === 'ongoing' ? 'Ongoing Trip 🚗' : ride.status}
                   </span>
                 </div>
 
