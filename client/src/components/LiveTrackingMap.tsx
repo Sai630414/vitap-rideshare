@@ -203,8 +203,20 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       socket.emit('driver_stop_tracking', { rideId });
     }
     setIsSharing(false);
-    setGpsLoading(false);
   };
+
+  // Automatically start sharing driver location when ride is ongoing
+  useEffect(() => {
+    if (isDriver && rideStatus === 'ongoing' && socket && !isSharing) {
+      startSharing();
+    }
+  }, [isDriver, rideStatus, socket]);
+
+  useEffect(() => {
+    return () => {
+      stopSharing();
+    };
+  }, []);
 
   // Auto-start location broadcasting if driver and ride is active
   useEffect(() => {

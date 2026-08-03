@@ -21,12 +21,16 @@ import rideService from '../services/rideService';
 import MapContainerComponent from '../components/MapContainer';
 import AutocompleteInput from '../components/AutocompleteInput';
 
+import { useAuth } from '../context/AuthContext';
+
 export const OfferRide: React.FC = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [activeRide, setActiveRide] = useState<any | null>(null);
 
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [source, setSource] = useState('');
@@ -44,7 +48,7 @@ export const OfferRide: React.FC = () => {
   const [dropAddress, setDropAddress] = useState('');
 
   useEffect(() => {
-    const fetchVehicles = async () => {
+    const fetchVehiclesAndActiveRides = async () => {
       try {
         const res = await vehicleService.getMyVehicles();
         if (res.status === 'success') {
@@ -55,14 +59,24 @@ export const OfferRide: React.FC = () => {
             setSeats(verifiedOnly[0].seats);
           }
         }
+
+        const ridesRes = await rideService.searchRides({});
+        if (ridesRes.status === 'success') {
+          const existingActive = ridesRes.data.rides.find(
+            (r: any) => r.driver._id === user?._id && (r.status === 'scheduled' || r.status === 'ongoing')
+          );
+          if (existingActive) {
+            setActiveRide(existingActive);
+          }
+        }
       } catch (err) {
-        console.error('Failed to load vehicles:', err);
+        console.error('Failed to load vehicles or active rides:', err);
       } finally {
         setLoadingVehicles(false);
       }
     };
-    fetchVehicles();
-  }, []);
+    fetchVehiclesAndActiveRides();
+  }, [user]);
 
   const handleVehicleChange = (vehicleId: string) => {
     setSelectedVehicleId(vehicleId);
@@ -137,6 +151,26 @@ export const OfferRide: React.FC = () => {
           + Add & Verify Vehicle
         </button>
       </Link>
+    </div>
+  );
+
+  if (activeRide) return (
+    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col items-center text-center my-4 gap-4 animate-in fade-in">
+      <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+        <AlertCircle className="w-7 h-7" />
+      </div>
+      <div>
+        <h2 className="text-lg font-black text-slate-900">Active Ride in Progress</h2>
+        <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed font-bold">
+          You already have an active ride hosted ({activeRide.source} → {activeRide.destination}). Complete or cancel your current trip before offering another one.
+        </p>
+      </div>
+      <button
+        onClick={() => navigate(`/ride/${activeRide._id}`)}
+        className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-transform"
+      >
+        View Active Trip Details
+      </button>
     </div>
   );
 

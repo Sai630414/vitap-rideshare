@@ -17,6 +17,14 @@ const offerRide = async (req, res, next) => {
         const { vehicleId, source, destination, pickupLocation, dropLocation, departureDate, departureTime, price, availableSeats, description, recurring, routePoints, } = req.body;
         if (!req.user)
             return next(new appError_1.default('Unauthorized', 401));
+        // Enforce 1 active ride per driver rule
+        const existingActiveRide = await Ride_1.default.findOne({
+            driver: req.user.id,
+            status: { $in: ['scheduled', 'ongoing'] },
+        });
+        if (existingActiveRide) {
+            return next(new appError_1.default('You already have an active ride in progress. Complete or cancel your current ride before offering a new one.', 400));
+        }
         // Verify driver has a verified vehicle matching vehicleId
         const vehicle = await Vehicle_1.default.findById(vehicleId);
         if (!vehicle) {

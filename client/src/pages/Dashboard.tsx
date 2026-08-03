@@ -83,7 +83,14 @@ const StudentDashboard: React.FC<{ user: any; toast: any; navigate: any }> = ({ 
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, rideStatus?: string) => {
+    if (rideStatus === 'ongoing' && status === 'accepted') {
+      return (
+        <span className="text-[10px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-300 animate-pulse flex items-center gap-1">
+          <span>Ongoing Trip 🚗</span>
+        </span>
+      );
+    }
     const styles: any = {
       accepted: 'bg-emerald-50 text-emerald-600 border-emerald-200',
       pending: 'bg-amber-50 text-amber-600 border-amber-200',
@@ -242,7 +249,7 @@ const StudentDashboard: React.FC<{ user: any; toast: any; navigate: any }> = ({ 
                   className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl active:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    {getStatusBadge(booking.status)}
+                    {getStatusBadge(booking.status, ride.status)}
                     <span className="text-[10px] font-bold text-slate-400">
                       {new Date(ride.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {ride.departureTime}
                     </span>
