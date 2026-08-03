@@ -13,7 +13,7 @@ export const createBooking = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { rideId, seatNumber = 1, pickup, drop, message } = req.body;
+    const { rideId, seatNumber = 1, pickup, drop, message, pickupCoordinates, dropCoordinates } = req.body;
     if (!req.user) return next(new AppError('Unauthorized', 401));
 
     if (!pickup || !drop) {
@@ -65,6 +65,8 @@ export const createBooking = async (
       driver: ride.driver,
       pickup,
       drop,
+      pickupCoordinates: pickupCoordinates || undefined,
+      dropCoordinates: dropCoordinates || undefined,
       message,
       seatNumber: requestedSeats,
       status: 'pending',
@@ -199,7 +201,7 @@ export const respondToBooking = async (
         booking.passenger.toString(),
         'Booking Approved 🎉',
         `Your request for ${booking.seatNumber} seat(s) on the ride to ${ride.destination} has been accepted! Contact the driver.`,
-        'ride_accepted',
+        'booking_accepted',
         ride._id
       );
     } else {
@@ -211,7 +213,7 @@ export const respondToBooking = async (
         booking.passenger.toString(),
         'Booking Rejected',
         `Your request for the ride to ${ride.destination} was rejected by the driver.`,
-        'ride_cancelled',
+        'booking_rejected',
         ride._id
       );
     }

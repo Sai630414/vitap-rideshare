@@ -136,7 +136,7 @@ export const sendMessage = async (
         recipientId.toString(),
         `Message from ${req.user.name}`,
         text || 'Sent an image',
-        'chat_message',
+        'new_message',
         chat._id
       );
     }

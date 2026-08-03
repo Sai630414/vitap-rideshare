@@ -13,6 +13,8 @@ import {
   ArrowRight,
   TrendingDown,
   Sparkles,
+  Filter,
+  X,
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
@@ -35,12 +37,14 @@ export const SearchRides: React.FC = () => {
   const [seats, setSeats] = useState<number>(1);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [sort, setSort] = useState<'lowest_price' | 'earliest_time' | 'highest_driver_rating'>('earliest_time');
+  const [minDriverRating, setMinDriverRating] = useState('');
+  const [sort, setSort] = useState<RideSearchParams['sort']>('earliest_time');
 
   const [rides, setRides] = useState<RideData[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Inline map preview states
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  // Map preview
   const [previewRide, setPreviewRide] = useState<RideData | null>(null);
 
   const fetchRides = async (searchParams: RideSearchParams = {}) => {
@@ -49,7 +53,6 @@ export const SearchRides: React.FC = () => {
       const res = await rideService.searchRides(searchParams);
       if (res.status === 'success') {
         setRides(res.data.rides);
-        // Clear old previews
         setPreviewRide(null);
       }
     } catch (err) {
@@ -60,7 +63,6 @@ export const SearchRides: React.FC = () => {
   };
 
   useEffect(() => {
-    // Initial fetch of all scheduled rides
     fetchRides();
   }, []);
 
@@ -74,6 +76,7 @@ export const SearchRides: React.FC = () => {
       seats: seats || undefined,
       minPrice: minPrice ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+      minDriverRating: minDriverRating ? parseFloat(minDriverRating) : undefined,
       sort,
     };
     fetchRides(query);
@@ -87,15 +90,27 @@ export const SearchRides: React.FC = () => {
     setSeats(1);
     setMinPrice('');
     setMaxPrice('');
+    setMinDriverRating('');
     setSort('earliest_time');
     fetchRides();
   };
 
+  const activeFiltersCount = [source, destination, date, vType, minPrice, maxPrice, minDriverRating]
+    .filter(Boolean).length;
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-sans">
-        Find Campus Rides
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-sans">
+          Find Campus Rides
+        </h1>
+        {activeFiltersCount > 0 && (
+          <Badge variant="primary" className="flex items-center gap-1">
+            <Filter className="w-3 h-3" />
+            {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''} active
+          </Badge>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Filter Card */}
@@ -167,7 +182,7 @@ export const SearchRides: React.FC = () => {
                 </div>
               </div>
 
-              {/* Price range */}
+              {/* Price Range */}
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="Min Price (₹)"
@@ -185,7 +200,26 @@ export const SearchRides: React.FC = () => {
                 />
               </div>
 
-              {/* Sort */}
+              {/* Min Driver Rating (Feature 7) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-amber-400" />
+                  Min Driver Rating
+                </label>
+                <select
+                  value={minDriverRating}
+                  onChange={(e) => setMinDriverRating(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm"
+                >
+                  <option value="">Any Rating</option>
+                  <option value="4.5">⭐⭐⭐⭐⭐ 4.5+</option>
+                  <option value="4">⭐⭐⭐⭐ 4.0+</option>
+                  <option value="3.5">⭐⭐⭐⭐ 3.5+</option>
+                  <option value="3">⭐⭐⭐ 3.0+</option>
+                </select>
+              </div>
+
+              {/* Sort Options */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase">Sort Results</label>
                 <select
@@ -193,9 +227,10 @@ export const SearchRides: React.FC = () => {
                   onChange={(e) => setSort(e.target.value as any)}
                   className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300"
                 >
-                  <option value="earliest_time">Earliest departure</option>
-                  <option value="lowest_price">Lowest Price</option>
-                  <option value="highest_driver_rating">Highest Rated Driver</option>
+                  <option value="earliest_time">🕐 Earliest Departure</option>
+                  <option value="lowest_price">💰 Lowest Price</option>
+                  <option value="highest_driver_rating">⭐ Highest Rated Driver</option>
+                  <option value="recently_posted">🆕 Recently Posted</option>
                 </select>
               </div>
 
@@ -206,9 +241,11 @@ export const SearchRides: React.FC = () => {
                   className="flex-1 text-xs"
                   onClick={handleClearFilters}
                 >
+                  <X className="w-3 h-3 mr-1" />
                   Reset
                 </Button>
                 <Button type="submit" className="flex-1 text-xs">
+                  <Search className="w-3 h-3 mr-1" />
                   Apply Filters
                 </Button>
               </div>
@@ -216,7 +253,7 @@ export const SearchRides: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Right Listings Area (span 2) */}
+        {/* Right Listings Area */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Inline Map Preview */}
           {previewRide && (
@@ -247,7 +284,7 @@ export const SearchRides: React.FC = () => {
           {loading ? (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-zinc-900 rounded-2xl animate-pulse"></div>
+                <div key={i} className="h-32 bg-zinc-900 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : rides.length === 0 ? (
@@ -263,6 +300,7 @@ export const SearchRides: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
+              <p className="text-xs text-zinc-500">{rides.length} ride{rides.length !== 1 ? 's' : ''} found</p>
               {rides.map((ride) => (
                 <Card
                   key={ride._id}
@@ -294,14 +332,14 @@ export const SearchRides: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Route Path */}
+                      {/* Route */}
                       <div className="flex items-center gap-2 mt-3 text-base font-extrabold text-zinc-150">
                         <span>{ride.source}</span>
                         <ArrowRight className="w-4 h-4 text-zinc-500 shrink-0" />
                         <span>{ride.destination}</span>
                       </div>
 
-                      {/* Driver Row */}
+                      {/* Driver row */}
                       <div className="flex items-center gap-4 mt-4">
                         <img
                           src={ride.driver.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=driver'}
@@ -318,18 +356,28 @@ export const SearchRides: React.FC = () => {
                             )}
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-[11px] text-zinc-400">
-                            <span className="flex items-center gap-0.5 text-amber-400">
-                              <Star className="w-3 h-3 fill-amber-400" />
-                              {ride.driver.rating}
+                            {/* Star rating display */}
+                            <span className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-2.5 h-2.5 ${
+                                    s <= Math.round(ride.driver.rating)
+                                      ? 'fill-amber-400 text-amber-400'
+                                      : 'text-zinc-700'
+                                  }`}
+                                />
+                              ))}
+                              <span className="ml-1 text-amber-400 font-bold">{ride.driver.rating}</span>
                             </span>
                             <span>•</span>
-                            <span>Trust Score: {ride.driver.trustScore}%</span>
+                            <span>Trust: {ride.driver.trustScore}%</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right column: price, seats, button */}
+                    {/* Right: price, seats, actions */}
                     <div className="flex md:flex-col items-end gap-3.5 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-zinc-850 justify-between md:justify-center shrink-0">
                       <div className="text-right">
                         <p className="text-[10px] text-zinc-500">Splitted cost</p>

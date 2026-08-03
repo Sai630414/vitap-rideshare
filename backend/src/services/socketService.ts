@@ -5,6 +5,9 @@ import { getCorsOrigin } from '../utils/cors';
 let io: SocketIOServer | null = null;
 const userSockets = new Map<string, string>(); // userId -> socketId
 
+// Track active driver location sharing: rideId -> { driverId, watcherCount }
+const activeTrackingSessions = new Map<string, { driverId: string; lastLocation: any }>();
+
 export const initSocket = (server: any) => {
   io = new SocketIOServer(server, {
     cors: {
@@ -17,6 +20,7 @@ export const initSocket = (server: any) => {
   io.on('connection', (socket) => {
     logger.info(`New WebSocket client connected: ${socket.id}`);
 
+    // ─── Core Events ────────────────────────────────────────────
     socket.on('register_user', (userId: string) => {
       userSockets.set(userId, socket.id);
       socket.join(userId);
@@ -32,9 +36,76 @@ export const initSocket = (server: any) => {
       socket.to(chatId).emit('typing_status', { userId, userName, isTyping });
     });
 
+    // ─── Feature 3: Live Driver Tracking ────────────────────────
+
+    /**
+     * Driver joins a ride's tracking room and starts broadcasting location.
+     * Payload: { rideId, driverId }
+     */
+    socket.on('driver_start_tracking', ({ rideId, driverId }: { rideId: string; driverId: string }) => {
+      const trackingRoom = `tracking:${rideId}`;
+      socket.join(trackingRoom);
+      activeTrackingSessions.set(rideId, { driverId, lastLocation: null });
+      logger.info(`Driver ${driverId} started location tracking for ride ${rideId}`);
+    });
+
+    /**
+     * Driver broadcasts their location update.
+     * Payload: { rideId, driverId, lat, lng, heading?, speed? }
+     * Passengers in the tracking room receive driver_location event.
+     */
+    socket.on(
+      'driver_location_update',
+      (payload: { rideId: string; driverId: string; lat: number; lng: number; heading?: number; speed?: number }) => {
+        const { rideId, driverId, lat, lng, heading, speed } = payload;
+        const trackingRoom = `tracking:${rideId}`;
+
+        const locationData = { driverId, lat, lng, heading, speed, timestamp: Date.now() };
+
+        // Update session cache
+        const session = activeTrackingSessions.get(rideId);
+        if (session) {
+          session.lastLocation = locationData;
+        } else {
+          activeTrackingSessions.set(rideId, { driverId, lastLocation: locationData });
+        }
+
+        // Broadcast to all passengers tracking this ride (excluding driver)
+        socket.to(trackingRoom).emit('driver_location', locationData);
+      }
+    );
+
+    /**
+     * Passenger joins a ride's tracking room to receive live location.
+     * Payload: { rideId }
+     */
+    socket.on('passenger_join_tracking', ({ rideId }: { rideId: string }) => {
+      const trackingRoom = `tracking:${rideId}`;
+      socket.join(trackingRoom);
+      logger.info(`Passenger socket ${socket.id} joined tracking room for ride ${rideId}`);
+
+      // Send last known location immediately if available
+      const session = activeTrackingSessions.get(rideId);
+      if (session?.lastLocation) {
+        socket.emit('driver_location', session.lastLocation);
+      }
+    });
+
+    /**
+     * Driver stops sharing location (ride completed or manually stopped).
+     * Payload: { rideId }
+     */
+    socket.on('driver_stop_tracking', ({ rideId }: { rideId: string }) => {
+      const trackingRoom = `tracking:${rideId}`;
+      activeTrackingSessions.delete(rideId);
+      io?.to(trackingRoom).emit('tracking_stopped', { rideId });
+      socket.leave(trackingRoom);
+      logger.info(`Driver stopped location tracking for ride ${rideId}`);
+    });
+
+    // ─── SOS Alert ──────────────────────────────────────────────
     socket.on('sos_alert', (sosData) => {
       logger.error(`🚨 SOS ALERT: User ${sosData.userId} (${sosData.userName}) triggered emergency alert at coordinates: ${JSON.stringify(sosData.coordinates)}`);
-      // Broadcast emergency to all sockets (especially admins)
       io?.emit('admin_sos_alert', {
         userId: sosData.userId,
         userName: sosData.userName,
@@ -44,6 +115,7 @@ export const initSocket = (server: any) => {
       });
     });
 
+    // ─── Disconnect ──────────────────────────────────────────────
     socket.on('disconnect', () => {
       for (const [userId, socketId] of userSockets.entries()) {
         if (socketId === socket.id) {

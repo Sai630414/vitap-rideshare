@@ -98,6 +98,15 @@ export const createReviewSchema = z.object({
   }),
 });
 
+export const createPassengerReviewSchema = z.object({
+  body: z.object({
+    rideId: objectIdSchema,
+    passengerId: objectIdSchema,
+    rating: z.coerce.number().min(1).max(5),
+    comment: z.string().optional(),
+  }),
+});
+
 export const updateRideStatusSchema = z.object({
   body: z.object({
     status: z.enum(['ongoing', 'completed', 'cancelled']),

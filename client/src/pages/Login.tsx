@@ -44,7 +44,7 @@ export const Login: React.FC = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/google?mobile=true`;
   };
 
   return (

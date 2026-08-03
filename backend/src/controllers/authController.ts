@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthRequest } from '../middleware/auth';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -589,15 +590,24 @@ export const googleCallback = (req: Request, res: Response) => {
   const accessToken = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
 
-  res.cookie('jwt', refreshToken, {
+  res.cookie("jwt", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'none',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  res.redirect(
-    `${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/auth/success?token=${accessToken}`
+  // Detect if request came from the mobile app
+  const isMobile = req.query.mobile === "true";
+
+  if (isMobile) {
+    return res.redirect(
+      `waygo://auth/success?token=${accessToken}`
+    );
+  }
+
+  return res.redirect(
+    `${process.env.CLIENT_URL}/auth/success?token=${accessToken}`
   );
 };
 
@@ -776,6 +786,107 @@ export const applyDriver = async (
     });
   } catch (error) {
     cleanupUploadedFiles(req.files);
+    next(error);
+  }
+};
+
+// ──────────────────────────────────────────────
+// Feature 8: Send Phone OTP via AWS SNS (or Mock)
+// ──────────────────────────────────────────────
+export const sendPhoneOTP = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { phone } = req.body;
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    if (!phone || !/^\+?[1-9]\d{9,14}$/.test(phone.replace(/\s+/g, ''))) {
+      return next(new AppError('Valid phone number with country code (e.g. +919876543210) is required', 400));
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return next(new AppError('User not found', 404));
+
+    // Rate-limiting check: max 5 attempts per session
+    if ((user.phoneVerificationAttempts ?? 0) >= 5) {
+      const ageMs = Date.now() - new Date(user.updatedAt).getTime();
+      if (ageMs < 15 * 60 * 1000) {
+        return next(new AppError('Too many verification attempts. Please wait 15 minutes before retrying.', 429));
+      }
+      user.phoneVerificationAttempts = 0;
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.phone = phone;
+    user.phoneOTP = otp;
+    user.phoneOTPExpiry = expiry;
+    user.phoneVerificationAttempts = (user.phoneVerificationAttempts ?? 0) + 1;
+    await user.save();
+
+    // Import smsService dynamically to avoid circular issues
+    const { sendSMS } = await import('../services/smsService');
+    await sendSMS(phone, `[VIT RideShare] Your phone verification OTP code is: ${otp}. Valid for 10 minutes.`);
+
+    res.status(200).json({
+      status: 'success',
+      message: `Verification OTP sent to ${phone}`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ──────────────────────────────────────────────
+// Feature 8: Verify Phone OTP
+// ──────────────────────────────────────────────
+export const verifyPhoneOTP = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { otp } = req.body;
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    if (!otp || otp.length !== 6) {
+      return next(new AppError('6-digit OTP is required', 400));
+    }
+
+    const user = await User.findById(req.user.id).select('+phoneOTP');
+    if (!user) return next(new AppError('User not found', 404));
+
+    if (!user.phoneOTP || !user.phoneOTPExpiry) {
+      return next(new AppError('No active phone OTP request found. Please request a new OTP.', 400));
+    }
+
+    if (Date.now() > new Date(user.phoneOTPExpiry).getTime()) {
+      return next(new AppError('OTP has expired. Please request a new OTP.', 400));
+    }
+
+    if (user.phoneOTP !== otp.toString().trim()) {
+      return next(new AppError('Invalid OTP code. Please check and try again.', 400));
+    }
+
+    user.phoneVerified = true;
+    user.phoneVerifiedAt = new Date();
+    user.phoneOTP = undefined;
+    user.phoneOTPExpiry = undefined;
+    user.phoneVerificationAttempts = 0;
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: '📱 Phone number verified successfully!',
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
     next(error);
   }
 };

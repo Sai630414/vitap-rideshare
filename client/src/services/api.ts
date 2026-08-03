@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-const API_URL = `${import.meta.env.VITE_API_URL || 'https://vitap-rideshare.onrender.com'}/api`;
+/**
+ * API base URL configuration.
+ * For local development with a backend running on localhost:5000:
+ * - If using a web browser: http://localhost:5000/api
+ * - If using an Android Emulator: http://10.0.2.2:5000/api
+ * - If using a physical Android device: http://<your-computer-ip>:5000/api
+ */
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://10.0.2.2:5000'}/api`;
 
 export const api = axios.create({
   baseURL: API_URL,

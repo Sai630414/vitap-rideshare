@@ -23,6 +23,7 @@ import api from '../../services/api';
 import rideService, { type RideData } from '../../services/rideService';
 import bookingService from '../../services/bookingService';
 import chatService from '../../services/chatService';
+import ReviewDialog from '../../components/ReviewDialog';
 
 // Dynamic Script Loader for Razorpay Checkout
 const loadRazorpayScript = () => {
@@ -59,6 +60,12 @@ export const DriverDashboard: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [activeTab, setActiveTab] = useState<'rides' | 'requests'>('rides');
+
+  // Feature 2: Passenger reviews by driver
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<{ rideId: string; passengerId: string; name: string } | null>(null);
+  const [reviewedPassengers, setReviewedPassengers] = useState<Record<string, boolean>>({});
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   // Sync user details to ensure fresh data
   const refreshUserState = async () => {
@@ -159,6 +166,29 @@ export const DriverDashboard: React.FC = () => {
   };
 
   const pendingRequestsCount = requests.filter(r => r.status === 'pending').length;
+
+  // Feature 2: Driver submits passenger review
+  const handlePassengerReview = async (rating: number, comment: string) => {
+    if (!reviewTarget) return;
+    setReviewLoading(true);
+    try {
+      const res = await bookingService.createPassengerReview(
+        reviewTarget.rideId,
+        reviewTarget.passengerId,
+        rating,
+        comment
+      );
+      if (res.status === 'success') {
+        toast.success('Passenger reviewed successfully! ⭐');
+        setReviewedPassengers(prev => ({ ...prev, [reviewTarget.passengerId]: true }));
+        setReviewDialogOpen(false);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit review.');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   // Razorpay Checkout handler
   const handlePayment = async () => {
@@ -692,7 +722,7 @@ export const DriverDashboard: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0 justify-end shrink-0">
+                        <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0 justify-end shrink-0 flex-wrap">
                           {req.status === 'pending' && (
                             <>
                               <Button
@@ -714,6 +744,24 @@ export const DriverDashboard: React.FC = () => {
                                 Reject
                               </Button>
                             </>
+                          )}
+                          {req.status === 'completed' && !reviewedPassengers[req.passenger?._id] && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs py-1.5 px-3 h-auto cursor-pointer border-amber-700/50 text-amber-400 hover:bg-amber-950/30"
+                              onClick={() => {
+                                setReviewTarget({
+                                  rideId: req.ride?._id,
+                                  passengerId: req.passenger?._id,
+                                  name: req.passenger?.name,
+                                });
+                                setReviewDialogOpen(true);
+                              }}
+                            >
+                              <Star className="w-3.5 h-3.5 mr-1" />
+                              Rate Passenger
+                            </Button>
                           )}
                           <Button
                             variant="secondary"
@@ -794,6 +842,18 @@ export const DriverDashboard: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Feature 2: Passenger Review Dialog */}
+      {reviewTarget && (
+        <ReviewDialog
+          isOpen={reviewDialogOpen}
+          onClose={() => setReviewDialogOpen(false)}
+          onSubmit={handlePassengerReview}
+          targetName={reviewTarget.name}
+          reviewType="passenger"
+          loading={reviewLoading}
+        />
+      )}
     </div>
   );
 };

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useSocket } from '../context/SocketContext';
 import {
   Car,
   MapPin,
@@ -13,22 +14,29 @@ import {
   CheckCircle,
   MessageSquare,
   AlertTriangle,
-  User,
   Navigation,
+  CloudSun,
+  Locate,
+  Map,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import ReviewDialog from '../components/ReviewDialog';
+import WeatherWidget from '../components/WeatherWidget';
+import LiveTrackingMap from '../components/LiveTrackingMap';
 import rideService, { type RideData } from '../services/rideService';
 import bookingService, { type BookingData } from '../services/bookingService';
 import chatService from '../services/chatService';
 import MapContainerComponent from '../components/MapContainer';
+import api from '../services/api';
 
 export const RideDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { socket } = useSocket();
   const navigate = useNavigate();
 
   const [ride, setRide] = useState<RideData | null>(null);
@@ -36,20 +44,28 @@ export const RideDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [myBooking, setMyBooking] = useState<BookingData | null>(null);
 
-  // Seat booking selection
+  // Seat booking
   const [requestedSeats, setRequestedSeats] = useState<number>(1);
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
+  const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
   const [message, setMessage] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
 
-  // Review states
-  const [rating, setRating] = useState<number>(5);
-  const [comment, setComment] = useState('');
+  // Reviews (F1 + F2)
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewDialogTarget, setReviewDialogTarget] = useState<{ name: string; type: 'driver' | 'passenger'; passengerId?: string }>({ name: '', type: 'driver' });
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [hasReviewed, setHasReviewed] = useState(false);
+  const [existingDriverReview, setExistingDriverReview] = useState<any>(null);
+  const [passengerReviewedMap, setPassengerReviewedMap] = useState<Record<string, any>>({});
 
-  const fetchRideAndBookings = async () => {
+  // Weather (F5)
+  const [weather, setWeather] = useState<any>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  const fetchRideAndBookings = useCallback(async () => {
     if (!id) return;
     try {
       const rideRes = await rideService.getRideDetails(id);
@@ -57,7 +73,6 @@ export const RideDetails: React.FC = () => {
         setRide(rideRes.data.ride);
       }
 
-      // If logged in user is the driver, fetch passenger bookings for this ride
       const isDriver = rideRes.data.ride.driver._id === user?._id;
       if (isDriver || user?.role === 'admin') {
         const bookRes = await bookingService.getRideBookings(id);
@@ -65,21 +80,19 @@ export const RideDetails: React.FC = () => {
           setBookings(bookRes.data.bookings);
         }
       } else {
-        // Passenger - check if they already booked this ride
         const bookRes = await bookingService.getMyBookings();
         if (bookRes.status === 'success') {
-          const userBooking = bookRes.data.bookings.find((b: any) => b.ride._id === id);
-          if (userBooking) {
-            // Find if passenger reviewed
+          const matched = bookRes.data.bookings.find((b: any) => b.ride._id === id);
+          setMyBooking(matched || null);
+
+          // Check if already reviewed driver
+          if (matched) {
             try {
-              const revRes = await bookingService.getDriverReviews(rideRes.data.ride.driver._id);
+              const revRes = await bookingService.getMyReview(id, 'driver');
               if (revRes.status === 'success') {
-                const reviewed = revRes.data.reviews.some((r: any) => r.ride === id && r.passenger._id === user?._id);
-                setHasReviewed(reviewed);
+                setExistingDriverReview(revRes.data.review);
               }
-            } catch (err) {
-              console.error('Failed to load review checks:', err);
-            }
+            } catch (_) {}
           }
         }
       }
@@ -88,11 +101,11 @@ export const RideDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, user]);
 
   useEffect(() => {
     fetchRideAndBookings();
-  }, [id, user]);
+  }, [fetchRideAndBookings]);
 
   useEffect(() => {
     if (ride) {
@@ -101,28 +114,57 @@ export const RideDetails: React.FC = () => {
     }
   }, [ride]);
 
+  // Fetch weather for ride (F5)
+  useEffect(() => {
+    if (!ride) return;
+    const coords = ride.pickupLocation?.coordinates;
+    const date = ride.departureDate;
+    if (!coords || !date) return;
+
+    const dateStr = new Date(date).toISOString().split('T')[0];
+    setWeatherLoading(true);
+    api
+      .get('/weather', { params: { lat: coords[1], lng: coords[0], date: dateStr } })
+      .then((res) => {
+        if (res.data?.data?.weather) setWeather(res.data.data.weather);
+      })
+      .catch(() => {}) // silently fail
+      .finally(() => setWeatherLoading(false));
+  }, [ride]);
+
   const isDriver = ride?.driver._id === user?._id;
 
-  // Passenger booking status (if any)
-  const [myBooking, setMyBooking] = useState<BookingData | null>(null);
-
-  useEffect(() => {
-    const checkMyBookingStatus = async () => {
-      if (isDriver || !ride) return;
-      try {
-        const bookRes = await bookingService.getMyBookings();
-        if (bookRes.status === 'success') {
-          const matched = bookRes.data.bookings.find((b: any) => b.ride._id === ride._id);
-          setMyBooking(matched || null);
+  // ─── Passenger: Get current GPS location ────────────────────────────────────
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setPickupCoords([lng, lat]);
+        try {
+          const res = await api.get(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          const addr = res.data?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          setPickup(addr);
+        } catch {
+          setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         }
-      } catch (err) {
-        console.error('Failed checking booking details:', err);
-      }
-    };
-    checkMyBookingStatus();
-  }, [ride, isDriver]);
+        setGettingLocation(false);
+      },
+      () => {
+        toast.error('Could not get your current location.');
+        setGettingLocation(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
 
-  // Submit seat booking request
+  // ─── Booking ─────────────────────────────────────────────────────────────────
   const handleRequestBooking = async () => {
     if (!ride) return;
     if (!pickup.trim() || !drop.trim()) {
@@ -131,7 +173,15 @@ export const RideDetails: React.FC = () => {
     }
     setBookingLoading(true);
     try {
-      const res = await bookingService.createBooking(ride._id, requestedSeats, pickup, drop, message);
+      const res = await bookingService.createBooking(
+        ride._id,
+        requestedSeats,
+        pickup,
+        drop,
+        message,
+        pickupCoords ?? undefined,
+        undefined
+      );
       if (res.status === 'success') {
         toast.success('🎉 Booking request sent to driver.');
         setMyBooking(res.data.booking);
@@ -143,7 +193,6 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Cancel booking request
   const handleCancelBooking = async () => {
     if (!myBooking) return;
     if (!window.confirm('Are you sure you want to cancel your seat booking?')) return;
@@ -162,15 +211,12 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Driver respond to passenger booking
   const handleRespondBooking = async (bookingId: string, status: 'accepted' | 'rejected') => {
     try {
       const res = await bookingService.respondToBooking(bookingId, status);
       if (res.status === 'success') {
         toast.success(`Booking successfully ${status}.`);
-        setBookings((prev) =>
-          prev.map((b) => (b._id === bookingId ? { ...b, status } : b))
-        );
+        setBookings((prev) => prev.map((b) => (b._id === bookingId ? { ...b, status } : b)));
         fetchRideAndBookings();
       }
     } catch (err: any) {
@@ -178,11 +224,9 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Driver update ride status (ongoing, completed, cancelled)
   const handleUpdateStatus = async (status: 'ongoing' | 'completed' | 'cancelled') => {
     if (!ride) return;
     if (status === 'cancelled' && !window.confirm('Are you sure you want to cancel this trip?')) return;
-    
     setStatusLoading(true);
     try {
       const res = await rideService.updateRideStatus(ride._id, status);
@@ -198,7 +242,6 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Launch chat with the driver / passenger
   const handleLaunchChat = async (recipientId: string) => {
     try {
       const res = await chatService.getOrCreateChat(recipientId);
@@ -210,16 +253,35 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Submit Driver rating review
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ─── Review Handlers ─────────────────────────────────────────────────────────
+  const openDriverReviewDialog = () => {
+    if (!ride) return;
+    setReviewDialogTarget({ name: ride.driver.name, type: 'driver' });
+    setReviewDialogOpen(true);
+  };
+
+  const openPassengerReviewDialog = (passengerId: string, passengerName: string) => {
+    setReviewDialogTarget({ name: passengerName, type: 'passenger', passengerId });
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewSubmit = async (rating: number, comment: string) => {
     if (!ride) return;
     setReviewLoading(true);
     try {
-      const res = await bookingService.createReview(ride._id, rating, comment);
-      if (res.status === 'success') {
-        toast.success('Thank you! Review submitted successfully.');
-        setHasReviewed(true);
+      if (reviewDialogTarget.type === 'driver') {
+        if (existingDriverReview) {
+          await bookingService.updateReview(existingDriverReview._id, rating, comment);
+          toast.success('Review updated!');
+        } else {
+          await bookingService.createReview(ride._id, rating, comment);
+          toast.success('Driver review submitted! ⭐');
+          setExistingDriverReview({ rating, comment, createdAt: new Date().toISOString() });
+        }
+      } else if (reviewDialogTarget.passengerId) {
+        await bookingService.createPassengerReview(ride._id, reviewDialogTarget.passengerId, rating, comment);
+        toast.success('Passenger review submitted! ⭐');
+        setPassengerReviewedMap((prev) => ({ ...prev, [reviewDialogTarget.passengerId!]: true }));
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to submit review.');
@@ -231,7 +293,7 @@ export const RideDetails: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -249,7 +311,7 @@ export const RideDetails: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Route Header summary */}
+      {/* Route Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900/40 p-6 rounded-2xl border border-zinc-850">
         <div>
           <div className="flex items-center gap-2">
@@ -272,15 +334,39 @@ export const RideDetails: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {ride.status === 'scheduled' && <Badge variant="primary">Scheduled</Badge>}
-          {ride.status === 'ongoing' && <Badge variant="warning">On the Road</Badge>}
+          {ride.status === 'ongoing' && <Badge variant="warning">On the Road 🚗</Badge>}
           {ride.status === 'completed' && <Badge variant="success">Completed</Badge>}
           {ride.status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Map Preview & Info (span 2) */}
+        {/* Left: Map & Management */}
         <div className="lg:col-span-2 flex flex-col gap-6">
+
+          {/* Feature 3: Live Tracking Map (shown when ride is ongoing) */}
+          {ride.status === 'ongoing' && (isDriver || myBooking?.status === 'accepted') && (
+            <Card className="overflow-hidden border-violet-500/30">
+              <CardHeader className="bg-zinc-950 p-4 border-b border-zinc-850">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Navigation className="w-4 h-4 text-violet-400 animate-pulse" />
+                  Live Driver Tracking
+                </CardTitle>
+              </CardHeader>
+              <div className="p-4">
+                <LiveTrackingMap
+                  socket={socket}
+                  rideId={ride._id}
+                  isDriver={isDriver}
+                  driverId={ride.driver._id}
+                  passengerPickupCoords={myBooking?.pickupCoordinates}
+                  passengerPickupAddress={myBooking?.pickup}
+                />
+              </div>
+            </Card>
+          )}
+
+          {/* Static Route Map */}
           <Card className="overflow-hidden">
             <CardHeader className="bg-zinc-950 p-4 border-b border-zinc-850">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -296,7 +382,27 @@ export const RideDetails: React.FC = () => {
             />
           </Card>
 
-          {/* Booking Management for Driver */}
+          {/* Feature 5: Weather Widget */}
+          {(weather || weatherLoading) && (
+            <Card>
+              <CardHeader className="border-b border-zinc-850 pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CloudSun className="w-4 h-4 text-blue-400" />
+                  Departure Day Weather
+                </CardTitle>
+                <CardDescription>Forecast for your pickup location</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <WeatherWidget
+                  weather={weather || { available: false }}
+                  departureDate={ride.departureDate}
+                  loading={weatherLoading}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Driver: Booking Management */}
           {isDriver && (
             <Card>
               <CardHeader className="border-b border-zinc-850 pb-4">
@@ -323,7 +429,8 @@ export const RideDetails: React.FC = () => {
                           />
                           <div>
                             <p className="text-xs font-bold text-zinc-200">
-                              {booking.passenger.name} ({booking.passenger.branch}, Year {booking.passenger.year})
+                              {booking.passenger.name}
+                              {booking.passenger.branch && ` (${booking.passenger.branch}, Year ${booking.passenger.year})`}
                             </p>
                             <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-2">
                               <span>Seats: <strong className="text-violet-400">{booking.seatNumber}</strong></span>
@@ -335,10 +442,15 @@ export const RideDetails: React.FC = () => {
                               <span>•</span>
                               <span>Trust: {booking.passenger.trustScore}%</span>
                             </p>
+                            {booking.pickup && (
+                              <p className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5" />
+                                Pickup: {booking.pickup}
+                              </p>
+                            )}
                           </div>
                         </div>
 
-                        {/* Respond Actions */}
                         <div className="flex items-center gap-2 shrink-0">
                           {booking.status === 'pending' ? (
                             <>
@@ -359,8 +471,8 @@ export const RideDetails: React.FC = () => {
                               </Button>
                             </>
                           ) : (
-                            <div className="text-right">
-                              {booking.status === 'accepted' ? (
+                            <div className="text-right flex flex-col items-end gap-2">
+                              {booking.status === 'accepted' && (
                                 <div className="flex items-center gap-2">
                                   <Badge variant="success">Approved</Badge>
                                   <Button
@@ -372,10 +484,20 @@ export const RideDetails: React.FC = () => {
                                     <MessageSquare className="w-3.5 h-3.5" />
                                   </Button>
                                 </div>
-                              ) : (
-                                <Badge variant="secondary" className="capitalize">
-                                  {booking.status}
-                                </Badge>
+                              )}
+                              {booking.status === 'completed' && !passengerReviewedMap[booking.passenger._id] && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs py-1 h-auto border-amber-700/50 text-amber-400"
+                                  onClick={() => openPassengerReviewDialog(booking.passenger._id, booking.passenger.name)}
+                                >
+                                  <Star className="w-3 h-3 mr-1" />
+                                  Rate Passenger
+                                </Button>
+                              )}
+                              {booking.status !== 'accepted' && booking.status !== 'completed' && (
+                                <Badge variant="secondary" className="capitalize">{booking.status}</Badge>
                               )}
                             </div>
                           )}
@@ -388,59 +510,47 @@ export const RideDetails: React.FC = () => {
             </Card>
           )}
 
-          {/* Rating/Review Submission (Completed passenger) */}
-          {!isDriver && myBooking?.status === 'accepted' && ride.status === 'completed' && !hasReviewed && (
+          {/* Passenger: Driver Review (F1) */}
+          {!isDriver && myBooking?.status === 'accepted' && ride.status === 'completed' && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Rate Driver {ride.driver.name}</CardTitle>
-                <CardDescription>Provide rating feedback about your transit experience</CardDescription>
+                <CardTitle className="text-base">Rate Your Experience</CardTitle>
+                <CardDescription>
+                  {existingDriverReview ? 'You reviewed this ride. Edit within 24h.' : 'Share your experience with the driver.'}
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleReviewSubmit} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-semibold text-zinc-300">Driver Rating</label>
-                    <select
-                      value={rating}
-                      onChange={(e) => setRating(parseInt(e.target.value))}
-                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-amber-400 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all font-bold text-sm light:bg-white light:border-zinc-300"
-                    >
-                      <option value={5}>⭐⭐⭐⭐⭐ (5/5 Excellent)</option>
-                      <option value={4}>⭐⭐⭐⭐ (4/5 Good)</option>
-                      <option value={3}>⭐⭐⭐ (3/5 Average)</option>
-                      <option value={2}>⭐⭐ (2/5 Poor)</option>
-                      <option value={1}>⭐ (1/5 Terrible)</option>
-                    </select>
-                  </div>
-                  <Input
-                    label="Comments"
-                    placeholder="Describe driver safe driving, cost split clarity, etc..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                  />
-                  <div className="flex justify-end mt-2">
-                    <Button type="submit" loading={reviewLoading}>
-                      Submit Driver Review
+              <CardContent className="pt-2">
+                {existingDriverReview ? (
+                  <div className="flex items-center justify-between p-4 bg-emerald-950/20 border border-emerald-800/30 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-zinc-200">Review Submitted</p>
+                        <div className="flex gap-0.5 mt-1">
+                          {[1,2,3,4,5].map((s) => (
+                            <Star key={s} className={`w-3.5 h-3.5 ${s <= existingDriverReview.rating ? 'fill-amber-400 text-amber-400' : 'text-zinc-700'}`} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={openDriverReviewDialog} className="text-xs h-auto py-1.5">
+                      Edit Review
                     </Button>
                   </div>
-                </form>
+                ) : (
+                  <Button onClick={openDriverReviewDialog} className="w-full">
+                    <Star className="w-4 h-4 mr-2" />
+                    Rate Driver {ride.driver.name}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
-
-          {/* Completed Passenger Review state confirmation */}
-          {!isDriver && myBooking?.status === 'accepted' && ride.status === 'completed' && hasReviewed && (
-            <div className="p-4 bg-emerald-950/20 border border-emerald-800/30 rounded-2xl flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-              <p className="text-xs text-zinc-400 font-medium">
-                You have already submitted your review feedback for this trip. Thank you!
-              </p>
-            </div>
-          )}
         </div>
 
-        {/* Right Panel: Driver Bio & Booking Trigger (span 1) */}
+        {/* Right: Driver Profile & Booking Action */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          {/* Driver Card Info */}
+          {/* Driver Card */}
           <Card>
             <CardHeader className="border-b border-zinc-850 pb-4">
               <CardTitle className="text-base">Driver Profile</CardTitle>
@@ -456,13 +566,12 @@ export const RideDetails: React.FC = () => {
                 {ride.driver.verifiedDriver && <Badge variant="success" className="py-0 px-1.5 text-[8px]">Verified</Badge>}
               </h3>
               <p className="text-xs text-zinc-400 mt-1">{ride.driver.email}</p>
-              
-              {/* Extra details (only visible to accepted passengers or driver themselves) */}
+
               {((myBooking?.status === 'accepted') || isDriver) && ride.driver.phone && (
                 <p className="text-xs font-bold text-violet-400 mt-2">Call: {ride.driver.phone}</p>
               )}
 
-              {/* Rating stars */}
+              {/* Rating display */}
               <div className="flex items-center justify-center gap-3 mt-4 w-full">
                 <div className="bg-zinc-950 p-2.5 rounded-xl border border-zinc-850 flex-1">
                   <span className="text-[10px] text-zinc-500 uppercase font-bold block">Rating</span>
@@ -472,7 +581,7 @@ export const RideDetails: React.FC = () => {
                   </span>
                 </div>
                 <div className="bg-zinc-950 p-2.5 rounded-xl border border-zinc-850 flex-1">
-                  <span className="text-[10px] text-zinc-500 uppercase font-bold block">Trust Score</span>
+                  <span className="text-[10px] text-zinc-500 uppercase font-bold block">Trust</span>
                   <span className="text-sm font-black text-violet-400 block mt-0.5">{ride.driver.trustScore}%</span>
                 </div>
               </div>
@@ -495,7 +604,7 @@ export const RideDetails: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Booking Action Card (For Passengers) / Trip Control Card (For Drivers) */}
+          {/* Booking Action / Trip Control */}
           <Card className="border-violet-500/20">
             <CardHeader className="bg-violet-950/15 border-b border-zinc-850 p-4">
               <CardTitle className="text-sm font-bold flex items-center justify-between">
@@ -504,24 +613,16 @@ export const RideDetails: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              {/* 1) DRIVER CONTROLS */}
+              {/* DRIVER CONTROLS */}
               {isDriver && (
                 <div className="flex flex-col gap-3">
                   {ride.status === 'scheduled' && (
-                    <Button
-                      onClick={() => handleUpdateStatus('ongoing')}
-                      loading={statusLoading}
-                      className="w-full py-3"
-                    >
+                    <Button onClick={() => handleUpdateStatus('ongoing')} loading={statusLoading} className="w-full py-3">
                       Start Trip (Ongoing)
                     </Button>
                   )}
                   {ride.status === 'ongoing' && (
-                    <Button
-                      onClick={() => handleUpdateStatus('completed')}
-                      loading={statusLoading}
-                      className="w-full py-3"
-                    >
+                    <Button onClick={() => handleUpdateStatus('completed')} loading={statusLoading} className="w-full py-3">
                       Mark as Completed
                     </Button>
                   )}
@@ -544,17 +645,17 @@ export const RideDetails: React.FC = () => {
                 </div>
               )}
 
-              {/* 2) PASSENGER CONTROLS */}
+              {/* PASSENGER CONTROLS */}
               {!isDriver && (
                 <div className="flex flex-col gap-4">
-                  {/* If not booked yet */}
+                  {/* Not booked yet */}
                   {!myBooking && (
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
                         <span>Requested Seats</span>
                         <span>{ride.availableSeats} available</span>
                       </div>
-                      
+
                       {ride.availableSeats > 0 ? (
                         <>
                           <input
@@ -563,19 +664,40 @@ export const RideDetails: React.FC = () => {
                             max={Math.min(4, ride.availableSeats)}
                             value={requestedSeats}
                             onChange={(e) => setRequestedSeats(parseInt(e.target.value) || 1)}
-                            className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 light:bg-white light:border-zinc-300"
+                            className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2"
                           />
 
+                          {/* Feature 4: Map-based pickup selection */}
                           <div className="flex flex-col gap-1">
-                            <label className="text-[11px] font-bold text-zinc-455 uppercase tracking-wider">Pickup Location</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. MH-2 Hostel Gate"
-                              value={pickup}
-                              onChange={(e) => setPickup(e.target.value)}
-                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 light:bg-white light:border-zinc-300"
-                              required
-                            />
+                            <label className="text-[11px] font-bold text-zinc-455 uppercase tracking-wider flex items-center justify-between">
+                              <span>Pickup Location</span>
+                              <button
+                                type="button"
+                                onClick={handleUseCurrentLocation}
+                                disabled={gettingLocation}
+                                className="flex items-center gap-1 text-violet-400 hover:text-violet-300 text-[10px] font-normal transition-colors disabled:opacity-50"
+                              >
+                                <Locate className="w-3 h-3" />
+                                {gettingLocation ? 'Getting location...' : 'Use GPS'}
+                              </button>
+                            </label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                              <input
+                                type="text"
+                                placeholder="e.g. MH-2 Hostel Gate, Block 3"
+                                value={pickup}
+                                onChange={(e) => { setPickup(e.target.value); setPickupCoords(null); }}
+                                className="w-full pl-9 pr-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2"
+                                required
+                              />
+                            </div>
+                            {pickupCoords && (
+                              <p className="text-[10px] text-emerald-400 flex items-center gap-1 -mt-1 mb-1">
+                                <CheckCircle className="w-2.5 h-2.5" />
+                                GPS coordinates captured
+                              </p>
+                            )}
                           </div>
 
                           <div className="flex flex-col gap-1">
@@ -585,7 +707,7 @@ export const RideDetails: React.FC = () => {
                               placeholder="e.g. Block 1 Academic Block"
                               value={drop}
                               onChange={(e) => setDrop(e.target.value)}
-                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 light:bg-white light:border-zinc-300"
+                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2"
                               required
                             />
                           </div>
@@ -597,7 +719,7 @@ export const RideDetails: React.FC = () => {
                               value={message}
                               onChange={(e) => setMessage(e.target.value)}
                               rows={2}
-                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 resize-none light:bg-white light:border-zinc-300"
+                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 resize-none"
                             />
                           </div>
 
@@ -618,7 +740,7 @@ export const RideDetails: React.FC = () => {
                     </div>
                   )}
 
-                  {/* If booked and pending */}
+                  {/* Awaiting driver approval */}
                   {myBooking && myBooking.status === 'pending' && (
                     <div className="flex flex-col gap-3 text-center">
                       <div className="p-3 bg-amber-950/20 border border-amber-900/30 text-amber-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
@@ -636,15 +758,13 @@ export const RideDetails: React.FC = () => {
                     </div>
                   )}
 
-                  {/* If booked and accepted */}
+                  {/* Booking accepted */}
                   {myBooking && myBooking.status === 'accepted' && (
                     <div className="flex flex-col gap-3">
                       <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 text-emerald-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
                         <CheckCircle className="w-4 h-4" />
                         Seat Confirmed 🎉
                       </div>
-
-                      {/* Chat trigger */}
                       <Button
                         variant="secondary"
                         onClick={() => handleLaunchChat(ride.driver._id)}
@@ -653,7 +773,6 @@ export const RideDetails: React.FC = () => {
                         <MessageSquare className="w-4 h-4" />
                         Chat with Driver
                       </Button>
-
                       {ride.status !== 'completed' && ride.status !== 'cancelled' && (
                         <Button
                           variant="destructive"
@@ -667,14 +786,12 @@ export const RideDetails: React.FC = () => {
                     </div>
                   )}
 
-                  {/* If booking rejected */}
                   {myBooking && myBooking.status === 'rejected' && (
                     <div className="p-3 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl text-xs font-semibold text-center">
                       Your booking request was declined.
                     </div>
                   )}
 
-                  {/* If booking cancelled */}
                   {myBooking && myBooking.status === 'cancelled' && (
                     <div className="p-3 bg-zinc-950 border border-zinc-850 text-zinc-500 rounded-xl text-xs font-semibold text-center">
                       Booking Cancelled.
@@ -686,6 +803,17 @@ export const RideDetails: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Review Dialog (F1 + F2) */}
+      <ReviewDialog
+        isOpen={reviewDialogOpen}
+        onClose={() => setReviewDialogOpen(false)}
+        onSubmit={handleReviewSubmit}
+        targetName={reviewDialogTarget.name}
+        reviewType={reviewDialogTarget.type}
+        existingReview={reviewDialogTarget.type === 'driver' ? existingDriverReview : null}
+        loading={reviewLoading}
+      />
     </div>
   );
 };

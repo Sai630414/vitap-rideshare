@@ -21,6 +21,11 @@ export interface IUser extends Document {
   googleId?: string;
   password?: string; // fallback password for local auth & mock accounts
   isVerified: boolean;
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: Date;
+  phoneOTP?: string;
+  phoneOTPExpiry?: Date;
+  phoneVerificationAttempts?: number;
   verificationOTP?: string;
   verificationOTPExpiry?: Date;
   resetPasswordToken?: string;
@@ -128,6 +133,24 @@ const userSchema = new Schema<IUser>(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerifiedAt: {
+      type: Date,
+    },
+    phoneOTP: {
+      type: String,
+      select: false,
+    },
+    phoneOTPExpiry: {
+      type: Date,
+    },
+    phoneVerificationAttempts: {
+      type: Number,
+      default: 0,
     },
     verificationOTP: {
       type: String,

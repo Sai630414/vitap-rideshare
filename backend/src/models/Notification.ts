@@ -5,7 +5,21 @@ export interface INotification extends Document {
   title: string;
   body: string;
   isRead: boolean;
-  type: 'ride_accepted' | 'ride_cancelled' | 'booking_request' | 'verification_approved' | 'chat_message' | 'sos_alert';
+  type:
+    | 'ride_accepted'
+    | 'ride_cancelled'
+    | 'booking_request'
+    | 'verification_approved'
+    | 'chat_message'
+    | 'sos_alert'
+    | 'ride_booked'
+    | 'booking_accepted'
+    | 'booking_rejected'
+    | 'driver_started'
+    | 'driver_arrived'
+    | 'ride_completed'
+    | 'new_message'
+    | 'new_review';
   referenceId?: Schema.Types.ObjectId; // generic link ID (e.g. ride ID, booking ID)
   createdAt: Date;
   updatedAt: Date;
@@ -36,12 +50,22 @@ const notificationSchema = new Schema<INotification>(
     type: {
       type: String,
       enum: [
+        // Legacy types (kept for backward compat)
         'ride_accepted',
         'ride_cancelled',
         'booking_request',
         'verification_approved',
         'chat_message',
         'sos_alert',
+        // New specific types (Feature 6)
+        'ride_booked',
+        'booking_accepted',
+        'booking_rejected',
+        'driver_started',
+        'driver_arrived',
+        'ride_completed',
+        'new_message',
+        'new_review',
       ],
       required: true,
     },

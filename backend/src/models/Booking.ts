@@ -6,6 +6,8 @@ export interface IBooking extends Document {
   driver: Schema.Types.ObjectId;
   pickup: string;
   drop: string;
+  pickupCoordinates?: [number, number]; // [lng, lat] — optional for map-based pickup
+  dropCoordinates?: [number, number];   // [lng, lat] — optional for map-based drop
   message?: string;
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed' | 'expired';
   paymentStatus: 'pending' | 'paid' | 'refunded';
@@ -45,6 +47,20 @@ const bookingSchema = new Schema<IBooking>(
       type: String,
       required: [true, 'Drop point address is required'],
       trim: true,
+    },
+    pickupCoordinates: {
+      type: [Number],
+      validate: {
+        validator: (v: number[]) => !v || v.length === 0 || v.length === 2,
+        message: 'Pickup coordinates must be [longitude, latitude]',
+      },
+    },
+    dropCoordinates: {
+      type: [Number],
+      validate: {
+        validator: (v: number[]) => !v || v.length === 0 || v.length === 2,
+        message: 'Drop coordinates must be [longitude, latitude]',
+      },
     },
     message: {
       type: String,

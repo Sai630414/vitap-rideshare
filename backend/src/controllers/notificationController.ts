@@ -5,12 +5,28 @@ import AppError from '../utils/appError';
 import { sendToUser } from '../services/socketService';
 import logger from '../utils/logger';
 
+type NotificationType =
+  | 'ride_accepted'
+  | 'ride_cancelled'
+  | 'booking_request'
+  | 'verification_approved'
+  | 'chat_message'
+  | 'sos_alert'
+  | 'ride_booked'
+  | 'booking_accepted'
+  | 'booking_rejected'
+  | 'driver_started'
+  | 'driver_arrived'
+  | 'ride_completed'
+  | 'new_message'
+  | 'new_review';
+
 // Helper function to create DB record and trigger real-time Socket event
 export const sendNotificationToUser = async (
   userId: string,
   title: string,
   body: string,
-  type: 'ride_accepted' | 'ride_cancelled' | 'booking_request' | 'verification_approved' | 'chat_message' | 'sos_alert',
+  type: NotificationType,
   referenceId?: any
 ): Promise<any> => {
   try {
