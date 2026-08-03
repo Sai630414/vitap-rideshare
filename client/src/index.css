@@ -4,144 +4,103 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Premium Material Design 3 Light Palette (Rapido/Uber style) */
+    --background: 220 20% 97%; /* #F3F4F8 */
+    --foreground: 222 47% 11%; /* #0F172A */
     
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 20% 98%;
-    
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 263.4 70% 50.4%;
-    
-    --radius: 0.75rem;
-  }
-
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;         /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 222 47% 11%;
     
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 20% 98%;
+    --primary: 154 64% 38%;    /* #15A061 (Rapido / Uber Green) */
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 217 91% 60%;  /* #3B82F6 */
+    --secondary-foreground: 0 0% 100%;
     
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 215 16% 47%;      /* #64748B */
+    --muted-foreground: 215 16% 56%;
     
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 45 100% 51%;     /* #FFC107 Vibrant Yellow */
+    --accent-foreground: 222 47% 11%;
     
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
     
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262.1 83.3% 57.8%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 154 64% 38%;
+    
+    --radius: 1.25rem; /* 20px rounded cards */
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    
+    --primary: 154 64% 45%;
+    --primary-foreground: 0 0% 100%;
+    
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 154 64% 45%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-slate-900 text-foreground font-sans antialiased selection:bg-primary selection:text-white;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Glassmorphism Styles */
-.glass-panel {
-  @apply bg-black/40 backdrop-blur-md border border-white/10;
+/* Material 3 Elevation Shadows */
+.shadow-md3-1 {
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -1px rgba(15, 23, 42, 0.04);
 }
 
-.light .glass-panel {
-  @apply bg-white/70 backdrop-blur-md border border-black/5;
+.shadow-md3-2 {
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
 }
 
-.glass-card {
-  @apply bg-zinc-900/60 backdrop-blur-lg border border-zinc-800/80 rounded-xl transition-all duration-300;
+.shadow-md3-3 {
+  box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.16), 0 8px 16px -4px rgba(15, 23, 42, 0.08);
 }
 
-.light .glass-card {
-  @apply bg-white/80 backdrop-blur-lg border border-zinc-200/50 rounded-xl transition-all duration-300;
+/* Hide Scrollbar for clean mobile lists */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Safe Area Insets for Native Capacitor */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
 }
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-zinc-700/50 rounded-full;
-}
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-zinc-600/70;
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 16px);
 }
 
-.light ::-webkit-scrollbar-thumb {
-  @apply bg-zinc-300/80 rounded-full;
-}
-.light ::-webkit-scrollbar-thumb:hover {
-  @apply bg-zinc-400;
-}
-
-/* Leaflet Map overrides for Dark Mode */
-.dark .leaflet-tile-layer {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+/* Pulse animation for skeleton items */
+@keyframes shimmer {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 
-.leaflet-container {
-  border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+.animate-shimmer {
+  animation: shimmer 1.5s infinite ease-in-out;
 }
 
-.leaflet-bar {
-  border: 1px solid hsl(var(--border)) !important;
-  background-color: hsl(var(--card)) !important;
-}
-
-.leaflet-bar a {
-  background-color: hsl(var(--card)) !important;
-  color: hsl(var(--foreground)) !important;
-  border-bottom: 1px solid hsl(var(--border)) !important;
-}
-
-.leaflet-bar a:hover {
-  background-color: hsl(var(--accent)) !important;
-}
-
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background-color: hsl(var(--card)) !important;
-  color: hsl(var(--foreground)) !important;
-  border: 1px solid hsl(var(--border));
-}

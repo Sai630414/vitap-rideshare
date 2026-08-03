@@ -2,17 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import {
-  MapPin,
   Calendar,
   Clock,
   CircleDollarSign,
   Users,
   AlertCircle,
   Plus,
+  Car,
+  ChevronRight,
+  ShieldCheck,
+  Zap,
+  MapPin,
+  X,
+  CheckCircle2,
 } from 'lucide-react';
-import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import vehicleService, { type VehicleData } from '../services/vehicleService';
 import rideService from '../services/rideService';
 import MapContainerComponent from '../components/MapContainer';
@@ -22,11 +25,9 @@ export const OfferRide: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Driver vehicle states
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
 
-  // Form states
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [source, setSource] = useState('');
   const [destination, setDestination] = useState('');
@@ -37,19 +38,16 @@ export const OfferRide: React.FC = () => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Map Coordinates selection state
   const [pickupCoords, setPickupCoords] = useState<[number, number] | undefined>(undefined);
   const [dropCoords, setDropCoords] = useState<[number, number] | undefined>(undefined);
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropAddress, setDropAddress] = useState('');
 
-  // Fetch driver's verified vehicles
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
         const res = await vehicleService.getMyVehicles();
         if (res.status === 'success') {
-          // Filter only verified vehicles
           const verifiedOnly = res.data.vehicles.filter((v: any) => v.status === 'verified');
           setVehicles(verifiedOnly);
           if (verifiedOnly.length > 0) {
@@ -69,12 +67,9 @@ export const OfferRide: React.FC = () => {
   const handleVehicleChange = (vehicleId: string) => {
     setSelectedVehicleId(vehicleId);
     const selected = vehicles.find((v) => v._id === vehicleId);
-    if (selected) {
-      setSeats(selected.seats);
-    }
+    if (selected) setSeats(selected.seats);
   };
 
-  // Map coordinates selection callback
   const handleMapSelect = (type: 'pickup' | 'drop', coords: [number, number], address: string) => {
     if (type === 'pickup') {
       setPickupCoords(coords);
@@ -87,27 +82,11 @@ export const OfferRide: React.FC = () => {
     }
   };
 
-  const handleResetCoords = () => {
-    setPickupCoords(undefined);
-    setDropCoords(undefined);
-    setPickupAddress('');
-    setDropAddress('');
-  };
-
   const handleOfferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedVehicleId) {
-      toast.error('Please register and select a verified vehicle first.');
-      return;
-    }
-    if (!pickupCoords || !dropCoords) {
-      toast.error('Please click on the map to set both pickup and drop coordinates.');
-      return;
-    }
-    if (!source || !destination || !departureDate || !departureTime || !price) {
-      toast.error('Please complete all form fields.');
-      return;
-    }
+    if (!selectedVehicleId) return toast.error('Select a verified vehicle.');
+    if (!pickupCoords || !dropCoords) return toast.error('Set both pickup and drop coordinates on map or search.');
+    if (!source || !destination || !departureDate || !departureTime || !price) return toast.error('Complete all trip fields.');
 
     setLoading(true);
     try {
@@ -115,14 +94,8 @@ export const OfferRide: React.FC = () => {
         vehicleId: selectedVehicleId,
         source,
         destination,
-        pickupLocation: {
-          address: pickupAddress || source,
-          coordinates: pickupCoords,
-        },
-        dropLocation: {
-          address: dropAddress || destination,
-          coordinates: dropCoords,
-        },
+        pickupLocation: { address: pickupAddress || source, coordinates: pickupCoords },
+        dropLocation: { address: dropAddress || destination, coordinates: dropCoords },
         departureDate,
         departureTime,
         price: parseFloat(price),
@@ -130,228 +103,232 @@ export const OfferRide: React.FC = () => {
         description,
         recurring: { isRecurring: false },
       });
-
       if (response.status === 'success') {
-        toast.success('🎉 Your ride offer has been listed successfully.');
+        toast.success('🎉 Ride published successfully!');
         navigate('/dashboard');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to list ride offer.');
+      toast.error(err.response?.data?.message || 'Failed to list ride.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loadingVehicles) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  if (loadingVehicles) return (
+    <div className="min-h-[300px] flex flex-col items-center justify-center gap-3">
+      <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      <p className="text-xs font-bold text-slate-500">Checking vehicle fleet...</p>
+    </div>
+  );
 
-  // Guard: If driver has no approved vehicles, block listing a ride
-  if (vehicles.length === 0) {
-    return (
-      <div className="flex flex-col gap-6 max-w-xl mx-auto items-center text-center py-16">
-        <div className="p-4 bg-amber-950/40 border border-amber-800/30 text-amber-400 rounded-full mb-2">
-          <AlertCircle className="w-10 h-10 animate-pulse" />
-        </div>
-        <h2 className="text-xl font-bold text-zinc-200">No Verified Vehicles Found</h2>
-        <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
-          You must register a vehicle and upload its Registration Certificate (RC) scan. Once an administrator approves your vehicle, you'll be authorized to list ride offers.
-        </p>
-        <Link to="/profile" className="mt-6">
-          <Button className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Register Vehicle RC
-          </Button>
-        </Link>
+  if (vehicles.length === 0) return (
+    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col items-center text-center my-4 gap-4">
+      <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+        <AlertCircle className="w-7 h-7" />
       </div>
-    );
-  }
+      <div>
+        <h2 className="text-lg font-black text-slate-900">Vehicle Approval Required</h2>
+        <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+          You need at least one verified vehicle in your profile to offer rides.
+        </p>
+      </div>
+      <Link to="/profile" className="w-full">
+        <button className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-extrabold text-xs shadow-md shadow-emerald-600/20">
+          + Add & Verify Vehicle
+        </button>
+      </Link>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-sans">
-        Offer a Ride
-      </h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Input Details Form (span 1) */}
-        <Card className="lg:col-span-1 h-fit">
-          <CardHeader className="border-b border-zinc-850 pb-4">
-            <CardTitle className="text-base">Trip Details</CardTitle>
-            <CardDescription>Setup pricing and route names</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleOfferSubmit} className="flex flex-col gap-4">
-              {/* Vehicle Select */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-zinc-300">Select Vehicle</label>
-                <select
-                  value={selectedVehicleId}
-                  onChange={(e) => handleVehicleChange(e.target.value)}
-                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300"
-                >
-                  {vehicles.map((v) => (
-                    <option key={v._id} value={v._id}>
-                      {v.brand} {v.model} ({v.numberPlate}) - max {v.seats} seats
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <AutocompleteInput
-                label="Leaving From (Pickup Address)"
-                placeholder="e.g. Hostels gate, Block 1"
-                value={source}
-                onChange={(val) => setSource(val)}
-                onSelect={(coords, name) => {
-                  setPickupCoords(coords);
-                  setPickupAddress(name);
-                  setSource(name); // sync text field with selected autocomplete result
-                }}
-                required
-              />
-
-              <AutocompleteInput
-                label="Going To (Drop Address)"
-                placeholder="e.g. Vijayawada Railway Station"
-                value={destination}
-                onChange={(val) => setDestination(val)}
-                onSelect={(coords, name) => {
-                  setDropCoords(coords);
-                  setDropAddress(name);
-                  setDestination(name); // sync text field with selected autocomplete result
-                }}
-                required
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase">Departure Date</label>
-                  <div className="relative flex items-center">
-                    <Calendar className="absolute left-4 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="date"
-                      value={departureDate}
-                      onChange={(e) => setDepartureDate(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase">Departure Time</label>
-                  <div className="relative flex items-center">
-                    <Clock className="absolute left-4 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="time"
-                      value={departureTime}
-                      onChange={(e) => setDepartureTime(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Price per Seat (₹)"
-                  placeholder="e.g. 150"
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  icon={<CircleDollarSign className="w-4 h-4 text-zinc-500" />}
-                  required
-                />
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-300">Available Seats</label>
-                  <div className="relative flex items-center">
-                    <Users className="absolute left-4 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="number"
-                      value={seats}
-                      onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
-                      className="w-full pl-11 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300"
-                      min={1}
-                      max={vehicles.find((v) => v._id === selectedVehicleId)?.seats || 4}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Input
-                label="Description/Note (Optional)"
-                placeholder="Luggage details, dynamic pickup spots, etc."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-
-              <Button type="submit" loading={loading} className="w-full py-3 mt-2">
-                List Ride Offer
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Right: Map Selector Canvas (span 2) */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="border-b border-zinc-850 pb-4 flex flex-row justify-between items-center">
-              <div>
-                <CardTitle className="text-base">Route Coordinates Selector</CardTitle>
-                <CardDescription>Click on the OpenStreetMap canvas to bind coordinates</CardDescription>
-              </div>
-              {(pickupCoords || dropCoords) && (
-                <button
-                  onClick={handleResetCoords}
-                  className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase"
-                >
-                  Reset Pins
-                </button>
-              )}
-            </CardHeader>
-            <CardContent className="pt-6 flex-1 flex flex-col gap-4">
-              <MapContainerComponent
-                pickupCoords={pickupCoords}
-                dropCoords={dropCoords}
-                pickupAddress={pickupAddress}
-                dropAddress={dropAddress}
-                interactive={true}
-                onSelectCoords={handleMapSelect}
-              />
-
-              {/* Displays selected pins info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                <div className="p-3.5 bg-zinc-950 border border-zinc-850 rounded-xl">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase block">Selected Pickup Point</span>
-                  <span className="text-xs font-semibold text-zinc-300 mt-1 block truncate">
-                    {pickupCoords
-                      ? `${pickupAddress} (${pickupCoords[0].toFixed(3)}, ${pickupCoords[1].toFixed(3)})`
-                      : 'None - Click Map to Pin'}
-                  </span>
-                </div>
-                <div className="p-3.5 bg-zinc-950 border border-zinc-850 rounded-xl">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase block">Selected Drop Point</span>
-                  <span className="text-xs font-semibold text-zinc-300 mt-1 block truncate">
-                    {dropCoords
-                      ? `${dropAddress} (${dropCoords[0].toFixed(3)}, ${dropCoords[1].toFixed(3)})`
-                      : 'None - Click Map to Pin'}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
+      
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-emerald-700 to-teal-600 text-white p-4 rounded-3xl shadow-md flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-200 block">Host a Trip</span>
+          <h1 className="text-lg font-black tracking-tight mt-0.5">Offer Campus Ride</h1>
+        </div>
+        <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center">
+          <Zap className="w-5 h-5 text-emerald-300" />
         </div>
       </div>
+
+      <form onSubmit={handleOfferSubmit} className="flex flex-col gap-4">
+        
+        {/* Vehicle Selection Card */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-2">
+          <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider ml-1">
+            Select Approved Vehicle
+          </label>
+          <div className="relative flex items-center">
+            <select
+              value={selectedVehicleId}
+              onChange={(e) => handleVehicleChange(e.target.value)}
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {vehicles.map((v) => (
+                <option key={v._id} value={v._id}>
+                  {v.brand} {v.model} ({v.numberPlate}) - {v.seats} seats
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none rotate-90" />
+          </div>
+        </div>
+
+        {/* Route Details Card */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+          <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            Route Points
+          </span>
+
+          <div className="space-y-2.5">
+            <AutocompleteInput
+              label="Pickup Location"
+              placeholder="e.g. VIT-AP Main Gate"
+              value={source}
+              onChange={setSource}
+              onSelect={(c, n) => {
+                setPickupCoords(c);
+                setPickupAddress(n);
+                setSource(n);
+              }}
+              required
+            />
+            <AutocompleteInput
+              label="Dropoff Location"
+              placeholder="e.g. Vijayawada Railway Station"
+              value={destination}
+              onChange={setDestination}
+              onSelect={(c, n) => {
+                setDropCoords(c);
+                setDropAddress(n);
+                setDestination(n);
+              }}
+              required
+            />
+          </div>
+        </div>
+
+        {/* Date & Time Selection */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+          <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-emerald-600" />
+            Schedule
+          </span>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                Departure Date
+              </label>
+              <input
+                type="date"
+                value={departureDate}
+                onChange={(e) => setDepartureDate(e.target.value)}
+                className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                value={departureTime}
+                onChange={(e) => setDepartureTime(e.target.value)}
+                className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Seats & Price */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+          <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+            <CircleDollarSign className="w-4 h-4 text-emerald-600" />
+            Seats & Fare
+          </span>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                Price Per Seat (₹)
+              </label>
+              <input
+                type="number"
+                placeholder="150"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                Available Seats
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={vehicles.find((v) => v._id === selectedVehicleId)?.seats || 4}
+                value={seats}
+                onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
+                className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Map Location Selector */}
+        <div className="bg-white p-3 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-black text-slate-900">Map Pin Preview</span>
+            {(pickupCoords || dropCoords) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPickupCoords(undefined);
+                  setDropCoords(undefined);
+                  setPickupAddress('');
+                  setDropAddress('');
+                }}
+                className="text-[10px] font-extrabold text-rose-600"
+              >
+                Reset Pins
+              </button>
+            )}
+          </div>
+          <div className="h-44 rounded-2xl overflow-hidden border border-slate-200 relative">
+            <MapContainerComponent
+              pickupCoords={pickupCoords}
+              dropCoords={dropCoords}
+              pickupAddress={pickupAddress}
+              dropAddress={dropAddress}
+              interactive={true}
+              onSelectCoords={handleMapSelect}
+            />
+          </div>
+        </div>
+
+        {/* Submit Floating Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] transition-all text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 mt-2"
+        >
+          {loading ? 'Publishing Ride...' : '🚀 Publish Campus Ride'}
+        </button>
+
+      </form>
     </div>
   );
 };
 
 export default OfferRide;
+

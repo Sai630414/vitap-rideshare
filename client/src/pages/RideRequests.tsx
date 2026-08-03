@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Compass, Plus, Clock, Users, MapPin, Sparkles, Navigation } from 'lucide-react';
-import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
+import { Compass, Plus, Clock, Users, MapPin, Navigation, X, Trash2 } from 'lucide-react';
 import rideService from '../services/rideService';
 
 interface RideRequestData {
@@ -75,9 +72,8 @@ export const RideRequests: React.FC = () => {
 
     setSubmitLoading(true);
     try {
-      // Simulate geocoding to attach mock coordinates to requested trips
-      const pickupCoords: [number, number] = [80.4992, 16.4971]; // default central VIT-AP
-      const dropCoords: [number, number] = [80.5, 16.5];        // offset slightly
+      const pickupCoords: [number, number] = [80.4992, 16.4971];
+      const dropCoords: [number, number] = [80.5, 16.5];
 
       const res = await rideService.createRideRequest({
         source,
@@ -91,16 +87,14 @@ export const RideRequests: React.FC = () => {
       });
 
       if (res.status === 'success') {
-        toast.success('🎉 Your ride request has been listed on the board.');
+        toast.success('🎉 Ride request posted!');
         setShowAddForm(false);
-        // Reset form
         setSource('');
         setDestination('');
         setDate('');
         setTime('');
         setSeats(1);
         setDescription('');
-        
         fetchRequests();
       }
     } catch (err: any) {
@@ -111,7 +105,6 @@ export const RideRequests: React.FC = () => {
   };
 
   const handleOfferMatchingRide = (req: RideRequestData) => {
-    // Navigate driver to offer ride page, prefilling the coordinates
     navigate('/offer-ride', {
       state: {
         prefill: {
@@ -126,7 +119,7 @@ export const RideRequests: React.FC = () => {
   };
 
   const handleCancelMyRequest = async (id: string) => {
-    if (!window.confirm('Are you sure you want to cancel your ride request?')) return;
+    if (!window.confirm('Cancel your ride request?')) return;
     try {
       const res = await rideService.deleteRideRequest(id);
       if (res.status === 'success') {
@@ -139,204 +132,220 @@ export const RideRequests: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center gap-4">
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
+      
+      {/* Top Action Header */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2 font-sans">
-            <Compass className="w-7 h-7 text-violet-400" />
+          <h1 className="text-base font-black text-slate-900 flex items-center gap-2">
+            <Navigation className="w-4 h-4 text-emerald-600" />
             Ride Requests Board
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">Passengers seeking rides commute splits</p>
+          <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+            Custom ride postings from fellow students
+          </p>
         </div>
+
         {!showAddForm && (
-          <Button size="sm" onClick={() => setShowAddForm(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            Request Ride
-          </Button>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-3.5 py-2 bg-emerald-600 text-white rounded-2xl text-xs font-extrabold shadow-sm active:scale-95 transition-transform flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Post Request</span>
+          </button>
         )}
       </div>
 
-      {/* Add Request Form Panel */}
+      {/* Add Request Form Modal / Sheet */}
       {showAddForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Post Ride Request</CardTitle>
-            <CardDescription>Need a ride? List your destination so drivers can see</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateRequest} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Leaving From"
-                placeholder="Block 1, Main Gate, Vijayawada station..."
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                icon={<MapPin className="w-4 h-4" />}
+        <form onSubmit={handleCreateRequest} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-md flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span className="text-xs font-black text-slate-900">Post Custom Ride Request</span>
+            <button type="button" onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Starting From</label>
+            <input
+              type="text"
+              placeholder="e.g. Block 2, VIT-AP"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Going To</label>
+            <input
+              type="text"
+              placeholder="e.g. Vijayawada Station"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
                 required
               />
-              <Input
-                label="Going To"
-                placeholder="Destinations, hostel blocks, Guntur..."
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                icon={<MapPin className="w-4 h-4 text-violet-500" />}
+            </div>
+            <div>
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Time</label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
                 required
               />
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase">Departure Date</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-155 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase">Departure Time</label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-155 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
-                    required
-                  />
-                </div>
-              </div>
+          <div>
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Seats Needed</label>
+            <input
+              type="number"
+              min={1}
+              max={6}
+              value={seats}
+              onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
+              className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+              required
+            />
+          </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-zinc-300">Seats Required</label>
-                <div className="relative flex items-center">
-                  <Users className="absolute left-4 w-4 h-4 text-zinc-500" />
-                  <input
-                    type="number"
-                    value={seats}
-                    onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
-                    className="w-full pl-11 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300"
-                    min={1}
-                    max={6}
-                    required
-                  />
-                </div>
-              </div>
+          <div>
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Additional Notes</label>
+            <input
+              type="text"
+              placeholder="Luggage info, time flexibility..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+            />
+          </div>
 
-              <Input
-                label="Notes"
-                placeholder="Bag details, split preferences, custom timings..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="sm:col-span-2"
-              />
-
-              <div className="sm:col-span-2 flex justify-end gap-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" loading={submitLoading}>
-                  List Requested Trip
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="flex-1 py-3 rounded-2xl text-xs font-bold text-slate-500 bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitLoading}
+              className="flex-1 py-3 rounded-2xl text-xs font-extrabold text-white bg-emerald-600 shadow-md shadow-emerald-600/20"
+            >
+              {submitLoading ? 'Submitting...' : 'Post Request'}
+            </button>
+          </div>
+        </form>
       )}
 
-      {/* Requests Listings Board */}
+      {/* Requests Listings */}
       {loading ? (
-        <div className="flex flex-col gap-4">
+        <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-28 bg-zinc-900 rounded-2xl animate-pulse"></div>
+            <div key={i} className="h-28 bg-slate-100 rounded-3xl animate-pulse" />
           ))}
         </div>
       ) : requests.length === 0 ? (
-        <div className="text-center py-20 bg-zinc-900 border border-zinc-800 rounded-2xl">
-          <Compass className="w-16 h-16 text-zinc-700 mx-auto mb-4 animate-pulse" />
-          <h3 className="text-lg font-bold text-zinc-300">No active requests listed</h3>
-          <p className="text-xs text-zinc-500 mt-1">
-            There are no passengers requesting rides right now. If you need a ride, post one above!
-          </p>
+        <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <Navigation className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+          <p className="text-xs font-bold text-slate-500">No active ride requests listed</p>
+          <p className="text-[10px] text-slate-400 mt-1">Post a request above if you need a custom trip</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-3">
           {requests.map((req) => (
-            <Card key={req._id}>
-              <CardContent className="p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex-1 min-w-0">
-                  {/* Top line metadata */}
-                  <div className="flex items-center gap-2.5 text-[10px] font-bold text-zinc-400 uppercase">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                      {new Date(req.departureDate).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                      {' '}at {req.departureTime}
+            <div
+              key={req._id}
+              className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={req.user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(req.user.name)}`}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover border border-slate-100"
+                  />
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">{req.user.name}</span>
+                    <span className="text-[9px] font-bold text-slate-400">
+                      Rating: {req.user.rating} ⭐ • Trust: {req.user.trustScore}%
                     </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1 text-violet-400">
-                      <Users className="w-3.5 h-3.5" />
-                      {req.seatsNeeded} Seat(s) requested
-                    </span>
-                  </div>
-
-                  {/* Route path */}
-                  <div className="flex items-center gap-2 mt-3 text-base font-extrabold text-zinc-150">
-                    <span>{req.source}</span>
-                    <span className="text-zinc-500 font-normal">→</span>
-                    <span>{req.destination}</span>
-                  </div>
-
-                  {/* Description note */}
-                  {req.description && (
-                    <p className="text-xs text-zinc-400 mt-2 bg-zinc-950 p-2.5 border border-zinc-850 rounded-xl leading-relaxed">
-                      {req.description}
-                    </p>
-                  )}
-
-                  {/* Requested by passenger */}
-                  <div className="flex items-center gap-3 mt-4">
-                    <img
-                      src={req.user.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=user'}
-                      className="w-7 h-7 rounded-full object-cover border border-zinc-700/50"
-                      alt=""
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-zinc-300">
-                        Requested by {req.user.name} | Rating: {req.user.rating} ⭐ | Trust: {req.user.trustScore}%
-                      </p>
-                    </div>
                   </div>
                 </div>
 
-                <div className="shrink-0 w-full md:w-auto flex justify-end border-t md:border-0 border-zinc-850 pt-4 md:pt-0">
-                  {req.user._id === user?._id ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs text-red-400 py-1.5 h-auto"
-                      onClick={() => handleCancelMyRequest(req._id)}
-                    >
-                      Cancel Request
-                    </Button>
-                  ) : user?.role === 'driver' && user?.verifiedDriver ? (
-                    <Button
-                      size="sm"
-                      className="text-xs py-1.5 h-auto flex items-center gap-1.5"
-                      onClick={() => handleOfferMatchingRide(req)}
-                    >
-                      <Navigation className="w-3.5 h-3.5" />
-                      Create Custom Offer
-                    </Button>
-                  ) : (
-                    <span className="text-[10px] text-zinc-500 font-bold uppercase italic p-2 border border-zinc-850 rounded-xl">
-                      Visible to Verified Drivers
-                    </span>
-                  )}
+                <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                  {req.seatsNeeded} Seat(s)
+                </span>
+              </div>
+
+              {/* Route */}
+              <div className="bg-slate-50 p-2.5 rounded-2xl flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                    <span className="truncate">{req.source}</span>
+                    <span className="text-slate-400">→</span>
+                    <span className="truncate">{req.destination}</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-right shrink-0 pl-2">
+                  <span className="text-[9px] font-bold text-slate-400 block">
+                    {new Date(req.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <span className="text-xs font-black text-slate-900 block mt-0.5">{req.departureTime}</span>
+                </div>
+              </div>
+
+              {req.description && (
+                <p className="text-[11px] text-slate-600 bg-slate-50/60 p-2 rounded-xl italic">
+                  "{req.description}"
+                </p>
+              )}
+
+              {/* Action footer */}
+              <div className="flex items-center justify-end pt-1">
+                {req.user._id === user?._id ? (
+                  <button
+                    onClick={() => handleCancelMyRequest(req._id)}
+                    className="text-[11px] font-extrabold text-rose-600 flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Cancel Request</span>
+                  </button>
+                ) : user?.role === 'driver' && user?.verifiedDriver ? (
+                  <button
+                    onClick={() => handleOfferMatchingRide(req)}
+                    className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm active:scale-95 transition-transform flex items-center gap-1"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    <span>Create Custom Offer</span>
+                  </button>
+                ) : (
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    Open for Drivers
+                  </span>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -345,3 +354,4 @@ export const RideRequests: React.FC = () => {
 };
 
 export default RideRequests;
+

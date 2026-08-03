@@ -10,15 +10,15 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = 'text', label, error, icon, ...props }, ref) => {
     return (
-      <div className="w-full flex flex-col gap-1.5">
+      <div className="w-full flex flex-col gap-2">
         {label && (
-          <label className="text-sm font-semibold text-zinc-300 light:text-zinc-700">
+          <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
             {label}
           </label>
         )}
-        <div className="relative flex items-center">
+        <div className="relative flex items-center group">
           {icon && (
-            <div className="absolute left-4 text-zinc-500 pointer-events-none">
+            <div className="absolute left-4 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none">
               {icon}
             </div>
           )}
@@ -26,16 +26,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             ref={ref}
             className={twMerge(
-              'w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900 light:placeholder-zinc-400',
-              icon ? 'pl-11' : '',
-              error ? 'border-red-650 focus:ring-red-650/30 focus:border-red-650' : '',
+              'w-full px-5 py-4 bg-white border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm shadow-soft',
+              icon ? 'pl-12' : '',
+              error ? 'border-destructive focus:ring-destructive/10 focus:border-destructive' : '',
               className
             )}
             {...props}
           />
         </div>
         {error && (
-          <p className="text-xs font-semibold text-red-500 leading-none">
+          <p className="text-xs font-medium text-destructive ml-1">
             {error}
           </p>
         )}

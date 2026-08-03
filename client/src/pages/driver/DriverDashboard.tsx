@@ -15,6 +15,10 @@ import {
   CreditCard,
   Check,
   MessageSquare,
+  ChevronRight,
+  ShieldCheck,
+  Calendar,
+  Users,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -72,7 +76,6 @@ export const DriverDashboard: React.FC = () => {
     try {
       const res = await api.get('/auth/me');
       if (res.data.status === 'success' && login) {
-        // Just reload the page or update state if login helper is available
         window.location.reload();
       }
     } catch (err) {
@@ -80,7 +83,6 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
-  // Fetch driver rides & incoming requests if fully active
   useEffect(() => {
     if (user?.role === 'driver' && user?.verifiedDriver && hasPaid) {
       const fetchDriverRides = async () => {
@@ -90,10 +92,8 @@ export const DriverDashboard: React.FC = () => {
             const allRides: RideData[] = response.data.data.rides;
             const filtered = allRides.filter((ride) => ride.driver._id === user._id);
             setMyRides(filtered);
-
-            // Calculate earnings based on completed rides
             const completed = filtered.filter((r) => r.status === 'completed');
-            setEarnings(completed.length * 150); // assume avg ₹150 profit per ride
+            setEarnings(completed.length * 150);
           }
         } catch (err) {
           console.error('Failed to load driver rides:', err);
@@ -140,8 +140,6 @@ export const DriverDashboard: React.FC = () => {
       if (res.status === 'success') {
         toast.success(`Request ${status === 'accepted' ? 'accepted' : 'declined'} successfully!`);
         setRequests(prev => prev.map(req => req._id === bookingId ? { ...req, status } : req));
-        
-        // Refresh rides to update seats
         const ridesRes = await api.get('/rides');
         if (ridesRes.data.status === 'success') {
           const allRides = ridesRes.data.data.rides;
@@ -167,7 +165,6 @@ export const DriverDashboard: React.FC = () => {
 
   const pendingRequestsCount = requests.filter(r => r.status === 'pending').length;
 
-  // Feature 2: Driver submits passenger review
   const handlePassengerReview = async (rating: number, comment: string) => {
     if (!reviewTarget) return;
     setReviewLoading(true);
@@ -190,48 +187,39 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
-  // Razorpay Checkout handler
   const handlePayment = async () => {
     setPaymentLoading(true);
     try {
-      // 1. Create order on backend (5000 paise = ₹50)
       const res = await api.post('/create-order', { amount: 5000 });
       const { orderId, amount, currency } = res.data;
-
-      // 2. Load script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
-        toast.error('Razorpay SDK failed to load. Are you offline?');
+        toast.error('Razorpay SDK failed to load.');
         setPaymentLoading(false);
         return;
       }
-
-      // 3. Open Checkout options
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
         amount: amount,
         currency: currency,
-        name: 'VIT RideShare',
-        description: 'Driver Subscription Activation Fee',
+        name: 'Waygo',
+        description: 'Driver Subscription Activation',
         order_id: orderId,
         handler: async function (response: any) {
-          toast.info('Verifying transaction...');
           try {
             const verifyRes = await api.post('/verify-payment', {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
             });
-
             if (verifyRes.data.status === 'success') {
-              toast.success('🎉 Subscription Activated! Welcome aboard.');
+              toast.success('🎉 Subscription Activated!');
               await refreshUserState();
             } else {
-              toast.error(verifyRes.data.message || 'Payment verification failed.');
+              toast.error('Payment verification failed.');
               setPaymentLoading(false);
             }
-          } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Payment verification failed.');
+          } catch (err) {
             setPaymentLoading(false);
           }
         },
@@ -240,538 +228,315 @@ export const DriverDashboard: React.FC = () => {
           email: user?.email || '',
           contact: driver?.phone || '',
         },
-        theme: {
-          color: '#8B5CF6', // Purple-600
-        },
+        theme: { color: '#0F9D58' },
         modal: {
-          ondismiss: function () {
-            toast.info('Transaction cancelled by user.');
-            setPaymentLoading(false);
-          },
+          ondismiss: () => setPaymentLoading(false),
         },
       };
-
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        console.error('Razorpay payment failed:', response.error);
-        toast.error(response.error.description || 'Payment failed.');
-        setPaymentLoading(false);
-      });
       rzp.open();
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Could not initialize Razorpay checkout. Please check your internet connection.');
+    } catch (err) {
       setPaymentLoading(false);
     }
   };
 
-  // State 1: No registration details
   if (!driver) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center gap-4 max-w-md mx-auto p-4 font-sans animate-fade-in">
-        <AlertTriangle className="w-12 h-12 text-amber-500 animate-bounce" />
-        <h2 className="text-lg font-bold text-zinc-200">No Driver Application Found</h2>
-        <p className="text-xs text-zinc-400">
-          You must submit a driver registration application including vehicle specifics and licence scans before you can host rides.
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 bg-white rounded-[3rem] shadow-premium">
+        <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-6">
+          <ShieldCheck className="w-10 h-10 text-primary" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground">Become a Driver</h2>
+        <p className="text-muted-foreground font-medium mt-2 max-w-xs mx-auto">
+          Host rides and earn while commuting across campus and city.
         </p>
-        <Link to="/driver/register" className="mt-2">
-          <Button className="bg-violet-650 hover:bg-violet-750">
-            Submit Application
+        <Link to="/driver/register" className="mt-8 w-full max-w-xs">
+          <Button className="w-full py-4 rounded-2xl">
+            Start Application
           </Button>
         </Link>
       </div>
     );
   }
 
-  // State 2: Pending Approval
   if (status === 'Pending' || status === 'pending') {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans animate-fade-in">
-        <Card className="max-w-md w-full bg-zinc-900 border-zinc-800">
-          <CardContent className="pt-8 pb-8 flex flex-col items-center text-center gap-5">
-            <div className="w-16 h-16 rounded-full bg-amber-950/40 border border-amber-800/30 flex items-center justify-center text-amber-400 animate-pulse">
-              <Clock className="w-8 h-8" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-zinc-200">Application Under Review ⏳</h2>
-              <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mt-1">
-                Driver Registration Pending
-              </p>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed px-2">
-              Your driver credentials and vehicle files are currently undergoing verification review by the platform administrator. You will receive an email update once your account is status updated.
-            </p>
-            <div className="w-full p-4 bg-zinc-950 border border-zinc-850 rounded-2xl flex flex-col gap-2 text-left">
-              <span className="text-[10px] text-zinc-500 font-extrabold uppercase block">Submitted Scans Check</span>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400 font-semibold">Licence Scan</span>
-                <span className="text-emerald-500 font-bold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Uploaded</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400 font-semibold">Vehicle RC Scan</span>
-                <span className="text-emerald-500 font-bold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Uploaded</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400 font-semibold">Registration Status</span>
-                <span className="text-amber-400 font-black flex items-center gap-1">Pending Approval</span>
-              </div>
-            </div>
-            <Link to="/dashboard" className="text-xs font-bold text-violet-400 hover:text-violet-300 uppercase mt-2">
-              Return to Student Commute Screen
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
+        <div className="w-20 h-20 bg-accent/10 rounded-[2rem] flex items-center justify-center mb-6 animate-pulse">
+          <Clock className="w-10 h-10 text-accent" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground">Application Pending</h2>
+        <p className="text-muted-foreground font-medium mt-2 max-w-sm">
+          We're verifying your vehicle and licence documents. This usually takes 24-48 hours.
+        </p>
+        <div className="mt-10 w-full max-w-md bg-white border border-border rounded-[2rem] p-6 space-y-4 text-left shadow-soft">
+           <div className="flex justify-between items-center">
+             <span className="text-xs font-black uppercase text-muted-foreground tracking-widest">Document Status</span>
+             <Badge variant="warning">In Review</Badge>
+           </div>
+           <div className="h-px bg-border"></div>
+           <div className="flex items-center gap-3">
+             <CheckCircle className="text-primary w-4 h-4" />
+             <span className="text-sm font-bold">Vehicle RC Scanned</span>
+           </div>
+           <div className="flex items-center gap-3">
+             <CheckCircle className="text-primary w-4 h-4" />
+             <span className="text-sm font-bold">Driving Licence Verified</span>
+           </div>
+        </div>
       </div>
     );
   }
 
-  // State 3: Resubmission Remarks
   if (status === 'resubmission') {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans animate-fade-in">
-        <Card className="max-w-md w-full bg-zinc-900 border-zinc-800">
-          <CardContent className="pt-8 pb-8 flex flex-col items-center text-center gap-5">
-            <div className="w-16 h-16 rounded-full bg-amber-950/30 border border-amber-700/50 flex items-center justify-center text-amber-500">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-zinc-200">Action Required ⚠️</h2>
-              <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mt-1">
-                Document Resubmission Requested
-              </p>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              The administrator reviewed your application but requested clearer document files. Please check the remarks below:
-            </p>
-            {driver?.rejectionReason && (
-              <div className="w-full p-4 bg-amber-950/15 border border-amber-900/30 text-xs text-amber-250 font-bold text-left rounded-xl">
-                Remarks: {driver.rejectionReason}
-              </div>
-            )}
-            <Link to="/driver/register" className="w-full mt-2">
-              <Button className="w-full bg-violet-650 hover:bg-violet-750 flex items-center justify-center gap-1.5 py-3 text-xs">
-                Update Uploaded Scans
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700">
+        <div className="w-20 h-20 bg-destructive/10 rounded-[2rem] flex items-center justify-center mb-6">
+          <AlertTriangle className="w-10 h-10 text-destructive" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground">Fix Required</h2>
+        <p className="text-muted-foreground font-medium mt-2 max-w-sm">
+          The admin team requested a document update.
+        </p>
+        {driver?.rejectionReason && (
+          <div className="mt-6 p-4 bg-destructive/5 border border-destructive/20 text-destructive font-bold text-sm rounded-2xl max-w-md">
+            "{driver.rejectionReason}"
+          </div>
+        )}
+        <Link to="/driver/register" className="mt-8 w-full max-w-xs">
+          <Button variant="primary" className="w-full py-4">Update Documents</Button>
+        </Link>
       </div>
     );
   }
 
-  // State 4: Rejected
   if (status === 'Rejected' || status === 'rejected') {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans animate-fade-in">
-        <Card className="max-w-md w-full bg-zinc-900 border-zinc-800">
-          <CardContent className="pt-8 pb-8 flex flex-col items-center text-center gap-5">
-            <div className="w-16 h-16 rounded-full bg-red-950/20 border border-red-800/40 flex items-center justify-center text-red-500">
-              <XCircle className="w-8 h-8" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-zinc-200">Application Rejected ❌</h2>
-              <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mt-1">
-                Registration Disallowed
-              </p>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Unfortunately, your driver application did not satisfy the registration compliance standards.
-            </p>
-            {driver?.rejectionReason && (
-              <div className="w-full p-4 bg-red-950/10 border border-red-950/20 text-xs text-red-300 font-bold text-left rounded-xl">
-                Reason: {driver.rejectionReason}
-              </div>
-            )}
-            <Link to="/driver/register" className="w-full mt-2">
-              <Button className="w-full bg-zinc-800 hover:bg-zinc-750 text-zinc-300 py-3 text-xs">
-                Apply with a New vehicle
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-destructive/10 rounded-[2rem] flex items-center justify-center mb-6">
+          <XCircle className="w-10 h-10 text-destructive" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground">Application Rejected</h2>
+        <p className="text-muted-foreground font-medium mt-2 max-w-sm">
+          Unfortunately, your application was not approved.
+        </p>
+        <Link to="/driver/register" className="mt-8">
+          <Button variant="ghost" className="font-black uppercase tracking-widest text-primary">Try Again</Button>
+        </Link>
       </div>
     );
   }
 
-  // State 5: Approved but Unpaid (Razorpay Gateway Screen)
   if ((status === 'Approved' || status === 'approved') && !hasPaid) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans animate-fade-in">
-        <Card className="max-w-md w-full bg-zinc-900 border-zinc-800">
-          <CardContent className="pt-8 pb-8 flex flex-col items-center text-center gap-5">
-            <div className="w-16 h-16 rounded-full bg-emerald-950/20 border border-emerald-800/30 flex items-center justify-center text-emerald-400">
-              <CheckCircle className="w-8 h-8" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-zinc-200">Application Approved! 🎉</h2>
-              <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mt-1">
-                Verification Successful
-              </p>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Your driver credentials have passed verification review! To activate your listing options and complete onboarding, please make the subscription payment.
-            </p>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in zoom-in-95 duration-500">
+        <div className="w-24 h-24 bg-primary/10 border-4 border-white rounded-[2.5rem] flex items-center justify-center text-primary mb-8 shadow-2xl shadow-primary/20 animate-bounce">
+          <CheckCircle className="w-12 h-12" />
+        </div>
+        <h2 className="text-3xl font-black text-foreground">You're Approved!</h2>
+        <p className="text-muted-foreground font-medium mt-2 max-w-sm">
+          Just one final step to activate your driver portal.
+        </p>
 
-            <div className="w-full p-5 bg-zinc-950 border border-zinc-850 rounded-2xl text-left flex flex-col gap-3">
-              <span className="text-[10px] text-zinc-500 font-extrabold uppercase block border-b border-zinc-850 pb-2">Subscription Summary</span>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400 font-semibold">Account Type</span>
-                <span className="text-zinc-200 font-extrabold">Verified driver</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400 font-semibold">Subscription Fee</span>
-                <span className="text-zinc-200 font-extrabold">₹50.00</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400 font-semibold">Status</span>
-                <span className="text-red-400 font-extrabold">Payment Pending</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={handlePayment}
-              loading={paymentLoading}
-              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 mt-2 text-xs"
-            >
-              <CreditCard className="w-4.5 h-4.5" />
-              Pay ₹50 via Razorpay
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="mt-10 w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-premium text-left">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6">Activation Fee</h4>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-lg font-bold text-foreground">One-time Fee</span>
+            <span className="text-2xl font-black text-primary">₹50.00</span>
+          </div>
+          <p className="text-xs font-medium text-muted-foreground mb-8">
+            Covers manual document verification and premium platform access.
+          </p>
+          <Button
+            onClick={handlePayment}
+            loading={paymentLoading}
+            className="w-full py-5 rounded-[1.5rem] flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
+          >
+            <CreditCard className="w-5 h-5" />
+            Pay & Activate
+          </Button>
+        </div>
       </div>
     );
   }
 
   // State 6: Full Driver Dashboard (Approved + Paid)
   return (
-    <div className="flex flex-col gap-8 text-zinc-150 font-sans animate-fade-in">
-      {/* Banner */}
-      <div className="p-5 bg-emerald-950/10 border border-emerald-900/30 rounded-2xl flex items-start gap-4">
-        <CheckCircle className="w-8 h-8 text-emerald-400 shrink-0 mt-0.5" />
-        <div>
-          <h4 className="font-extrabold text-sm text-emerald-200">Verified Driver Account Active 🎖️</h4>
-          <p className="text-xs text-zinc-400 mt-1 leading-4">
-            Your subscription and documents are active. You can list ride offers, define seat layouts, accept student bookings, and navigate campus commute paths.
-          </p>
-        </div>
-      </div>
-
-      {/* Stats summary row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase">Commute Rating</p>
-              <p className="text-2xl font-black mt-1 flex items-center gap-1">
-                {user?.rating || 5.0} <Star className="w-5 h-5 text-amber-400 fill-amber-400 shrink-0" />
-              </p>
-            </div>
-            <div className="p-3 bg-zinc-950 rounded-xl text-zinc-400">
-              <Star className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase">Active Rides</p>
-              <p className="text-2xl font-black mt-1">
-                {myRides.filter((r) => r.status === 'scheduled' || r.status === 'ongoing').length}
-              </p>
-            </div>
-            <div className="p-3 bg-zinc-950 rounded-xl text-zinc-400">
-              <Car className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase">Completed Rides</p>
-              <p className="text-2xl font-black mt-1">
-                {myRides.filter((r) => r.status === 'completed').length}
-              </p>
-            </div>
-            <div className="p-3 bg-zinc-950 rounded-xl text-zinc-400">
-              <CheckCircle className="w-6 h-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-zinc-400 uppercase">Estimated Earnings</p>
-              <p className="text-2xl font-black mt-1 text-emerald-400">
-                ₹{earnings}
-              </p>
-            </div>
-            <div className="p-3 bg-zinc-950 rounded-xl text-emerald-500/20">
-              <CircleDollarSign className="w-6 h-6 text-emerald-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Active Offers List (span 2) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <Card className="h-full">
-            <CardHeader className="border-b border-zinc-850 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setActiveTab('rides')}
-                  className={`pb-1 text-sm font-extrabold border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'rides'
-                      ? 'border-violet-500 text-zinc-150'
-                      : 'border-transparent text-zinc-500 hover:text-zinc-350'
-                  }`}
-                >
-                  My Commute Rides
-                </button>
-                <button
-                  onClick={() => setActiveTab('requests')}
-                  className={`pb-1 text-sm font-extrabold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-                    activeTab === 'requests'
-                      ? 'border-violet-500 text-zinc-150'
-                      : 'border-transparent text-zinc-500 hover:text-zinc-350'
-                  }`}
-                >
-                  Ride Requests
-                  {pendingRequestsCount > 0 && (
-                    <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-violet-600 text-white animate-pulse">
-                      {pendingRequestsCount}
-                    </span>
-                  )}
-                </button>
+    <div className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Header Banner */}
+      <section className="bg-primary rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-primary/30">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="primary" className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Verified Driver</Badge>
+              <div className="flex items-center gap-1 text-white/80 font-black text-[10px] uppercase tracking-widest">
+                <ShieldCheck className="w-3 h-3" />
+                Active
               </div>
-              <Link to="/offer-ride">
-                <Button className="text-xs py-2 h-auto flex items-center gap-1.5">
-                  <PlusCircle className="w-4 h-4" />
-                  List a Ride
-                </Button>
-              </Link>
+            </div>
+            <h1 className="text-3xl font-black tracking-tight">Driver Control Center</h1>
+            <p className="text-white/70 font-medium mt-1">Host rides and manage passenger requests</p>
+          </div>
+          <Link to="/offer-ride">
+            <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 px-8 py-4 rounded-[1.5rem] shadow-xl">
+              <PlusCircle className="w-5 h-5 mr-2" />
+              List a New Ride
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Rating', val: user?.rating || 5.0, icon: Star, color: 'text-accent', bg: 'bg-accent/10' },
+          { label: 'Live Rides', val: myRides.filter(r => r.status === 'scheduled' || r.status === 'ongoing').length, icon: Car, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { label: 'Finished', val: myRides.filter(r => r.status === 'completed').length, icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Earnings', val: `₹${earnings}`, icon: CircleDollarSign, color: 'text-primary', bg: 'bg-primary/10' },
+        ].map((stat, i) => (
+          <Card key={i} className="border-none shadow-soft hover:shadow-premium transition-all duration-300">
+            <CardContent className="p-6 flex flex-col gap-4">
+              <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center ${stat.color}`}>
+                <stat.icon className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-black text-foreground mt-1">{stat.val}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <Card className="border-none">
+            <CardHeader className="flex flex-row items-center justify-between pb-0 px-8 pt-8">
+              <div className="flex gap-8">
+                {[
+                  { id: 'rides', label: 'My Rides', icon: Car },
+                  { id: 'requests', label: 'Bookings', icon: MessageSquare, count: pendingRequestsCount },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`relative pb-6 text-sm font-black transition-all ${
+                      activeTab === tab.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                       <tab.icon className="w-4 h-4" />
+                       {tab.label}
+                       {tab.count !== undefined && tab.count > 0 && (
+                         <span className="bg-primary text-white text-[9px] px-1.5 py-0.5 rounded-full animate-pulse">{tab.count}</span>
+                       )}
+                    </span>
+                    {activeTab === tab.id && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </CardHeader>
-            <CardContent className="pt-6">
+            <div className="h-px bg-border mx-8"></div>
+            <CardContent className="p-8">
               {activeTab === 'rides' ? (
                 loadingRides ? (
-                  <div className="flex flex-col gap-3">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="h-16 bg-zinc-950 rounded-xl animate-pulse"></div>
-                    ))}
+                  <div className="space-y-4">
+                    {[1, 2].map(i => <div key={i} className="h-20 bg-muted/5 rounded-[1.5rem] animate-pulse"></div>)}
                   </div>
                 ) : myRides.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Car className="w-10 h-10 text-zinc-800 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-zinc-400">No commute rides offered yet.</p>
-                    <p className="text-xs text-zinc-550 mt-1">Tap the button above to publish your first ride offer.</p>
+                  <div className="text-center py-20">
+                     <div className="w-20 h-20 bg-muted/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Calendar className="w-10 h-10 text-muted-foreground/20" />
+                     </div>
+                     <h4 className="text-lg font-bold text-muted-foreground">No rides scheduled</h4>
+                     <Button variant="ghost" className="mt-4 font-black uppercase tracking-widest text-primary" onClick={() => navigate('/offer-ride')}>Schedule Now</Button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
                     {myRides.map((ride) => (
-                      <div
-                        key={ride._id}
-                        className="p-4 bg-zinc-950 border border-zinc-850 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-zinc-400">
-                              {new Date(ride.departureDate).toLocaleDateString([], {
-                                month: 'short',
-                                day: 'numeric',
-                              })}{' '}
-                              at {ride.departureTime}
-                            </span>
-                            <Badge
-                              variant={
-                                ride.status === 'completed'
-                                  ? 'success'
-                                  : ride.status === 'ongoing'
-                                    ? 'primary'
-                                    : ride.status === 'cancelled'
-                                      ? 'destructive'
-                                      : 'warning'
-                              }
-                            >
-                              {ride.status}
-                            </Badge>
+                      <div key={ride._id} className="p-6 bg-white border border-border rounded-[2rem] hover:border-primary/20 transition-all duration-300 shadow-soft">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                          <div className="flex-1 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Badge variant={ride.status === 'completed' ? 'success' : ride.status === 'ongoing' ? 'primary' : 'warning'}>
+                                {ride.status}
+                              </Badge>
+                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(ride.departureDate).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {ride.departureTime}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                               <div className="flex flex-col items-center gap-1">
+                                  <div className="w-2.5 h-2.5 rounded-full border-2 border-primary bg-white"></div>
+                                  <div className="w-0.5 h-4 bg-border"></div>
+                                  <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                               </div>
+                               <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-bold">{ride.source}</span>
+                                  <span className="text-xs font-bold">{ride.destination}</span>
+                               </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 mt-2 text-sm font-extrabold text-zinc-200">
-                            <span>{ride.source}</span>
-                            <span className="text-zinc-500 font-normal">→</span>
-                            <span>{ride.destination}</span>
+                          <div className="flex items-center gap-2 self-stretch justify-end border-t sm:border-t-0 pt-4 sm:pt-0">
+                             {ride.status === 'scheduled' && (
+                                <button onClick={() => handleUpdateStatus(ride._id, 'ongoing')} className="px-6 py-3 bg-primary text-white rounded-xl text-xs font-black shadow-lg shadow-primary/20 active:scale-95 transition-all">Start</button>
+                             )}
+                             {ride.status === 'ongoing' && (
+                                <button onClick={() => handleUpdateStatus(ride._id, 'completed')} className="px-6 py-3 bg-secondary text-white rounded-xl text-xs font-black shadow-lg shadow-secondary/20 active:scale-95 transition-all">Complete</button>
+                             )}
+                             <Button variant="ghost" size="sm" className="px-2" onClick={() => navigate(`/ride/${ride._id}`)}><ChevronRight /></Button>
                           </div>
-                          <p className="text-xs text-zinc-555 mt-2">
-                            {ride.availableSeats} seats remaining • Vehicle: {ride.vehicle?.brand} {ride.vehicle?.model}
-                          </p>
                         </div>
-
-                        {/* Controls */}
-                        {ride.status === 'scheduled' && (
-                          <div className="flex gap-2">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              className="text-xs cursor-pointer"
-                              onClick={() => handleUpdateStatus(ride._id, 'ongoing')}
-                            >
-                              Start Ride
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="text-xs cursor-pointer"
-                              onClick={() => handleUpdateStatus(ride._id, 'cancelled')}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        )}
-                        {ride.status === 'ongoing' && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            className="text-xs cursor-pointer"
-                            onClick={() => handleUpdateStatus(ride._id, 'completed')}
-                          >
-                            Mark Complete
-                          </Button>
-                        )}
                       </div>
                     ))}
                   </div>
                 )
               ) : (
                 loadingRequests ? (
-                  <div className="flex flex-col gap-3">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="h-16 bg-zinc-950 rounded-xl animate-pulse"></div>
-                    ))}
+                  <div className="space-y-4">
+                    {[1, 2].map(i => <div key={i} className="h-20 bg-muted/5 rounded-[1.5rem] animate-pulse"></div>)}
                   </div>
                 ) : requests.length === 0 ? (
-                  <div className="text-center py-12">
-                    <MessageSquare className="w-10 h-10 text-zinc-800 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-zinc-400">No ride requests received yet.</p>
-                    <p className="text-xs text-zinc-550 mt-1">Students requesting your commute offers will be listed here.</p>
+                  <div className="text-center py-20">
+                     <div className="w-20 h-20 bg-muted/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Users className="w-10 h-10 text-muted-foreground/20" />
+                     </div>
+                     <h4 className="text-lg font-bold text-muted-foreground">No bookings yet</h4>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
                     {requests.map((req) => (
-                      <div
-                        key={req._id}
-                        className="p-4 bg-zinc-950 border border-zinc-850 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-zinc-800 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className="text-xs font-bold text-zinc-400">
-                              {new Date(req.createdAt).toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                              })}{' '}
-                              at {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <Badge
-                              variant={
-                                req.status === 'accepted'
-                                  ? 'success'
-                                  : req.status === 'rejected'
-                                    ? 'destructive'
-                                    : req.status === 'cancelled'
-                                      ? 'secondary'
-                                      : 'warning'
-                              }
-                            >
-                              {req.status === 'pending' ? 'Pending Approval' : req.status}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 mt-3">
-                            <img
-                              src={req.passenger?.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=' + req.passenger?.name}
-                              className="w-9 h-9 rounded-full object-cover border border-zinc-800 shrink-0"
-                              alt=""
-                            />
-                            <div className="min-w-0">
-                              <h4 className="text-sm font-black text-zinc-200 truncate">{req.passenger?.name}</h4>
-                              <p className="text-[10px] text-zinc-450 font-bold truncate">{req.passenger?.email}</p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-3 text-xs">
-                            <p className="text-zinc-450">
-                              Pickup: <strong className="text-zinc-200">{req.pickup}</strong>
-                            </p>
-                            <p className="text-zinc-455">
-                              Dropoff: <strong className="text-zinc-200">{req.drop}</strong>
-                            </p>
-                            <p className="text-zinc-450">
-                              Seats Requested: <strong className="text-zinc-200">{req.seatNumber}</strong>
-                            </p>
-                            <p className="text-zinc-455">
-                              Ride Price: <strong className="text-zinc-200">₹{req.ride?.price || 0}</strong>
-                            </p>
-                          </div>
-
-                          {req.message && (
-                            <p className="p-2.5 mt-2.5 bg-zinc-900 border border-zinc-850 rounded-lg text-xs text-zinc-350 italic">
-                              Message: "{req.message}"
-                            </p>
-                          )}
+                      <div key={req._id} className="p-6 bg-white border border-border rounded-[2rem] shadow-soft">
+                        <div className="flex items-center gap-4 mb-6">
+                           <img src={req.passenger?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${req.passenger?.name}`} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" alt="" />
+                           <div className="flex-1">
+                              <h4 className="font-black text-foreground">{req.passenger?.name}</h4>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{req.passenger?.email}</p>
+                           </div>
+                           <Badge variant={req.status === 'accepted' ? 'success' : 'warning'}>{req.status}</Badge>
                         </div>
-
-                        <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0 justify-end shrink-0 flex-wrap">
-                          {req.status === 'pending' && (
-                            <>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="text-xs py-1.5 px-3 h-auto cursor-pointer"
-                                onClick={() => handleRespondToRequest(req._id, 'accepted')}
-                              >
-                                <Check className="w-3.5 h-3.5 mr-1" />
-                                Accept
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="text-xs py-1.5 px-3 h-auto cursor-pointer"
-                                onClick={() => handleRespondToRequest(req._id, 'rejected')}
-                              >
-                                <XCircle className="w-3.5 h-3.5 mr-1" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          {req.status === 'completed' && !reviewedPassengers[req.passenger?._id] && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs py-1.5 px-3 h-auto cursor-pointer border-amber-700/50 text-amber-400 hover:bg-amber-950/30"
-                              onClick={() => {
-                                setReviewTarget({
-                                  rideId: req.ride?._id,
-                                  passengerId: req.passenger?._id,
-                                  name: req.passenger?.name,
-                                });
-                                setReviewDialogOpen(true);
-                              }}
-                            >
-                              <Star className="w-3.5 h-3.5 mr-1" />
-                              Rate Passenger
-                            </Button>
-                          )}
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="text-xs py-1.5 px-3 h-auto cursor-pointer"
-                            onClick={() => handleLaunchChat(req.passenger?._id)}
-                          >
-                            <MessageSquare className="w-3.5 h-3.5 mr-1" />
-                            Chat
-                          </Button>
+                        <div className="grid grid-cols-2 gap-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6">
+                           <div className="space-y-1">
+                              <p>Pickup</p>
+                              <p className="text-foreground normal-case text-sm font-bold">{req.pickup}</p>
+                           </div>
+                           <div className="space-y-1">
+                              <p>Drop</p>
+                              <p className="text-foreground normal-case text-sm font-bold">{req.drop}</p>
+                           </div>
+                        </div>
+                        <div className="flex gap-2">
+                           {req.status === 'pending' && (
+                             <>
+                               <Button variant="primary" size="sm" className="flex-1 rounded-xl" onClick={() => handleRespondToRequest(req._id, 'accepted')}>Accept</Button>
+                               <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => handleRespondToRequest(req._id, 'rejected')}>Reject</Button>
+                             </>
+                           )}
+                           <Button variant="ghost" size="sm" className="w-12 rounded-xl" onClick={() => handleLaunchChat(req.passenger?._id)}><MessageSquare className="w-5 h-5" /></Button>
                         </div>
                       </div>
                     ))}
@@ -782,68 +547,38 @@ export const DriverDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right: Active Vehicle Card */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <Card>
-            <CardHeader className="border-b border-zinc-850 pb-4">
-              <CardTitle className="text-base">Active Vehicle Profile</CardTitle>
-              <CardDescription>Verified model and document scans</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 p-3.5 bg-zinc-950 border border-zinc-850 rounded-2xl">
-                  <div className="p-2.5 bg-violet-950/20 border border-violet-900/30 text-violet-400 rounded-xl">
-                    <Car className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h5 className="font-extrabold text-zinc-350 capitalize">
-                      {driver?.vehicleModel}
-                    </h5>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase mt-0.5">
-                      Plate: {driver?.vehicleNumber}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl">
-                    <span className="text-[10px] text-zinc-500 font-bold block">Vehicle Type</span>
-                    <span className="font-bold text-zinc-350 capitalize mt-0.5 block">{driver?.vehicleType}</span>
-                  </div>
-                  <div className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl">
-                    <span className="text-[10px] text-zinc-500 font-bold block">Colour</span>
-                    <span className="font-bold text-zinc-350 capitalize mt-0.5 block">{driver?.vehicleColour}</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-zinc-950 border border-zinc-850 rounded-xl text-xs flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-550 font-bold">Driving Experience</span>
-                    <span className="font-bold text-zinc-300">{driver?.drivingExperience} Years</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-550 font-bold">Licence Key</span>
-                    <span className="font-bold text-zinc-300">{driver?.licenceNumber}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 border-t border-zinc-850 pt-3 mt-1">
-                  <div>
-                    <span className="text-[10px] text-zinc-500 font-bold text-center block mb-1">Vehicle Scan</span>
-                    <img src={driver?.vehicleImage} className="w-full h-20 object-cover rounded-lg border border-zinc-800" alt="Vehicle" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-zinc-500 font-bold text-center block mb-1">Licence Scan</span>
-                    <img src={driver?.licenceImage} className="w-full h-20 object-cover rounded-lg border border-zinc-800" alt="Licence" />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-col gap-8">
+           <Card className="border-none shadow-soft">
+              <CardHeader>
+                 <CardTitle className="text-xl">Vehicle Details</CardTitle>
+                 <CardDescription>Verified Transport</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                 <div className="p-6 bg-muted/5 rounded-[2rem] border border-border text-center">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Plate Number</p>
+                    <p className="text-2xl font-black text-foreground mt-1 select-all">{driver?.vehicleNumber}</p>
+                 </div>
+                 <div className="space-y-4">
+                    {[
+                      { l: 'Model', v: driver?.vehicleModel },
+                      { l: 'Color', v: driver?.vehicleColour },
+                      { l: 'Type', v: driver?.vehicleType },
+                    ].map((item, i) => (
+                      <div key={i} className="flex justify-between items-center px-2">
+                         <span className="text-xs font-bold text-muted-foreground">{item.l}</span>
+                         <span className="text-sm font-black capitalize">{item.v}</span>
+                      </div>
+                    ))}
+                 </div>
+                 <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border">
+                    <img src={driver?.vehicleImage} className="w-full h-24 object-cover rounded-2xl border border-border" alt="" />
+                    <img src={driver?.licenceImage} className="w-full h-24 object-cover rounded-2xl border border-border" alt="" />
+                 </div>
+              </CardContent>
+           </Card>
         </div>
       </div>
 
-      {/* Feature 2: Passenger Review Dialog */}
       {reviewTarget && (
         <ReviewDialog
           isOpen={reviewDialogOpen}
