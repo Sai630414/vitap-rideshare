@@ -597,17 +597,20 @@ export const googleCallback = (req: Request, res: Response) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  // Detect if request came from the mobile app
-  const isMobile = req.query.mobile === "true";
-
-  if (isMobile) {
+  // Mobile login
+  if (req.query.mobile === "true") {
     return res.redirect(
       `waygo://auth/success?token=${accessToken}`
     );
   }
 
+  // Get the first web client URL
+  const clientUrl =
+    process.env.CLIENT_URL?.split(",")[0].trim() ||
+    "https://vitap-rideshare.vercel.app";
+
   return res.redirect(
-    `${process.env.CLIENT_URL}/auth/success?token=${accessToken}`
+    `${clientUrl}/auth/success?token=${accessToken}`
   );
 };
 
