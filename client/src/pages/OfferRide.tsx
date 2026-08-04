@@ -48,6 +48,16 @@ export const OfferRide: React.FC = () => {
   const [dropAddress, setDropAddress] = useState('');
 
   useEffect(() => {
+    // If driver is approved but has not paid yet, redirect directly to driver payment dashboard
+    const driverDetails = user?.driverDetails as any;
+    const approvalStatus = (driverDetails?.approvalStatus || '').toLowerCase();
+    const hasPaid = !!driverDetails?.paymentStatus;
+    
+    if (approvalStatus === 'approved' && !hasPaid) {
+      navigate('/driver/dashboard', { replace: true });
+      return;
+    }
+
     const fetchVehiclesAndActiveRides = async () => {
       try {
         const res = await vehicleService.getMyVehicles();

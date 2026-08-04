@@ -29,7 +29,7 @@ class FCMPushService {
         id: 'channel_messages',
         name: 'Chat Messages',
         description: 'Notifications for direct student & driver chat messages',
-        importance: 5, // High importance
+        importance: 5,
         sound: 'default',
         vibration: true,
       });
@@ -70,38 +70,29 @@ class FCMPushService {
    */
   async initFCM(onNavigate?: (path: string) => void) {
     if (!this.isNative) {
-      console.log('[FCMPushService] Web environment detected. Native FCM push notifications handled via Web Socket.');
+      console.log('[FCMPushService] Web environment detected. Native FCM handled via Socket.');
       return;
     }
 
     if (this.isInitialized) return;
     this.isInitialized = true;
 
-    await this.setupAndroidChannels();
-
     try {
-      const permStatus = await PushNotifications.checkPermissions();
-      let status = permStatus.receive;
+      await this.setupAndroidChannels();
 
-      if (status !== 'granted') {
-        const reqResult = await PushNotifications.requestPermissions();
-        status = reqResult.receive;
-      }
-
-      if (status !== 'granted') {
-        console.warn('[FCMPushService] Push notification permission denied by user.');
-        return;
-      }
-
-      await PushNotifications.register();
+      // IMPORTANT: Add listeners BEFORE registering
 
       // Listen for FCM Registration Token
       PushNotifications.addListener('registration', async (token) => {
         console.log('[FCMPushService] Registered FCM Device Token:', token.value);
         try {
-          await authService.updateProfile({ fcmToken: token.value } as any);
+          // Only sync if user is logged in
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            await authService.updateProfile({ fcmToken: token.value } as any);
+          }
         } catch (e) {
-          console.error('[FCMPushService] Failed to sync FCM token to backend profile:', e);
+          console.error('[FCMPushService] Failed to sync FCM token to profile:', e);
         }
       });
 
@@ -111,33 +102,48 @@ class FCMPushService {
 
       // Foreground Notification Received
       PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+        console.log('[FCMPushService] Push notification received in foreground:', notification);
         const data = notification.data || {};
-        // Duplicate Prevention: If user is actively looking at the same chat screen, suppress duplicate push
         if (data.type === 'chat_message' && data.chatId && data.chatId === this.activeChatRoomId) {
-          console.log('[FCMPushService] Suppressing duplicate push notification for active chat:', data.chatId);
+          console.log('[FCMPushService] Suppressing duplicate push for active chat:', data.chatId);
           return;
         }
       });
 
       // Notification Action / Tap Event (Deep Linking)
       PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+        console.log('[FCMPushService] Push notification action performed:', action);
         const data = action.notification.data || {};
         const { type, referenceId, chatId } = data;
 
         if (onNavigate) {
           if ((type === 'chat_message' || type === 'new_message') && (chatId || referenceId)) {
             onNavigate(`/chat?id=${chatId || referenceId}`);
-          } else if (type === 'ride_booked' || type === 'booking_request') {
-            onNavigate(referenceId ? `/ride/${referenceId}` : '/dashboard');
-          } else if (type === 'booking_accepted' || type === 'ride_accepted' || type === 'driver_started' || type === 'driver_arrived') {
-            onNavigate(referenceId ? `/ride/${referenceId}` : '/dashboard');
-          } else if (type === 'ride_completed' || type === 'new_review') {
+          } else if (type === 'ride_booked' || type === 'booking_request' || type === 'booking_accepted' || type === 'ride_accepted' || type === 'driver_started' || type === 'driver_arrived' || type === 'ride_completed' || type === 'new_review') {
             onNavigate(referenceId ? `/ride/${referenceId}` : '/dashboard');
           } else {
             onNavigate('/dashboard');
           }
         }
       });
+
+      const permStatus = await PushNotifications.checkPermissions();
+      let status = permStatus.receive;
+
+      if (status !== 'granted') {
+        const reqResult = await PushNotifications.requestPermissions();
+        status = reqResult.receive;
+      }
+
+      if (status === 'granted') {
+        // Only call register if we have permission.
+        // NOTE: This might still crash if google-services.json is missing on Android.
+        await PushNotifications.register().catch(err => {
+          console.error('[FCMPushService] Registration call failed:', err);
+        });
+      } else {
+        console.warn('[FCMPushService] Push notification permission denied.');
+      }
     } catch (err) {
       console.error('[FCMPushService] FCM Initialization Error:', err);
     }
@@ -147,10 +153,14 @@ class FCMPushService {
    * Clear FCM token on user logout
    */
   async clearFCMToken() {
+    if (!this.isNative) return;
     try {
       await authService.updateProfile({ fcmToken: '' } as any);
+      // Remove all listeners to avoid memory leaks
+      await PushNotifications.removeAllListeners();
+      this.isInitialized = false;
     } catch (err) {
-      console.warn('[FCMPushService] Failed to clear FCM token on logout:', err);
+      console.warn('[FCMPushService] Failed to clear FCM token:', err);
     }
   }
 }

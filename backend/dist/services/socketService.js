@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendToUser = exports.getIO = exports.initSocket = void 0;
+exports.isUserInChatRoom = exports.sendToUser = exports.getIO = exports.initSocket = void 0;
 const socket_io_1 = require("socket.io");
 const logger_1 = __importDefault(require("../utils/logger"));
 const cors_1 = require("../utils/cors");
@@ -30,6 +30,10 @@ const initSocket = (server) => {
         socket.on('join_chat', (chatId) => {
             socket.join(chatId);
             logger_1.default.info(`Socket ${socket.id} joined room ${chatId}`);
+        });
+        socket.on('leave_chat', (chatId) => {
+            socket.leave(chatId);
+            logger_1.default.info(`Socket ${socket.id} left room ${chatId}`);
         });
         socket.on('typing', ({ chatId, userId, userName, isTyping }) => {
             socket.to(chatId).emit('typing_status', { userId, userName, isTyping });
@@ -128,3 +132,13 @@ const sendToUser = (userId, eventName, data) => {
     }
 };
 exports.sendToUser = sendToUser;
+const isUserInChatRoom = (userId, chatId) => {
+    if (!io)
+        return false;
+    const socketId = userSockets.get(userId);
+    if (!socketId)
+        return false;
+    const socket = io.sockets.sockets.get(socketId);
+    return socket ? socket.rooms.has(chatId) : false;
+};
+exports.isUserInChatRoom = isUserInChatRoom;

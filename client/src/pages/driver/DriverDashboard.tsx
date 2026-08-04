@@ -340,9 +340,16 @@ export const DriverDashboard: React.FC = () => {
   }
 
   if ((status === 'Approved' || status === 'approved') && !hasPaid) {
+    const updatedAtDate = driver?.updatedAt ? new Date(driver.updatedAt) : new Date();
+    // 7 days deadline after approval date
+    const deadlineDate = new Date(updatedAtDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const diffTime = deadlineDate.getTime() - now.getTime();
+    const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in zoom-in-95 duration-500">
-        <div className="w-24 h-24 bg-primary/10 border-4 border-white rounded-[2.5rem] flex items-center justify-center text-primary mb-8 shadow-2xl shadow-primary/20 animate-bounce">
+        <div className="w-24 h-24 bg-primary/10 border-4 border-white rounded-[2.5rem] flex items-center justify-center text-primary mb-6 shadow-2xl shadow-primary/20 animate-bounce">
           <CheckCircle className="w-12 h-12" />
         </div>
         <h2 className="text-3xl font-black text-foreground">You're Approved!</h2>
@@ -350,7 +357,24 @@ export const DriverDashboard: React.FC = () => {
           Just one final step to activate your driver portal.
         </p>
 
-        <div className="mt-10 w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-premium text-left">
+        {/* Subscription Deadline Card */}
+        <div className="mt-6 w-full max-w-md bg-amber-50 border border-amber-200 rounded-3xl p-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3 text-left">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase text-amber-600 tracking-wider block">Subscription Deadline</span>
+              <span className="text-xs font-extrabold text-amber-900 block">Complete payment to activate</span>
+            </div>
+          </div>
+          <div className="bg-white px-3 py-1.5 rounded-2xl border border-amber-200 shadow-sm text-center">
+            <span className="text-base font-black text-amber-700 block">{daysLeft}</span>
+            <span className="text-[9px] font-bold text-amber-600 block uppercase tracking-wider">{daysLeft === 1 ? 'Day Left' : 'Days Left'}</span>
+          </div>
+        </div>
+
+        <div className="mt-6 w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-premium text-left">
           <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6">Activation Fee</h4>
           <div className="flex justify-between items-center mb-2">
             <span className="text-lg font-bold text-foreground">One-time Fee</span>

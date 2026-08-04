@@ -3,7 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import Notification from '../models/Notification';
 import AppError from '../utils/appError';
 import { sendToUser } from '../services/socketService';
-import { sendFCMPushNotification } from '../services/fcmService';
+import notificationService from '../services/notification.service';
 import logger from '../utils/logger';
 
 type NotificationType =
@@ -20,9 +20,12 @@ type NotificationType =
   | 'driver_arrived'
   | 'ride_completed'
   | 'new_message'
-  | 'new_review';
+  | 'new_review'
+  | 'driver_approved'
+  | 'driver_rejected'
+  | 'admin_announcement';
 
-// Helper function to create DB record and trigger real-time Socket event
+// Helper function to create DB record and trigger real-time Socket event & FCM Push
 export const sendNotificationToUser = async (
   userId: string,
   title: string,
@@ -43,14 +46,14 @@ export const sendNotificationToUser = async (
     // Send real-time socket alert
     sendToUser(userId, 'notification', notification);
 
-    // Trigger FCM Push Notification
-    sendFCMPushNotification({
-      userId,
+    // Trigger FCM Push Notification via NotificationService
+    notificationService.sendPushNotification({
+      userIds: userId,
       title,
       body,
       type,
       referenceId: referenceId ? String(referenceId) : undefined,
-    }).catch((err) => logger.error(`[FCM] Push dispatch error: ${err.message}`));
+    }).catch((err) => logger.error(`[NotificationService] Push dispatch error: ${err.message}`));
     
     return notification;
   } catch (error) {

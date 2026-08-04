@@ -5,8 +5,9 @@ import User from '../models/User';
 import Booking from '../models/Booking';
 import AppError from '../utils/appError';
 import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
-import { getIO } from '../services/socketService';
+import { getIO, isUserInChatRoom } from '../services/socketService';
 import { sendNotificationToUser } from './notificationController';
+import notificationService from '../services/notification.service';
 
 export const getOrCreateChat = async (
   req: AuthRequest,
@@ -132,13 +133,27 @@ export const sendMessage = async (
     );
 
     for (const recipientId of recipients) {
+      const recipientStr = recipientId.toString();
+      
+      // Always store in-app notification & emit socket event
       await sendNotificationToUser(
-        recipientId.toString(),
+        recipientStr,
         `Message from ${req.user.name}`,
         text || 'Sent an image',
         'new_message',
         chat._id
       );
+
+      // Only send push notification if user is NOT currently viewing this chat room
+      const isViewingChat = isUserInChatRoom(recipientStr, chatId);
+      if (!isViewingChat) {
+        await notificationService.sendChatNotification(
+          recipientStr,
+          req.user.name,
+          text || 'Sent an image',
+          chatId
+        );
+      }
     }
 
     res.status(201).json({

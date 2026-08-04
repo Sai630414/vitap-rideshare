@@ -32,6 +32,11 @@ export const initSocket = (server: any) => {
       logger.info(`Socket ${socket.id} joined room ${chatId}`);
     });
 
+    socket.on('leave_chat', (chatId: string) => {
+      socket.leave(chatId);
+      logger.info(`Socket ${socket.id} left room ${chatId}`);
+    });
+
     socket.on('typing', ({ chatId, userId, userName, isTyping }) => {
       socket.to(chatId).emit('typing_status', { userId, userName, isTyping });
     });
@@ -141,4 +146,12 @@ export const sendToUser = (userId: string, eventName: string, data: any) => {
   if (io) {
     io.to(userId).emit(eventName, data);
   }
+};
+
+export const isUserInChatRoom = (userId: string, chatId: string): boolean => {
+  if (!io) return false;
+  const socketId = userSockets.get(userId);
+  if (!socketId) return false;
+  const socket = io.sockets.sockets.get(socketId);
+  return socket ? socket.rooms.has(chatId) : false;
 };

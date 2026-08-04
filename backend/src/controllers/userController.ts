@@ -220,3 +220,72 @@ export const reportUser = async (
     next(error);
   }
 };
+
+export const registerFCMToken = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const { token, fcmToken } = req.body;
+    const tokenToSave = token || fcmToken;
+
+    if (!tokenToSave || typeof tokenToSave !== 'string') {
+      return next(new AppError('FCM token is required', 400));
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        $set: { fcmToken: tokenToSave },
+        $addToSet: { fcmTokens: tokenToSave },
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'FCM token registered successfully',
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeFCMToken = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const { token, fcmToken } = req.body;
+    const tokenToRemove = token || fcmToken;
+
+    if (tokenToRemove) {
+      await User.findByIdAndUpdate(req.user.id, {
+        $pull: { fcmTokens: tokenToRemove },
+        $set: { fcmToken: '' },
+      });
+    } else {
+      // If no specific token passed, clear tokens for this user session
+      await User.findByIdAndUpdate(req.user.id, {
+        $set: { fcmTokens: [], fcmToken: '' },
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'FCM token removed successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

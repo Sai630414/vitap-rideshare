@@ -31,6 +31,7 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpiry?: Date;
   fcmToken?: string;
+  fcmTokens?: string[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -170,6 +171,10 @@ const userSchema = new Schema<IUser>(
     fcmToken: {
       type: String,
       default: '',
+    },
+    fcmTokens: {
+      type: [String],
+      default: [],
     },
   },
   { timestamps: true }

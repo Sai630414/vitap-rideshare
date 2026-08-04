@@ -140,6 +140,10 @@ const userSchema = new mongoose_1.Schema({
         type: String,
         default: '',
     },
+    fcmTokens: {
+        type: [String],
+        default: [],
+    },
 }, { timestamps: true });
 userSchema.index({ role: 1, status: 1 });
 // Encrypt password before saving
