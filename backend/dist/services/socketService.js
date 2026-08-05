@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isUserInChatRoom = exports.sendToUser = exports.getIO = exports.initSocket = void 0;
+exports.isUserInChatRoom = exports.broadcastToRoom = exports.broadcastToAll = exports.sendToUser = exports.getIO = exports.initSocket = void 0;
 const socket_io_1 = require("socket.io");
 const logger_1 = __importDefault(require("../utils/logger"));
 const cors_1 = require("../utils/cors");
@@ -84,6 +84,16 @@ const initSocket = (server) => {
             }
         });
         /**
+         * Passenger updates their live location.
+         * Payload: { rideId, passengerId, lat, lng }
+         */
+        socket.on('passenger_location_update', (payload) => {
+            const { rideId, passengerId, lat, lng } = payload;
+            const trackingRoom = `tracking:${rideId}`;
+            const locationData = { passengerId, lat, lng, timestamp: Date.now() };
+            socket.to(trackingRoom).emit('passenger_location', locationData);
+        });
+        /**
          * Driver stops sharing location (ride completed or manually stopped).
          * Payload: { rideId }
          */
@@ -132,6 +142,18 @@ const sendToUser = (userId, eventName, data) => {
     }
 };
 exports.sendToUser = sendToUser;
+const broadcastToAll = (eventName, data) => {
+    if (io) {
+        io.emit(eventName, data);
+    }
+};
+exports.broadcastToAll = broadcastToAll;
+const broadcastToRoom = (room, eventName, data) => {
+    if (io) {
+        io.to(room).emit(eventName, data);
+    }
+};
+exports.broadcastToRoom = broadcastToRoom;
 const isUserInChatRoom = (userId, chatId) => {
     if (!io)
         return false;

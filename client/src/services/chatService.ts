@@ -29,6 +29,7 @@ export interface ChatData {
   }[];
   lastMessage?: MessageData;
   updatedAt: string;
+  isCompleted?: boolean;
 }
 
 export const chatService = {

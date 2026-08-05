@@ -10,6 +10,7 @@ const Booking_1 = __importDefault(require("../models/Booking"));
 const User_1 = __importDefault(require("../models/User"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const notificationController_1 = require("./notificationController");
+const socketService_1 = require("../services/socketService");
 // ──────────────────────────────────────────────
 // Helper: recalculate & persist average rating
 // ──────────────────────────────────────────────
@@ -79,6 +80,7 @@ const createReview = async (req, res, next) => {
         await recalcAverageRating(ride.driver.toString(), 'driver');
         // Notify driver
         await (0, notificationController_1.sendNotificationToUser)(ride.driver.toString(), 'New Review Received ⭐', `You received a ${rating}-star review from a passenger on your ride to ${ride.destination}.`, 'new_review', ride._id);
+        (0, socketService_1.sendToUser)(ride.driver.toString(), 'review_submitted', review);
         res.status(201).json({ status: 'success', data: { review } });
     }
     catch (error) {

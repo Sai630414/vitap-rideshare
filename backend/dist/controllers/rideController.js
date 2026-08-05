@@ -12,6 +12,7 @@ const appError_1 = __importDefault(require("../utils/appError"));
 const Booking_1 = __importDefault(require("../models/Booking"));
 const notificationController_1 = require("./notificationController");
 const paymentController_1 = require("./paymentController");
+const socketService_1 = require("../services/socketService");
 const offerRide = async (req, res, next) => {
     try {
         const { vehicleId, source, destination, pickupLocation, dropLocation, departureDate, departureTime, price, availableSeats, description, recurring, routePoints, } = req.body;
@@ -69,10 +70,16 @@ const offerRide = async (req, res, next) => {
             routePoints: routePoints || { coordinates: [] },
             status: 'scheduled',
         });
+        const populatedRide = await Ride_1.default.findById(ride._id)
+            .populate('vehicle', 'brand model type numberPlate color seats')
+            .populate('driver', 'name email profileImage rating verifiedDriver trustScore');
+        // Broadcast real-time ride creation event to all searching clients & driver
+        (0, socketService_1.broadcastToAll)('ride_created', populatedRide);
+        (0, socketService_1.sendToUser)(req.user.id, 'driver_ride_created', populatedRide);
         res.status(201).json({
             status: 'success',
             data: {
-                ride,
+                ride: populatedRide,
             },
         });
     }
@@ -370,10 +377,15 @@ const updateRideStatus = async (req, res, next) => {
                 await User_1.default.findByIdAndUpdate(passengerId, { $inc: { totalTrips: 1 } });
             }
         }
+        const updatedRidePopulated = await Ride_1.default.findById(ride._id)
+            .populate('driver', 'name email phone profileImage rating verifiedDriver trustScore branch year registrationNumber')
+            .populate('vehicle', 'brand model type color numberPlate seats');
+        // Emit real-time ride status update to all connected clients & rooms
+        (0, socketService_1.broadcastToAll)('ride_updated', updatedRidePopulated);
         res.status(200).json({
             status: 'success',
             data: {
-                ride,
+                ride: updatedRidePopulated,
             },
         });
     }

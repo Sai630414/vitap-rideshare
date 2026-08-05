@@ -17,6 +17,7 @@ const appError_1 = __importDefault(require("../utils/appError"));
 const notificationController_1 = require("./notificationController");
 const logger_1 = __importDefault(require("../utils/logger"));
 const jwt_1 = require("../utils/jwt");
+const socketService_1 = require("../services/socketService");
 const emailService_1 = require("../services/emailService");
 const paymentController_1 = require("./paymentController");
 /**
@@ -290,6 +291,9 @@ const approveDriver = async (req, res, next) => {
         });
         await (0, emailService_1.sendDriverApprovalEmail)(user.email, user.name);
         await (0, notificationController_1.sendNotificationToUser)(user._id.toString(), 'Driver Registration Approved!', 'Your documents were approved. Complete the ₹50 subscription payment to activate your driver account and start offering rides.', 'verification_approved', driver._id);
+        // Emit real-time driver approval update to user and admin dashboard
+        (0, socketService_1.sendToUser)(user._id.toString(), 'driver_approval_updated', driver);
+        (0, socketService_1.broadcastToAll)('admin_driver_updated', driver);
         res.status(200).json({
             status: 'success',
             message: 'Driver profile successfully approved and synchronized.',

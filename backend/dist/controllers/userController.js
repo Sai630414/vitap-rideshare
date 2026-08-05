@@ -8,6 +8,7 @@ const User_1 = __importDefault(require("../models/User"));
 const Report_1 = __importDefault(require("../models/Report"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const cloudinaryService_1 = require("../services/cloudinaryService");
+const socketService_1 = require("../services/socketService");
 const getUserProfile = async (req, res, next) => {
     try {
         const user = await User_1.default.findById(req.params.id)
@@ -42,6 +43,8 @@ const updateProfile = async (req, res, next) => {
             }
         });
         const updatedUser = await User_1.default.findByIdAndUpdate(req.user.id, { $set: updateData }, { new: true, runValidators: true });
+        // Emit real-time profile update event to current user socket
+        (0, socketService_1.sendToUser)(req.user.id, 'profile_updated', updatedUser);
         res.status(200).json({
             status: 'success',
             data: {

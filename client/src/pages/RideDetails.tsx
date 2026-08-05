@@ -26,10 +26,12 @@ import Badge from '../components/ui/Badge';
 import ReviewDialog from '../components/ReviewDialog';
 import WeatherWidget from '../components/WeatherWidget';
 import LiveTrackingMap from '../components/LiveTrackingMap';
+import AutocompleteInput from '../components/AutocompleteInput';
 import rideService, { type RideData } from '../services/rideService';
 import bookingService, { type BookingData } from '../services/bookingService';
 import chatService from '../services/chatService';
 import MapContainerComponent from '../components/MapContainer';
+import locationPermissionService from '../services/locationPermissionService';
 import api from '../services/api';
 
 export const RideDetails: React.FC = () => {
@@ -172,34 +174,27 @@ export const RideDetails: React.FC = () => {
 
   const isDriver = ride?.driver._id === user?._id;
 
-  // ─── Passenger: Get current GPS location ────────────────────────────────────
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser.');
-      return;
-    }
+  // ─── Passenger: Get current GPS location with Android location permissions ─
+  const handleUseCurrentLocation = async () => {
     setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        setPickupCoords([lng, lat]);
-        try {
-          const res = await api.get(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          const addr = res.data?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          setPickup(addr);
-        } catch {
-          setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-        }
-        setGettingLocation(false);
-      },
-      () => {
-        toast.error('Could not get your current location.');
-        setGettingLocation(false);
-      },
-      { enableHighAccuracy: true }
-    );
+    try {
+      const coords = await locationPermissionService.getCurrentPosition();
+      const { latitude: lat, longitude: lng } = coords;
+      setPickupCoords([lng, lat]);
+      try {
+        const res = await api.get(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+        const addr = res.data?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        setPickup(addr);
+      } catch {
+        setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Could not get your current location.');
+    } finally {
+      setGettingLocation(false);
+    }
   };
 
   // ─── Booking ─────────────────────────────────────────────────────────────────
@@ -417,8 +412,16 @@ export const RideDetails: React.FC = () => {
               rideId={ride._id}
               isDriver={isDriver}
               driverId={ride.driver._id}
-              passengerPickupCoords={myBooking?.pickupCoordinates}
-              passengerPickupAddress={myBooking?.pickup}
+              passengerPickupCoords={
+                isDriver
+                  ? bookings.find((b) => b.status === 'accepted')?.pickupCoordinates
+                  : myBooking?.pickupCoordinates
+              }
+              passengerPickupAddress={
+                isDriver
+                  ? bookings.find((b) => b.status === 'accepted')?.pickup
+                  : myBooking?.pickup
+              }
               rideStatus={ride.status}
             />
           </div>
@@ -544,12 +547,15 @@ export const RideDetails: React.FC = () => {
                           </span>
                           {booking.status === 'accepted' && (
                             <>
-                              <button
-                                onClick={() => handleLaunchChat(booking.passenger._id)}
-                                className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                              </button>
+                              {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                                <button
+                                  onClick={() => handleLaunchChat(booking.passenger._id)}
+                                  className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
+                                  title="Chat with Passenger"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               {ride.status === 'completed' && (
                                 <button
                                   onClick={() => openPassengerReviewDialog(booking.passenger._id, booking.passenger.name)}
@@ -664,49 +670,33 @@ export const RideDetails: React.FC = () => {
                       />
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Pickup Point</label>
-                        <button
-                          type="button"
-                          onClick={handleUseCurrentLocation}
-                          disabled={gettingLocation}
-                          className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-1"
-                        >
-                          <Locate className="w-3 h-3" />
-                          {gettingLocation ? 'Locating...' : 'Use GPS'}
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder="e.g. MH-2 Hostel Gate, Block 3"
-                          value={pickup}
-                          onChange={(e) => { setPickup(e.target.value); setPickupCoords(null); }}
-                          className="w-full pl-9 pr-3 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                          required
-                        />
-                      </div>
-                      {pickupCoords && (
-                        <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
-                          <CheckCircle className="w-3 h-3" />
-                          GPS location attached
-                        </p>
-                      )}
-                    </div>
+                    <AutocompleteInput
+                      label="Pickup Point"
+                      placeholder="Search pickup place, hostel, campus gate..."
+                      value={pickup}
+                      onChange={(val) => setPickup(val)}
+                      onSelect={(coords, name) => {
+                        setPickup(name);
+                        setPickupCoords(coords);
+                      }}
+                      required
+                    />
 
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Dropoff Point</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Academic Block 1 Gate"
-                        value={drop}
-                        onChange={(e) => setDrop(e.target.value)}
-                        className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                        required
-                      />
-                    </div>
+                    {pickupCoords && (
+                      <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1 ml-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Exact coordinates attached ({pickupCoords[1].toFixed(4)}, {pickupCoords[0].toFixed(4)})
+                      </p>
+                    )}
+
+                    <AutocompleteInput
+                      label="Dropoff Point"
+                      placeholder="Search drop location, landmark, station..."
+                      value={drop}
+                      onChange={(val) => setDrop(val)}
+                      onSelect={(coords, name) => setDrop(name)}
+                      required
+                    />
 
                     <div>
                       <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Message to Driver (Optional)</label>
@@ -759,13 +749,15 @@ export const RideDetails: React.FC = () => {
                   <CheckCircle className="w-4 h-4 text-emerald-600" />
                   <span>Seat Booking Approved 🎉</span>
                 </div>
-                <button
-                  onClick={() => handleLaunchChat(ride.driver._id)}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Chat with Driver
-                </button>
+                {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                  <button
+                    onClick={() => handleLaunchChat(ride.driver._id)}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Chat with Driver
+                  </button>
+                )}
                 {ride.status !== 'completed' && ride.status !== 'cancelled' && (
                   <button
                     onClick={handleCancelBooking}

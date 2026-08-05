@@ -97,6 +97,20 @@ export const initSocket = (server: any) => {
     });
 
     /**
+     * Passenger updates their live location.
+     * Payload: { rideId, passengerId, lat, lng }
+     */
+    socket.on(
+      'passenger_location_update',
+      (payload: { rideId: string; passengerId?: string; lat: number; lng: number }) => {
+        const { rideId, passengerId, lat, lng } = payload;
+        const trackingRoom = `tracking:${rideId}`;
+        const locationData = { passengerId, lat, lng, timestamp: Date.now() };
+        socket.to(trackingRoom).emit('passenger_location', locationData);
+      }
+    );
+
+    /**
      * Driver stops sharing location (ride completed or manually stopped).
      * Payload: { rideId }
      */

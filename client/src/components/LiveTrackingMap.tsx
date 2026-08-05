@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Navigation2, Wifi, WifiOff, MapPin, Clock, ShieldCheck } from 'lucide-react';
+import { Navigation2, Wifi, WifiOff, MapPin, Clock, UserCheck } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 import locationPermissionService from '../services/locationPermissionService';
 
-// ─── Driver Marker (Smoothly animated gliding pulse icon) ────────────────────
+// ─── Driver Marker (Smoothly animated green gliding pulse icon) ───────────────
 const createDriverMarkerIcon = () => {
   return L.divIcon({
     html: `
@@ -27,12 +27,22 @@ const createDriverMarkerIcon = () => {
 
 const driverMarkerIcon = createDriverMarkerIcon();
 
-// ─── Passenger Pickup Marker ──────────────────────────────────────────────────
-const pickupIcon = L.divIcon({
-  html: `<div style="background:#3B82F6;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
-  className: '',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
+// ─── Passenger Live / Pickup Marker (Blue pulse icon) ────────────────────────
+const passengerMarkerIcon = L.divIcon({
+  html: `
+    <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(37,99,235,0.3);animation:liveTrackPulse 1.8s ease-out infinite;"></div>
+      <div style="position:absolute;width:22px;height:22px;border-radius:50%;background:#2563EB;border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:2;display:flex;align-items:center;justify-content:center;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="12" height="12">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      </div>
+    </div>
+  `,
+  className: 'smooth-passenger-marker',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18],
 });
 
 // ─── Haversine distance formula ───────────────────────────────────────────────
@@ -46,12 +56,31 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-// ─── Component to smoothly pan to driver ─────────────────────────────────────
+// ─── Component to smoothly pan to driver location ─────────────────────────────
 const PanToDriver: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
   const map = useMap();
   useEffect(() => {
     map.panTo([lat, lng], { animate: true, duration: 1.0 });
   }, [lat, lng, map]);
+  return null;
+};
+
+// ─── Component to fit bounds to show both Driver and Passenger ─────────────────
+const FitRouteBounds: React.FC<{ driverPos?: [number, number]; passengerPos?: [number, number] }> = ({
+  driverPos,
+  passengerPos,
+}) => {
+  const map = useMap();
+  const hasFittedRef = useRef(false);
+
+  useEffect(() => {
+    if (driverPos && passengerPos && !hasFittedRef.current) {
+      const bounds = L.latLngBounds([driverPos, passengerPos]);
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      hasFittedRef.current = true;
+    }
+  }, [driverPos, passengerPos, map]);
+
   return null;
 };
 
@@ -73,6 +102,12 @@ interface DriverLocation {
   speed?: number;
 }
 
+interface PassengerLocation {
+  lat: number;
+  lng: number;
+  timestamp?: number;
+}
+
 const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   socket,
   rideId,
@@ -83,6 +118,7 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   rideStatus = 'ongoing',
 }) => {
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
+  const [passengerLiveLocation, setPassengerLiveLocation] = useState<PassengerLocation | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [trackingActive, setTrackingActive] = useState(false);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -90,8 +126,15 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   const [permissionState, setPermissionState] = useState<string>('checking');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
-  const watchIdRef = useRef<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const passengerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Compute effective passenger coordinates: live GPS if available, else pickup coords
+  const effectivePassengerCoords: [number, number] | null = passengerLiveLocation
+    ? [passengerLiveLocation.lat, passengerLiveLocation.lng]
+    : passengerPickupCoords && passengerPickupCoords.length === 2
+    ? [passengerPickupCoords[1], passengerPickupCoords[0]]
+    : null;
 
   // ─── Check permissions on mount ───────────────────────────────────────────
   useEffect(() => {
@@ -99,7 +142,7 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       try {
         const state = await locationPermissionService.checkPermissionStatus();
         setPermissionState(state);
-      } catch (err) {
+      } catch {
         setPermissionState('prompt');
       }
     };
@@ -115,17 +158,6 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     socket.on('driver_location', (data: DriverLocation) => {
       setDriverLocation(data);
       setTrackingActive(true);
-
-      // Calculate ETA & distance if passenger pickup coords are provided
-      if (passengerPickupCoords && passengerPickupCoords.length === 2) {
-        const km = haversineKm(data.lat, data.lng, passengerPickupCoords[1], passengerPickupCoords[0]);
-        const formattedKm = parseFloat(km.toFixed(1));
-        setDistanceKm(formattedKm);
-        
-        // Calculate ETA assuming 30 km/h average speed in city/campus
-        const mins = Math.max(1, Math.round((km / 30) * 60));
-        setEtaMinutes(mins);
-      }
     });
 
     socket.on('tracking_stopped', () => {
@@ -137,7 +169,69 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       socket.off('driver_location');
       socket.off('tracking_stopped');
     };
-  }, [socket, rideId, isDriver, passengerPickupCoords]);
+  }, [socket, rideId, isDriver]);
+
+  // ─── DRIVER: Listen for live passenger location updates via socket ─────────
+  useEffect(() => {
+    if (!socket || !isDriver) return;
+
+    const handlePassengerLoc = (data: { lat: number; lng: number; timestamp?: number }) => {
+      setPassengerLiveLocation({ lat: data.lat, lng: data.lng, timestamp: data.timestamp });
+    };
+
+    socket.on('passenger_location', handlePassengerLoc);
+    return () => {
+      socket.off('passenger_location', handlePassengerLoc);
+    };
+  }, [socket, isDriver]);
+
+  // ─── PASSENGER: Broadcast live location when ride is ongoing ──────────────
+  useEffect(() => {
+    if (isDriver || rideStatus !== 'ongoing' || !socket) return;
+
+    const updatePassengerLocation = async () => {
+      try {
+        const coords = await locationPermissionService.getCurrentPosition();
+        setPassengerLiveLocation({ lat: coords.latitude, lng: coords.longitude });
+        socket.emit('passenger_location_update', {
+          rideId,
+          lat: coords.latitude,
+          lng: coords.longitude,
+        });
+      } catch (err) {
+        // Fallback to pickup coordinates silently if GPS denied
+      }
+    };
+
+    updatePassengerLocation();
+    if (passengerIntervalRef.current) clearInterval(passengerIntervalRef.current);
+    passengerIntervalRef.current = setInterval(updatePassengerLocation, 5000);
+
+    return () => {
+      if (passengerIntervalRef.current) {
+        clearInterval(passengerIntervalRef.current);
+        passengerIntervalRef.current = null;
+      }
+    };
+  }, [isDriver, rideStatus, socket, rideId]);
+
+  // ─── Recalculate Distance & ETA ─────────────────────────────────────────────
+  useEffect(() => {
+    if (driverLocation && effectivePassengerCoords) {
+      const km = haversineKm(
+        driverLocation.lat,
+        driverLocation.lng,
+        effectivePassengerCoords[0],
+        effectivePassengerCoords[1]
+      );
+      const formattedKm = parseFloat(km.toFixed(1));
+      setDistanceKm(formattedKm);
+
+      // Average speed ~30 km/h
+      const mins = Math.max(1, Math.round((km / 30) * 60));
+      setEtaMinutes(mins);
+    }
+  }, [driverLocation, effectivePassengerCoords]);
 
   // ─── DRIVER: Request permission & start sharing location ───────────────────
   const startSharing = async () => {
@@ -195,28 +289,11 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    if (watchIdRef.current) {
-      locationPermissionService.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
     if (socket) {
       socket.emit('driver_stop_tracking', { rideId });
     }
     setIsSharing(false);
   };
-
-  // Automatically start sharing driver location when ride is ongoing
-  useEffect(() => {
-    if (isDriver && rideStatus === 'ongoing' && socket && !isSharing) {
-      startSharing();
-    }
-  }, [isDriver, rideStatus, socket]);
-
-  useEffect(() => {
-    return () => {
-      stopSharing();
-    };
-  }, []);
 
   // Auto-start location broadcasting if driver and ride is active
   useEffect(() => {
@@ -237,9 +314,47 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   // Default center — VIT-AP Campus
   const defaultCenter: [number, number] = [16.4971, 80.4992];
 
+  const requestPassengerPermission = async () => {
+    try {
+      const status = await locationPermissionService.requestPermissions();
+      setPermissionState(status);
+      if (status === 'granted') {
+        const coords = await locationPermissionService.getCurrentPosition();
+        setPassengerLiveLocation({ lat: coords.latitude, lng: coords.longitude });
+        if (socket) {
+          socket.emit('passenger_location_update', {
+            rideId,
+            lat: coords.latitude,
+            lng: coords.longitude,
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn('Passenger location permission request error:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2.5">
-      
+      {/* Passenger Permission Banner */}
+      {!isDriver && permissionState !== 'granted' && (
+        <div className="flex items-center justify-between p-3 bg-blue-50/80 border border-blue-200 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-blue-600 animate-bounce" />
+            <div>
+              <p className="text-xs font-black text-slate-900">Enable Live GPS Location</p>
+              <p className="text-[10px] text-slate-500 font-bold">Allows driver to view your pickup location on Android & map</p>
+            </div>
+          </div>
+          <button
+            onClick={requestPassengerPermission}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-extrabold shadow-sm active:scale-95 transition-transform shrink-0"
+          >
+            Allow Location
+          </button>
+        </div>
+      )}
+
       {/* Driver Control Status Banner */}
       {isDriver && (
         <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
@@ -249,7 +364,7 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
               <p className="text-xs font-black text-slate-800">
                 {isSharing ? 'Live GPS Broadcast Active' : 'Location Broadcast Paused'}
               </p>
-              <p className="text-[10px] font-bold text-slate-400">Emitting coordinates every 4 seconds</p>
+              <p className="text-[10px] font-bold text-slate-400">Broadcasting driver & tracking passenger</p>
             </div>
           </div>
 
@@ -266,49 +381,74 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         </div>
       )}
 
-      {/* Passenger Status & ETA Banner */}
-      {!isDriver && (
-        <div className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between">
-          {trackingActive ? (
-            <div className="flex items-center gap-2.5 w-full justify-between">
-              <div className="flex items-center gap-2">
+      {/* Driver Turn-by-Turn Navigation Button (uses exact passenger GPS coordinates) */}
+      {isDriver && effectivePassengerCoords && (
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${effectivePassengerCoords[0]},${effectivePassengerCoords[1]}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-95"
+        >
+          <Navigation2 className="w-4 h-4 text-white" />
+          <span>Open Turn-by-Turn GPS Navigation (Google Maps)</span>
+        </a>
+      )}
+
+      {/* Driver or Passenger Info Banner */}
+      <div className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-2.5 w-full justify-between">
+          <div className="flex items-center gap-2">
+            {isDriver ? (
+              <>
+                <UserCheck className="w-4 h-4 text-blue-600 animate-pulse" />
+                <div>
+                  <span className="text-xs font-black text-slate-900 block">Passenger Location Active</span>
+                  <span className="text-[9px] font-bold text-blue-600">
+                    {passengerLiveLocation ? 'Live GPS coordinate signal' : 'Pickup address location'}
+                  </span>
+                </div>
+              </>
+            ) : trackingActive ? (
+              <>
                 <Wifi className="w-4 h-4 text-emerald-600 animate-pulse" />
                 <div>
                   <span className="text-xs font-black text-slate-900 block">Driver Location Live</span>
                   <span className="text-[9px] font-bold text-emerald-600">Updated in real-time</span>
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4 text-slate-400" />
+                <span className="text-xs font-bold text-slate-500">Waiting for driver location signal...</span>
+              </>
+            )}
+          </div>
 
-              {distanceKm !== null && (
-                <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-xs font-black text-slate-800">{distanceKm} km</span>
-                  </div>
-                  {etaMinutes !== null && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-amber-500" />
-                      <span className="text-xs font-black text-amber-600">{etaMinutes} mins ETA</span>
-                    </div>
-                  )}
+          {distanceKm !== null && (
+            <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-black text-slate-800">{distanceKm} km</span>
+              </div>
+              {etaMinutes !== null && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-xs font-black text-amber-600">{etaMinutes} mins</span>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <WifiOff className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-bold text-slate-500">Waiting for driver live location signal...</span>
-            </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Interactive Map View */}
-      <div className="relative w-full h-[320px] bg-slate-100 border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+      <div className="relative w-full h-[340px] bg-slate-100 border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
         <MapContainer
           center={
             driverLocation
               ? [driverLocation.lat, driverLocation.lng]
+              : effectivePassengerCoords
+              ? effectivePassengerCoords
               : defaultCenter
           }
           zoom={15}
@@ -326,56 +466,67 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
               <Marker position={[driverLocation.lat, driverLocation.lng]} icon={driverMarkerIcon}>
                 <Popup>
                   <div className="p-1">
-                    <p className="font-bold text-emerald-600 text-xs">Driver's Live Location</p>
+                    <p className="font-bold text-emerald-600 text-xs">Driver's Location</p>
                     <p className="text-[10px] text-slate-500">Updated: {new Date(driverLocation.timestamp).toLocaleTimeString()}</p>
                   </div>
                 </Popup>
               </Marker>
-              <PanToDriver lat={driverLocation.lat} lng={driverLocation.lng} />
+              {isDriver && <PanToDriver lat={driverLocation.lat} lng={driverLocation.lng} />}
             </>
           )}
 
-          {/* Blue Polyline route between driver and passenger pickup */}
-          {driverLocation && passengerPickupCoords && passengerPickupCoords.length === 2 && (
-            <Polyline
-              positions={[
-                [driverLocation.lat, driverLocation.lng],
-                [passengerPickupCoords[1], passengerPickupCoords[0]],
-              ]}
-              pathOptions={{
-                color: '#2563EB',
-                weight: 5,
-                opacity: 0.85,
-                dashArray: '1, 10',
-              }}
-            />
-          )}
-
-          {/* Passenger pickup point */}
-          {passengerPickupCoords && passengerPickupCoords.length === 2 && (
-            <Marker position={[passengerPickupCoords[1], passengerPickupCoords[0]]} icon={pickupIcon}>
+          {/* Passenger Marker */}
+          {effectivePassengerCoords && (
+            <Marker position={effectivePassengerCoords} icon={passengerMarkerIcon}>
               <Popup>
                 <div className="p-1">
-                  <p className="font-bold text-blue-600 text-xs">Pickup Location</p>
-                  <p className="text-[10px] text-slate-500">{passengerPickupAddress || 'Pickup Point'}</p>
+                  <p className="font-bold text-blue-600 text-xs">
+                    {passengerLiveLocation ? 'Passenger Live GPS' : 'Passenger Pickup Location'}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    {passengerPickupAddress || `${effectivePassengerCoords[0].toFixed(4)}, ${effectivePassengerCoords[1].toFixed(4)}`}
+                  </p>
                 </div>
               </Popup>
             </Marker>
           )}
+
+          {/* BLUE Polyline Route between Driver and Passenger */}
+          {driverLocation && effectivePassengerCoords && (
+            <Polyline
+              positions={[
+                [driverLocation.lat, driverLocation.lng],
+                effectivePassengerCoords,
+              ]}
+              pathOptions={{
+                color: '#2563EB', // Blue colour route
+                weight: 6,
+                opacity: 0.9,
+              }}
+            />
+          )}
+
+          {/* Fit route view bounds to show both Driver & Passenger */}
+          {driverLocation && effectivePassengerCoords && (
+            <FitRouteBounds
+              driverPos={[driverLocation.lat, driverLocation.lng]}
+              passengerPos={effectivePassengerCoords}
+            />
+          )}
         </MapContainer>
 
-        {/* Pulse CSS for driver marker */}
+        {/* Pulse & Smooth Animation Styles */}
         <style>{`
           @keyframes liveTrackPulse {
             0% { transform: scale(1); opacity: 0.8; }
             100% { transform: scale(2.2); opacity: 0; }
           }
-          .smooth-driver-marker {
+          .smooth-driver-marker, .smooth-passenger-marker {
             transition: transform 0.8s linear, left 0.8s linear, top 0.8s linear;
           }
         `}</style>
 
-        {/* Overlay when waiting for location */}
+        {/* Overlay when waiting for location signal */}
         {!driverLocation && !isDriver && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px] z-20">
             <div className="bg-white/90 px-4 py-3 rounded-2xl shadow-lg border border-white text-center flex flex-col items-center gap-1.5">

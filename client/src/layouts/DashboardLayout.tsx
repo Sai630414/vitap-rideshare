@@ -16,6 +16,7 @@ import { useSocket } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
 import notificationService from '../services/notificationService';
 import fcmPushService from '../services/fcmPushService';
+import locationPermissionService from '../services/locationPermissionService';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -69,28 +70,21 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     const sendSos = (lat: number, lng: number) => {
       if (socket) {
         socket.emit('sos_alert', {
-          userId: user._id,
-          userName: user.name,
-          phone: user.phone || 'No phone number linked',
+          userId: user?._id,
+          userName: user?.name,
+          phone: user?.phone,
           coordinates: [lng, lat],
         });
-        toast.error('🚨 Emergency SOS alert has been broadcast to all admins.');
-      } else {
-        toast.error('Emergency trigger failed: No server connection.');
+        toast.success('🚨 SOS alert broadcasted to safety monitoring team!');
       }
       setSosLoading(false);
       setShowSosModal(false);
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => sendSos(position.coords.latitude, position.coords.longitude),
-        () => sendSos(16.4971, 80.4992),
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    } else {
-      sendSos(16.4971, 80.4992);
-    }
+    locationPermissionService
+      .getCurrentPosition()
+      .then((coords) => sendSos(coords.latitude, coords.longitude))
+      .catch(() => sendSos(16.4971, 80.4992));
   };
 
   const isActive = (path: string) => location.pathname === path;
