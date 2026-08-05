@@ -8,6 +8,7 @@ import AppError from '../utils/appError';
 import Booking from '../models/Booking';
 import { sendNotificationToUser } from './notificationController';
 import { refundPayment } from './paymentController';
+import { broadcastToAll, sendToUser } from '../services/socketService';
 
 export const offerRide = async (
   req: AuthRequest,
@@ -98,10 +99,18 @@ export const offerRide = async (
       status: 'scheduled',
     });
 
+    const populatedRide = await Ride.findById(ride._id)
+      .populate('vehicle', 'brand model type numberPlate color seats')
+      .populate('driver', 'name email profileImage rating verifiedDriver trustScore');
+
+    // Broadcast real-time ride creation event to all searching clients & driver
+    broadcastToAll('ride_created', populatedRide);
+    sendToUser(req.user.id, 'driver_ride_created', populatedRide);
+
     res.status(201).json({
       status: 'success',
       data: {
-        ride,
+        ride: populatedRide,
       },
     });
   } catch (error) {
@@ -465,10 +474,17 @@ export const updateRideStatus = async (
       }
     }
 
+    const updatedRidePopulated = await Ride.findById(ride._id)
+      .populate('driver', 'name email phone profileImage rating verifiedDriver trustScore branch year registrationNumber')
+      .populate('vehicle', 'brand model type color numberPlate seats');
+
+    // Emit real-time ride status update to all connected clients & rooms
+    broadcastToAll('ride_updated', updatedRidePopulated);
+
     res.status(200).json({
       status: 'success',
       data: {
-        ride,
+        ride: updatedRidePopulated,
       },
     });
   } catch (error) {

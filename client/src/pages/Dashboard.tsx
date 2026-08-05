@@ -21,6 +21,8 @@ import bookingService, { type BookingData } from '../services/bookingService';
 import notificationService, { type NotificationData } from '../services/notificationService';
 import DriverDashboard from './driver/DriverDashboard';
 
+import useSocket from '../context/SocketContext';
+
 // ==========================================
 // STUDENT DASHBOARD COMPONENT (Mobile First)
 // ==========================================
@@ -29,34 +31,75 @@ const StudentDashboard: React.FC<{ user: any; toast: any; navigate: any }> = ({ 
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const { socket } = useSocket();
+
+  const fetchBookings = async () => {
+    try {
+      const bookingsRes = await bookingService.getMyBookings();
+      if (bookingsRes.status === 'success') {
+        setBookings(bookingsRes.data.bookings);
+      }
+    } catch (err) {
+      console.error('Failed to load bookings:', err);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const notifRes = await notificationService.getMyNotifications();
+      if (notifRes.status === 'success') {
+        setNotifications(notifRes.data.notifications);
+      }
+    } catch (err) {
+      console.error('Failed to load notifications:', err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const bookingsRes = await bookingService.getMyBookings();
-        if (bookingsRes.status === 'success') {
-          setBookings(bookingsRes.data.bookings);
-        }
-      } catch (err) {
-        console.error('Failed to load bookings:', err);
-      } finally {
-        setLoadingBookings(false);
-      }
+    fetchBookings();
+    fetchNotifications();
+  }, []);
 
-      try {
-        const notifRes = await notificationService.getMyNotifications();
-        if (notifRes.status === 'success') {
-          setNotifications(notifRes.data.notifications);
-        }
-      } catch (err) {
-        console.error('Failed to load notifications:', err);
-      } finally {
-        setLoadingNotifications(false);
-      }
+  // Real-time Socket Event Listeners for Instant UI updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBookingCreated = (newBooking: any) => {
+      setBookings((prev) => [newBooking, ...prev.filter((b) => b._id !== newBooking._id)]);
     };
 
-    fetchData();
-  }, []);
+    const handleBookingUpdated = (updatedBooking: any) => {
+      setBookings((prev) =>
+        prev.map((b) => (b._id === updatedBooking._id ? updatedBooking : b))
+      );
+    };
+
+    const handleRideUpdated = (updatedRide: any) => {
+      setBookings((prev) =>
+        prev.map((b) => (b.ride?._id === updatedRide._id ? { ...b, ride: updatedRide } : b))
+      );
+    };
+
+    const handleNewNotification = (newNotif: any) => {
+      setNotifications((prev) => [newNotif, ...prev.filter((n) => n._id !== newNotif._id)]);
+    };
+
+    socket.on('booking_created', handleBookingCreated);
+    socket.on('booking_updated', handleBookingUpdated);
+    socket.on('ride_updated', handleRideUpdated);
+    socket.on('notification', handleNewNotification);
+
+    return () => {
+      socket.off('booking_created', handleBookingCreated);
+      socket.off('booking_updated', handleBookingUpdated);
+      socket.off('ride_updated', handleRideUpdated);
+      socket.off('notification', handleNewNotification);
+    };
+  }, [socket]);
 
   const handleMarkRead = async (id: string) => {
     try {

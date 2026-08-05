@@ -148,6 +148,18 @@ export const sendToUser = (userId: string, eventName: string, data: any) => {
   }
 };
 
+export const broadcastToAll = (eventName: string, data: any) => {
+  if (io) {
+    io.emit(eventName, data);
+  }
+};
+
+export const broadcastToRoom = (room: string, eventName: string, data: any) => {
+  if (io) {
+    io.to(room).emit(eventName, data);
+  }
+};
+
 export const isUserInChatRoom = (userId: string, chatId: string): boolean => {
   if (!io) return false;
   const socketId = userSockets.get(userId);

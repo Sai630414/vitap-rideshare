@@ -4,6 +4,7 @@ import User from '../models/User';
 import Report from '../models/Report';
 import AppError from '../utils/appError';
 import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
+import { sendToUser } from '../services/socketService';
 
 export const getUserProfile = async (
   req: AuthRequest,
@@ -55,6 +56,9 @@ export const updateProfile = async (
       { $set: updateData },
       { new: true, runValidators: true }
     );
+
+    // Emit real-time profile update event to current user socket
+    sendToUser(req.user.id, 'profile_updated', updatedUser);
 
     res.status(200).json({
       status: 'success',

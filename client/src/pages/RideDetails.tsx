@@ -107,6 +107,44 @@ export const RideDetails: React.FC = () => {
     fetchRideAndBookings();
   }, [fetchRideAndBookings]);
 
+  // Real-time Socket listeners for active trip screen
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handleRideUpdated = (updatedRide: RideData) => {
+      if (updatedRide._id === id) {
+        setRide(updatedRide);
+      }
+    };
+
+    const handleBookingCreated = (newBooking: BookingData) => {
+      const bRideId = typeof newBooking.ride === 'string' ? newBooking.ride : newBooking.ride?._id;
+      if (bRideId === id) {
+        setBookings((prev) => [newBooking, ...prev.filter((b) => b._id !== newBooking._id)]);
+      }
+    };
+
+    const handleBookingUpdated = (updatedBooking: BookingData) => {
+      const bRideId = typeof updatedBooking.ride === 'string' ? updatedBooking.ride : updatedBooking.ride?._id;
+      if (bRideId === id) {
+        setBookings((prev) => prev.map((b) => (b._id === updatedBooking._id ? updatedBooking : b)));
+        if (updatedBooking.passenger._id === user?._id) {
+          setMyBooking(updatedBooking);
+        }
+      }
+    };
+
+    socket.on('ride_updated', handleRideUpdated);
+    socket.on('booking_created', handleBookingCreated);
+    socket.on('booking_updated', handleBookingUpdated);
+
+    return () => {
+      socket.off('ride_updated', handleRideUpdated);
+      socket.off('booking_created', handleBookingCreated);
+      socket.off('booking_updated', handleBookingUpdated);
+    };
+  }, [socket, id, user]);
+
   useEffect(() => {
     if (ride) {
       setPickup(ride.source || '');

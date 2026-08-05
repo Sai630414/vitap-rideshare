@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 export interface ToastMessage {
   id: string;
@@ -23,6 +25,19 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
+
+    // Trigger local push notification on native Android / iOS devices
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const title = type === 'success' ? 'Waygo Success' : type === 'error' ? 'Waygo Alert' : 'Waygo Info';
+        // Use Notification web/native API fallback or PushNotifications schema
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(title, { body: message });
+        }
+      } catch (e) {
+        console.warn('[ToastContext] Native mobile notification trigger:', e);
+      }
+    }
 
     // Auto-remove toast after 4 seconds
     setTimeout(() => {

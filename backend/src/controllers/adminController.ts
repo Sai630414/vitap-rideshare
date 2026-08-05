@@ -13,6 +13,7 @@ import AppError from '../utils/appError';
 import { sendNotificationToUser } from './notificationController';
 import logger from '../utils/logger';
 import { createAccessToken, createRefreshToken } from '../utils/jwt';
+import { sendToUser, broadcastToAll } from '../services/socketService';
 import {
   sendDriverApprovalEmail,
   sendDriverRejectionEmail,
@@ -356,6 +357,10 @@ export const approveDriver = async (
       'verification_approved',
       driver._id
     );
+
+    // Emit real-time driver approval update to user and admin dashboard
+    sendToUser(user._id.toString(), 'driver_approval_updated', driver);
+    broadcastToAll('admin_driver_updated', driver);
 
     res.status(200).json({
       status: 'success',

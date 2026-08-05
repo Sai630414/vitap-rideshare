@@ -29,6 +29,8 @@ import bookingService from '../../services/bookingService';
 import chatService from '../../services/chatService';
 import ReviewDialog from '../../components/ReviewDialog';
 
+import useSocket from '../../context/SocketContext';
+
 // Dynamic Script Loader for Razorpay Checkout
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -48,6 +50,7 @@ const loadRazorpayScript = () => {
 export const DriverDashboard: React.FC = () => {
   const { user, login } = useAuth();
   const { toast } = useToast();
+  const { socket } = useSocket();
   const navigate = useNavigate();
 
   const driver = user?.driverDetails as any;
@@ -83,41 +86,88 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
+  const fetchDriverRides = async () => {
+    try {
+      const response = await api.get('/rides/mine');
+      if (response.data.status === 'success') {
+        const allRides: RideData[] = response.data.data.rides;
+        setMyRides(allRides);
+        const completed = allRides.filter((r) => r.status === 'completed');
+        setEarnings(completed.length * 150);
+      }
+    } catch (err) {
+      console.error('Failed to load driver rides:', err);
+    } finally {
+      setLoadingRides(false);
+    }
+  };
+
+  const fetchRequests = async () => {
+    try {
+      const res = await bookingService.getDriverRequests();
+      if (res.status === 'success') {
+        setRequests(res.data.bookings);
+      }
+    } catch (err) {
+      console.error('Failed to load ride requests:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'driver' && user?.verifiedDriver && hasPaid) {
-      const fetchDriverRides = async () => {
-        try {
-          const response = await api.get('/rides/mine');
-          if (response.data.status === 'success') {
-            const allRides: RideData[] = response.data.data.rides;
-            setMyRides(allRides);
-            const completed = allRides.filter((r) => r.status === 'completed');
-            setEarnings(completed.length * 150);
-          }
-        } catch (err) {
-          console.error('Failed to load driver rides:', err);
-        } finally {
-          setLoadingRides(false);
-        }
-      };
-
-      const fetchRequests = async () => {
-        try {
-          const res = await bookingService.getDriverRequests();
-          if (res.status === 'success') {
-            setRequests(res.data.bookings);
-          }
-        } catch (err) {
-          console.error('Failed to load ride requests:', err);
-        } finally {
-          setLoadingRequests(false);
-        }
-      };
-
       fetchDriverRides();
       fetchRequests();
     }
   }, [user, hasPaid]);
+
+  // Real-time Socket listeners for Driver Dashboard
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRideCreated = (newRide: RideData) => {
+      if (newRide.driver?._id === user?._id) {
+        setMyRides((prev) => [newRide, ...prev.filter((r) => r._id !== newRide._id)]);
+      }
+    };
+
+    const handleRideUpdated = (updatedRide: RideData) => {
+      if (updatedRide.driver?._id === user?._id) {
+        setMyRides((prev) => prev.map((r) => (r._id === updatedRide._id ? updatedRide : r)));
+      }
+    };
+
+    const handleBookingCreated = (newBooking: any) => {
+      if (newBooking.driver === user?._id || newBooking.ride?.driver?._id === user?._id) {
+        setRequests((prev) => [newBooking, ...prev.filter((b) => b._id !== newBooking._id)]);
+      }
+    };
+
+    const handleBookingUpdated = (updatedBooking: any) => {
+      if (updatedBooking.driver === user?._id || updatedBooking.ride?.driver?._id === user?._id) {
+        setRequests((prev) => prev.map((b) => (b._id === updatedBooking._id ? updatedBooking : b)));
+      }
+    };
+
+    const handleDriverApprovalUpdated = (driverDoc: any) => {
+      refreshUserState();
+    };
+
+    socket.on('driver_ride_created', handleRideCreated);
+    socket.on('ride_updated', handleRideUpdated);
+    socket.on('booking_created', handleBookingCreated);
+    socket.on('booking_updated', handleBookingUpdated);
+    socket.on('driver_approval_updated', handleDriverApprovalUpdated);
+
+    return () => {
+      socket.off('driver_ride_created', handleRideCreated);
+      socket.off('ride_updated', handleRideUpdated);
+      socket.off('booking_created', handleBookingCreated);
+      socket.off('booking_updated', handleBookingUpdated);
+      socket.off('driver_approval_updated', handleDriverApprovalUpdated);
+    };
+  }, [socket, user]);
 
   const handleUpdateStatus = async (rideId: string, newStatus: 'ongoing' | 'completed' | 'cancelled') => {
     try {
@@ -128,7 +178,10 @@ export const DriverDashboard: React.FC = () => {
           prev.map((r) => (r._id === rideId ? { ...r, status: newStatus } : r))
         );
 
-        if (newStatus === 'completed') {
+        if (newStatus === 'ongoing') {
+          // Instantly open live tracking map route page for driver and passengers
+          navigate(`/ride/${rideId}`);
+        } else if (newStatus === 'completed') {
           // Find first passenger for this completed ride to review
           const matchedReq = requests.find(req => (req.ride?._id === rideId || req.ride === rideId) && req.status === 'accepted');
           if (matchedReq && matchedReq.passenger) {
@@ -358,19 +411,19 @@ export const DriverDashboard: React.FC = () => {
         </p>
 
         {/* Subscription Deadline Card */}
-        <div className="mt-6 w-full max-w-md bg-amber-50 border border-amber-200 rounded-3xl p-4 flex items-center justify-between shadow-sm">
+        <div className="mt-6 w-full max-w-md bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-5 text-white flex items-center justify-between shadow-lg shadow-amber-500/20">
           <div className="flex items-center gap-3 text-left">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
-              <Clock className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center font-black">
+              <Clock className="w-6 h-6 text-white animate-pulse" />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase text-amber-600 tracking-wider block">Subscription Deadline</span>
-              <span className="text-xs font-extrabold text-amber-900 block">Complete payment to activate</span>
+              <span className="text-[10px] font-black uppercase text-amber-100 tracking-wider block">Subscription Deadline</span>
+              <span className="text-sm font-black text-white block">Complete ₹50 payment to activate</span>
             </div>
           </div>
-          <div className="bg-white px-3 py-1.5 rounded-2xl border border-amber-200 shadow-sm text-center">
-            <span className="text-base font-black text-amber-700 block">{daysLeft}</span>
-            <span className="text-[9px] font-bold text-amber-600 block uppercase tracking-wider">{daysLeft === 1 ? 'Day Left' : 'Days Left'}</span>
+          <div className="bg-white px-4 py-2 rounded-2xl shadow-md text-center shrink-0">
+            <span className="text-xl font-black text-amber-600 block leading-tight">{daysLeft}</span>
+            <span className="text-[9px] font-extrabold text-amber-700 block uppercase tracking-wider">{daysLeft === 1 ? 'Day Left' : 'Days Left'}</span>
           </div>
         </div>
 
@@ -421,6 +474,27 @@ export const DriverDashboard: React.FC = () => {
           <p className="text-xs text-white/80 font-bold mt-0.5">Manage your hosted trips and passenger bookings</p>
         </div>
       </div>
+
+      {/* Subscription / Days Left Status Card if subscription active */}
+      {driver?.updatedAt && (
+        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-3xl flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider block">Active Driver Subscription</span>
+              <span className="text-xs font-extrabold text-emerald-950 block">Verified & Subscription Active</span>
+            </div>
+          </div>
+          <div className="bg-white px-3 py-1.5 rounded-2xl border border-emerald-200 shadow-sm text-center">
+            <span className="text-base font-black text-emerald-700 block">
+              {Math.max(0, Math.ceil((new Date(new Date(driver.updatedAt).getTime() + 30 * 24 * 60 * 60 * 1000).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
+            </span>
+            <span className="text-[9px] font-bold text-emerald-600 block uppercase tracking-wider">Days Left</span>
+          </div>
+        </div>
+      )}
 
       {/* Stats Quick Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
