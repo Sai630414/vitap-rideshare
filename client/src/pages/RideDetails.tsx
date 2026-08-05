@@ -62,6 +62,7 @@ export const RideDetails: React.FC = () => {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [existingDriverReview, setExistingDriverReview] = useState<any>(null);
   const [passengerReviewedMap, setPassengerReviewedMap] = useState<Record<string, any>>({});
+  const [isMandatoryReview, setIsMandatoryReview] = useState(false);
 
   // Weather (F5)
   const [weather, setWeather] = useState<any>(null);
@@ -153,6 +154,23 @@ export const RideDetails: React.FC = () => {
       setDrop(ride.destination || '');
     }
   }, [ride]);
+
+  // Auto-trigger mandatory driver review modal when driver completes the ride
+  useEffect(() => {
+    if (!ride || !user) return;
+    const isRideDriver = ride.driver._id === user._id;
+    if (
+      ride.status === 'completed' &&
+      !isRideDriver &&
+      myBooking &&
+      (myBooking.status === 'accepted' || myBooking.status === 'completed') &&
+      !existingDriverReview
+    ) {
+      setReviewDialogTarget({ name: ride.driver.name, type: 'driver' });
+      setIsMandatoryReview(true);
+      setReviewDialogOpen(true);
+    }
+  }, [ride, user, myBooking, existingDriverReview]);
 
   // Fetch weather for ride (F5)
   useEffect(() => {
@@ -321,11 +339,14 @@ export const RideDetails: React.FC = () => {
           await bookingService.createReview(ride._id, rating, comment);
           toast.success('Driver review submitted! ⭐');
           setExistingDriverReview({ rating, comment, createdAt: new Date().toISOString() });
+          setIsMandatoryReview(false);
+          setReviewDialogOpen(false);
         }
       } else if (reviewDialogTarget.passengerId) {
         await bookingService.createPassengerReview(ride._id, reviewDialogTarget.passengerId, rating, comment);
         toast.success('Passenger review submitted! ⭐');
         setPassengerReviewedMap((prev) => ({ ...prev, [reviewDialogTarget.passengerId!]: true }));
+        setReviewDialogOpen(false);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to submit review.');
@@ -412,6 +433,15 @@ export const RideDetails: React.FC = () => {
               rideId={ride._id}
               isDriver={isDriver}
               driverId={ride.driver._id}
+              currentUserId={user?._id}
+              passengers={bookings
+                .filter((b) => b.status === 'accepted')
+                .map((b) => ({
+                  id: typeof b.passenger === 'object' && b.passenger?._id ? b.passenger._id : String(b.passenger || ''),
+                  name: typeof b.passenger === 'object' && b.passenger?.name ? b.passenger.name : 'Passenger',
+                  pickupCoords: b.pickupCoordinates,
+                  pickupAddress: b.pickup,
+                }))}
               passengerPickupCoords={
                 isDriver
                   ? bookings.find((b) => b.status === 'accepted')?.pickupCoordinates
@@ -787,12 +817,15 @@ export const RideDetails: React.FC = () => {
         {/* Review Dialog (F1 + F2) */}
         <ReviewDialog
           isOpen={reviewDialogOpen}
-          onClose={() => setReviewDialogOpen(false)}
+          onClose={() => {
+            if (!isMandatoryReview) setReviewDialogOpen(false);
+          }}
           onSubmit={handleReviewSubmit}
           targetName={reviewDialogTarget.name}
           reviewType={reviewDialogTarget.type}
           existingReview={reviewDialogTarget.type === 'driver' ? existingDriverReview : null}
           loading={reviewLoading}
+          mandatory={isMandatoryReview}
         />
       </div>
     </div>
