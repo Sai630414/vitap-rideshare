@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Navigation2, Wifi, WifiOff, MapPin, Clock, ShieldCheck } from 'lucide-react';
 import { Socket } from 'socket.io-client';
@@ -333,6 +333,22 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
               </Marker>
               <PanToDriver lat={driverLocation.lat} lng={driverLocation.lng} />
             </>
+          )}
+
+          {/* Blue Polyline route between driver and passenger pickup */}
+          {driverLocation && passengerPickupCoords && passengerPickupCoords.length === 2 && (
+            <Polyline
+              positions={[
+                [driverLocation.lat, driverLocation.lng],
+                [passengerPickupCoords[1], passengerPickupCoords[0]],
+              ]}
+              pathOptions={{
+                color: '#2563EB',
+                weight: 5,
+                opacity: 0.85,
+                dashArray: '1, 10',
+              }}
+            />
           )}
 
           {/* Passenger pickup point */}

@@ -82,6 +82,10 @@ const StudentDashboard: React.FC<{ user: any; toast: any; navigate: any }> = ({ 
       setBookings((prev) =>
         prev.map((b) => (b.ride?._id === updatedRide._id ? { ...b, ride: updatedRide } : b))
       );
+      if (updatedRide.status === 'ongoing') {
+        // Auto-navigate passenger to live tracking map when driver starts ride
+        navigate(`/ride/${updatedRide._id}`);
+      }
     };
 
     const handleNewNotification = (newNotif: any) => {
