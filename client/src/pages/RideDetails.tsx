@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useSocket } from '../context/SocketContext';
 import {
   Car,
   MapPin,
@@ -13,22 +14,29 @@ import {
   CheckCircle,
   MessageSquare,
   AlertTriangle,
-  User,
   Navigation,
+  CloudSun,
+  Locate,
+  Map,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import ReviewDialog from '../components/ReviewDialog';
+import WeatherWidget from '../components/WeatherWidget';
+import LiveTrackingMap from '../components/LiveTrackingMap';
 import rideService, { type RideData } from '../services/rideService';
 import bookingService, { type BookingData } from '../services/bookingService';
 import chatService from '../services/chatService';
 import MapContainerComponent from '../components/MapContainer';
+import api from '../services/api';
 
 export const RideDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { socket } = useSocket();
   const navigate = useNavigate();
 
   const [ride, setRide] = useState<RideData | null>(null);
@@ -36,20 +44,28 @@ export const RideDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [myBooking, setMyBooking] = useState<BookingData | null>(null);
 
-  // Seat booking selection
+  // Seat booking
   const [requestedSeats, setRequestedSeats] = useState<number>(1);
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
+  const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
   const [message, setMessage] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
 
-  // Review states
-  const [rating, setRating] = useState<number>(5);
-  const [comment, setComment] = useState('');
+  // Reviews (F1 + F2)
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewDialogTarget, setReviewDialogTarget] = useState<{ name: string; type: 'driver' | 'passenger'; passengerId?: string }>({ name: '', type: 'driver' });
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [hasReviewed, setHasReviewed] = useState(false);
+  const [existingDriverReview, setExistingDriverReview] = useState<any>(null);
+  const [passengerReviewedMap, setPassengerReviewedMap] = useState<Record<string, any>>({});
 
-  const fetchRideAndBookings = async () => {
+  // Weather (F5)
+  const [weather, setWeather] = useState<any>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  const fetchRideAndBookings = useCallback(async () => {
     if (!id) return;
     try {
       const rideRes = await rideService.getRideDetails(id);
@@ -57,7 +73,6 @@ export const RideDetails: React.FC = () => {
         setRide(rideRes.data.ride);
       }
 
-      // If logged in user is the driver, fetch passenger bookings for this ride
       const isDriver = rideRes.data.ride.driver._id === user?._id;
       if (isDriver || user?.role === 'admin') {
         const bookRes = await bookingService.getRideBookings(id);
@@ -65,21 +80,19 @@ export const RideDetails: React.FC = () => {
           setBookings(bookRes.data.bookings);
         }
       } else {
-        // Passenger - check if they already booked this ride
         const bookRes = await bookingService.getMyBookings();
         if (bookRes.status === 'success') {
-          const userBooking = bookRes.data.bookings.find((b: any) => b.ride._id === id);
-          if (userBooking) {
-            // Find if passenger reviewed
+          const matched = bookRes.data.bookings.find((b: any) => b.ride._id === id);
+          setMyBooking(matched || null);
+
+          // Check if already reviewed driver
+          if (matched) {
             try {
-              const revRes = await bookingService.getDriverReviews(rideRes.data.ride.driver._id);
+              const revRes = await bookingService.getMyReview(id, 'driver');
               if (revRes.status === 'success') {
-                const reviewed = revRes.data.reviews.some((r: any) => r.ride === id && r.passenger._id === user?._id);
-                setHasReviewed(reviewed);
+                setExistingDriverReview(revRes.data.review);
               }
-            } catch (err) {
-              console.error('Failed to load review checks:', err);
-            }
+            } catch (_) {}
           }
         }
       }
@@ -88,11 +101,11 @@ export const RideDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, user]);
 
   useEffect(() => {
     fetchRideAndBookings();
-  }, [id, user]);
+  }, [fetchRideAndBookings]);
 
   useEffect(() => {
     if (ride) {
@@ -101,28 +114,57 @@ export const RideDetails: React.FC = () => {
     }
   }, [ride]);
 
+  // Fetch weather for ride (F5)
+  useEffect(() => {
+    if (!ride) return;
+    const coords = ride.pickupLocation?.coordinates;
+    const date = ride.departureDate;
+    if (!coords || !date) return;
+
+    const dateStr = new Date(date).toISOString().split('T')[0];
+    setWeatherLoading(true);
+    api
+      .get('/weather', { params: { lat: coords[1], lng: coords[0], date: dateStr } })
+      .then((res) => {
+        if (res.data?.data?.weather) setWeather(res.data.data.weather);
+      })
+      .catch(() => {}) // silently fail
+      .finally(() => setWeatherLoading(false));
+  }, [ride]);
+
   const isDriver = ride?.driver._id === user?._id;
 
-  // Passenger booking status (if any)
-  const [myBooking, setMyBooking] = useState<BookingData | null>(null);
-
-  useEffect(() => {
-    const checkMyBookingStatus = async () => {
-      if (isDriver || !ride) return;
-      try {
-        const bookRes = await bookingService.getMyBookings();
-        if (bookRes.status === 'success') {
-          const matched = bookRes.data.bookings.find((b: any) => b.ride._id === ride._id);
-          setMyBooking(matched || null);
+  // ─── Passenger: Get current GPS location ────────────────────────────────────
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setPickupCoords([lng, lat]);
+        try {
+          const res = await api.get(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          const addr = res.data?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          setPickup(addr);
+        } catch {
+          setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         }
-      } catch (err) {
-        console.error('Failed checking booking details:', err);
-      }
-    };
-    checkMyBookingStatus();
-  }, [ride, isDriver]);
+        setGettingLocation(false);
+      },
+      () => {
+        toast.error('Could not get your current location.');
+        setGettingLocation(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
 
-  // Submit seat booking request
+  // ─── Booking ─────────────────────────────────────────────────────────────────
   const handleRequestBooking = async () => {
     if (!ride) return;
     if (!pickup.trim() || !drop.trim()) {
@@ -131,7 +173,15 @@ export const RideDetails: React.FC = () => {
     }
     setBookingLoading(true);
     try {
-      const res = await bookingService.createBooking(ride._id, requestedSeats, pickup, drop, message);
+      const res = await bookingService.createBooking(
+        ride._id,
+        requestedSeats,
+        pickup,
+        drop,
+        message,
+        pickupCoords ?? undefined,
+        undefined
+      );
       if (res.status === 'success') {
         toast.success('🎉 Booking request sent to driver.');
         setMyBooking(res.data.booking);
@@ -143,7 +193,6 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Cancel booking request
   const handleCancelBooking = async () => {
     if (!myBooking) return;
     if (!window.confirm('Are you sure you want to cancel your seat booking?')) return;
@@ -162,15 +211,12 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Driver respond to passenger booking
   const handleRespondBooking = async (bookingId: string, status: 'accepted' | 'rejected') => {
     try {
       const res = await bookingService.respondToBooking(bookingId, status);
       if (res.status === 'success') {
         toast.success(`Booking successfully ${status}.`);
-        setBookings((prev) =>
-          prev.map((b) => (b._id === bookingId ? { ...b, status } : b))
-        );
+        setBookings((prev) => prev.map((b) => (b._id === bookingId ? { ...b, status } : b)));
         fetchRideAndBookings();
       }
     } catch (err: any) {
@@ -178,11 +224,9 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Driver update ride status (ongoing, completed, cancelled)
   const handleUpdateStatus = async (status: 'ongoing' | 'completed' | 'cancelled') => {
     if (!ride) return;
     if (status === 'cancelled' && !window.confirm('Are you sure you want to cancel this trip?')) return;
-    
     setStatusLoading(true);
     try {
       const res = await rideService.updateRideStatus(ride._id, status);
@@ -190,6 +234,17 @@ export const RideDetails: React.FC = () => {
         setRide(res.data.ride);
         toast.success(`Ride status updated to: ${status.toUpperCase()}`);
         fetchRideAndBookings();
+
+        if (status === 'completed') {
+          if (isDriver) {
+            const acceptedBooking = bookings.find((b) => b.status === 'accepted');
+            if (acceptedBooking) {
+              openPassengerReviewDialog(acceptedBooking.passenger._id, acceptedBooking.passenger.name);
+            }
+          } else {
+            openDriverReviewDialog();
+          }
+        }
       }
     } catch (err) {
       toast.error('Failed to update trip status.');
@@ -198,7 +253,6 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Launch chat with the driver / passenger
   const handleLaunchChat = async (recipientId: string) => {
     try {
       const res = await chatService.getOrCreateChat(recipientId);
@@ -210,16 +264,35 @@ export const RideDetails: React.FC = () => {
     }
   };
 
-  // Submit Driver rating review
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ─── Review Handlers ─────────────────────────────────────────────────────────
+  const openDriverReviewDialog = () => {
+    if (!ride) return;
+    setReviewDialogTarget({ name: ride.driver.name, type: 'driver' });
+    setReviewDialogOpen(true);
+  };
+
+  const openPassengerReviewDialog = (passengerId: string, passengerName: string) => {
+    setReviewDialogTarget({ name: passengerName, type: 'passenger', passengerId });
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewSubmit = async (rating: number, comment: string) => {
     if (!ride) return;
     setReviewLoading(true);
     try {
-      const res = await bookingService.createReview(ride._id, rating, comment);
-      if (res.status === 'success') {
-        toast.success('Thank you! Review submitted successfully.');
-        setHasReviewed(true);
+      if (reviewDialogTarget.type === 'driver') {
+        if (existingDriverReview) {
+          await bookingService.updateReview(existingDriverReview._id, rating, comment);
+          toast.success('Review updated!');
+        } else {
+          await bookingService.createReview(ride._id, rating, comment);
+          toast.success('Driver review submitted! ⭐');
+          setExistingDriverReview({ rating, comment, createdAt: new Date().toISOString() });
+        }
+      } else if (reviewDialogTarget.passengerId) {
+        await bookingService.createPassengerReview(ride._id, reviewDialogTarget.passengerId, rating, comment);
+        toast.success('Passenger review submitted! ⭐');
+        setPassengerReviewedMap((prev) => ({ ...prev, [reviewDialogTarget.passengerId!]: true }));
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to submit review.');
@@ -231,7 +304,7 @@ export const RideDetails: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -239,8 +312,8 @@ export const RideDetails: React.FC = () => {
   if (!ride) {
     return (
       <div className="text-center py-16">
-        <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-        <p className="text-zinc-300">Ride not found or has been deleted.</p>
+        <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto mb-3 animate-pulse" />
+        <p className="text-slate-600 font-extrabold text-sm">Ride not found or has been removed.</p>
       </div>
     );
   }
@@ -248,443 +321,449 @@ export const RideDetails: React.FC = () => {
   const departureDateObj = new Date(ride.departureDate);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Route Header summary */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900/40 p-6 rounded-2xl border border-zinc-850">
-        <div>
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
+      
+      {/* Route Header Card */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-extrabold text-zinc-150">
-              {ride.source} → {ride.destination}
+            <span className="text-base font-black text-slate-900">
+              {ride.source}
+            </span>
+            <span className="text-slate-400 font-bold">→</span>
+            <span className="text-base font-black text-slate-900">
+              {ride.destination}
             </span>
           </div>
-          <p className="text-xs text-zinc-400 mt-1.5 flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-violet-400" />
-            {departureDateObj.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-            <span>at</span>
-            <Clock className="w-4 h-4 text-violet-400" />
-            {ride.departureTime}
-          </p>
+
+          <div>
+            {ride.status === 'scheduled' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700">Scheduled</span>}
+            {ride.status === 'ongoing' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700">On the Road 🚗</span>}
+            {ride.status === 'completed' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700">Completed</span>}
+            {ride.status === 'cancelled' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700">Cancelled</span>}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {ride.status === 'scheduled' && <Badge variant="primary">Scheduled</Badge>}
-          {ride.status === 'ongoing' && <Badge variant="warning">On the Road</Badge>}
-          {ride.status === 'completed' && <Badge variant="success">Completed</Badge>}
-          {ride.status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
+
+        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-50 p-3 rounded-2xl">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-emerald-600" />
+            <span>
+              {departureDateObj.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-emerald-600" />
+            <span>{ride.departureTime}</span>
+          </div>
+          <div className="ml-auto font-black text-slate-900 text-sm">
+            ₹{ride.price} <span className="text-[10px] text-slate-400 font-bold">/ seat</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Map Preview & Info (span 2) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-zinc-950 p-4 border-b border-zinc-850">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Navigation className="w-4 h-4 text-violet-400" />
-                Trip Route Map
-              </CardTitle>
-            </CardHeader>
+      <div className="flex flex-col gap-4">
+
+        {/* Feature 3: Live Tracking Map (shown when ride is ongoing) */}
+        {ride.status === 'ongoing' && (isDriver || myBooking?.status === 'accepted') && (
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+              <Navigation className="w-4 h-4 text-emerald-600 animate-pulse" />
+              <span className="text-xs font-black text-slate-900">Live Driver Tracking</span>
+            </div>
+            <LiveTrackingMap
+              socket={socket}
+              rideId={ride._id}
+              isDriver={isDriver}
+              driverId={ride.driver._id}
+              passengerPickupCoords={myBooking?.pickupCoordinates}
+              passengerPickupAddress={myBooking?.pickup}
+              rideStatus={ride.status}
+            />
+          </div>
+        )}
+
+        {/* Static Route Map */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <Map className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-black text-slate-900">Trip Route Preview</span>
+          </div>
+          <div className="h-56 rounded-2xl overflow-hidden">
             <MapContainerComponent
               pickupCoords={ride.pickupLocation.coordinates}
               dropCoords={ride.dropLocation.coordinates}
               pickupAddress={ride.pickupLocation.address}
               dropAddress={ride.dropLocation.address}
             />
-          </Card>
-
-          {/* Booking Management for Driver */}
-          {isDriver && (
-            <Card>
-              <CardHeader className="border-b border-zinc-850 pb-4">
-                <CardTitle className="text-base">Seat Booking Requests ({bookings.length})</CardTitle>
-                <CardDescription>Review student requests for this ride</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {bookings.length === 0 ? (
-                  <div className="text-center py-6 text-zinc-500 text-xs">
-                    No booking requests submitted yet.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {bookings.map((booking) => (
-                      <div
-                        key={booking._id}
-                        className="p-4 bg-zinc-950 border border-zinc-850 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={booking.passenger.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=pass'}
-                            className="w-10 h-10 rounded-full object-cover"
-                            alt=""
-                          />
-                          <div>
-                            <p className="text-xs font-bold text-zinc-200">
-                              {booking.passenger.name} ({booking.passenger.branch}, Year {booking.passenger.year})
-                            </p>
-                            <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-2">
-                              <span>Seats: <strong className="text-violet-400">{booking.seatNumber}</strong></span>
-                              <span>•</span>
-                              <span className="flex items-center gap-0.5 text-amber-400">
-                                <Star className="w-3 h-3 fill-amber-400" />
-                                {booking.passenger.rating}
-                              </span>
-                              <span>•</span>
-                              <span>Trust: {booking.passenger.trustScore}%</span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Respond Actions */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          {booking.status === 'pending' ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs py-1.5 h-auto text-red-400"
-                                onClick={() => handleRespondBooking(booking._id, 'rejected')}
-                              >
-                                Decline
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="text-xs py-1.5 h-auto"
-                                onClick={() => handleRespondBooking(booking._id, 'accepted')}
-                              >
-                                Approve
-                              </Button>
-                            </>
-                          ) : (
-                            <div className="text-right">
-                              {booking.status === 'accepted' ? (
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="success">Approved</Badge>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    className="text-xs py-1.5 h-auto px-2"
-                                    onClick={() => handleLaunchChat(booking.passenger._id)}
-                                  >
-                                    <MessageSquare className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Badge variant="secondary" className="capitalize">
-                                  {booking.status}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Rating/Review Submission (Completed passenger) */}
-          {!isDriver && myBooking?.status === 'accepted' && ride.status === 'completed' && !hasReviewed && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Rate Driver {ride.driver.name}</CardTitle>
-                <CardDescription>Provide rating feedback about your transit experience</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleReviewSubmit} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-semibold text-zinc-300">Driver Rating</label>
-                    <select
-                      value={rating}
-                      onChange={(e) => setRating(parseInt(e.target.value))}
-                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-amber-400 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all font-bold text-sm light:bg-white light:border-zinc-300"
-                    >
-                      <option value={5}>⭐⭐⭐⭐⭐ (5/5 Excellent)</option>
-                      <option value={4}>⭐⭐⭐⭐ (4/5 Good)</option>
-                      <option value={3}>⭐⭐⭐ (3/5 Average)</option>
-                      <option value={2}>⭐⭐ (2/5 Poor)</option>
-                      <option value={1}>⭐ (1/5 Terrible)</option>
-                    </select>
-                  </div>
-                  <Input
-                    label="Comments"
-                    placeholder="Describe driver safe driving, cost split clarity, etc..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                  />
-                  <div className="flex justify-end mt-2">
-                    <Button type="submit" loading={reviewLoading}>
-                      Submit Driver Review
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Completed Passenger Review state confirmation */}
-          {!isDriver && myBooking?.status === 'accepted' && ride.status === 'completed' && hasReviewed && (
-            <div className="p-4 bg-emerald-950/20 border border-emerald-800/30 rounded-2xl flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-              <p className="text-xs text-zinc-400 font-medium">
-                You have already submitted your review feedback for this trip. Thank you!
-              </p>
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Right Panel: Driver Bio & Booking Trigger (span 1) */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          {/* Driver Card Info */}
-          <Card>
-            <CardHeader className="border-b border-zinc-850 pb-4">
-              <CardTitle className="text-base">Driver Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 flex flex-col items-center text-center">
-              <img
-                src={ride.driver.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=driver'}
-                className="w-20 h-20 rounded-full object-cover border-2 border-zinc-800"
-                alt=""
-              />
-              <h3 className="font-bold text-base mt-3 flex items-center gap-1.5">
+        {/* Departure Day Weather */}
+        {(weather || weatherLoading) && (
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+              <CloudSun className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-black text-slate-900">Departure Weather Forecast</span>
+            </div>
+            <WeatherWidget
+              weather={weather || { available: false }}
+              departureDate={ride.departureDate}
+              loading={weatherLoading}
+            />
+          </div>
+        )}
+
+        {/* Driver Profile & Vehicle Card */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <img
+              src={ride.driver.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(ride.driver.name)}`}
+              className="w-12 h-12 rounded-full object-cover border border-slate-100"
+              alt=""
+            />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
                 {ride.driver.name}
-                {ride.driver.verifiedDriver && <Badge variant="success" className="py-0 px-1.5 text-[8px]">Verified</Badge>}
+                {ride.driver.verifiedDriver && <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold bg-emerald-50 text-emerald-700">Verified Driver</span>}
               </h3>
-              <p className="text-xs text-zinc-400 mt-1">{ride.driver.email}</p>
-              
-              {/* Extra details (only visible to accepted passengers or driver themselves) */}
+              <p className="text-[10px] font-bold text-slate-400">{ride.driver.email}</p>
               {((myBooking?.status === 'accepted') || isDriver) && ride.driver.phone && (
-                <p className="text-xs font-bold text-violet-400 mt-2">Call: {ride.driver.phone}</p>
+                <p className="text-[11px] font-extrabold text-emerald-600 mt-0.5">Phone: {ride.driver.phone}</p>
               )}
+            </div>
 
-              {/* Rating stars */}
-              <div className="flex items-center justify-center gap-3 mt-4 w-full">
-                <div className="bg-zinc-950 p-2.5 rounded-xl border border-zinc-850 flex-1">
-                  <span className="text-[10px] text-zinc-500 uppercase font-bold block">Rating</span>
-                  <span className="text-sm font-black text-amber-400 flex items-center justify-center gap-0.5 mt-0.5">
-                    <Star className="w-4 h-4 fill-amber-400" />
-                    {ride.driver.rating}
-                  </span>
-                </div>
-                <div className="bg-zinc-950 p-2.5 rounded-xl border border-zinc-850 flex-1">
-                  <span className="text-[10px] text-zinc-500 uppercase font-bold block">Trust Score</span>
-                  <span className="text-sm font-black text-violet-400 block mt-0.5">{ride.driver.trustScore}%</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-100">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-black text-slate-800">{ride.driver.rating}</span>
+            </div>
+          </div>
 
-              {/* Vehicle Bio */}
-              <div className="w-full bg-zinc-950/60 p-4 rounded-xl border border-zinc-850 text-left space-y-2 mt-4 text-xs">
-                <p className="font-bold text-zinc-400 border-b border-zinc-850 pb-1.5 uppercase tracking-wide">Vehicle Details</p>
-                <p className="text-zinc-300">
-                  Model: <strong className="text-zinc-150 capitalize">{ride.vehicle.brand} {ride.vehicle.model}</strong>
-                </p>
-                <p className="text-zinc-300">
-                  Type: <span className="capitalize">{ride.vehicle.type}</span> | Color: {ride.vehicle.color}
-                </p>
-                {((myBooking?.status === 'accepted') || isDriver) && (
-                  <p className="text-zinc-300">
-                    Plate: <strong className="text-zinc-150 uppercase">{ride.vehicle.numberPlate}</strong>
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs flex justify-between items-center">
+            <div>
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase block">Vehicle</span>
+              <span className="font-extrabold text-slate-800 capitalize">{ride.vehicle.brand} {ride.vehicle.model} ({ride.vehicle.color})</span>
+            </div>
+            {((myBooking?.status === 'accepted') || isDriver) && (
+              <span className="px-2.5 py-1 rounded-xl bg-white border border-slate-200 font-black uppercase text-[10px] text-slate-900">
+                {ride.vehicle.numberPlate}
+              </span>
+            )}
+          </div>
+        </div>
 
-          {/* Booking Action Card (For Passengers) / Trip Control Card (For Drivers) */}
-          <Card className="border-violet-500/20">
-            <CardHeader className="bg-violet-950/15 border-b border-zinc-850 p-4">
-              <CardTitle className="text-sm font-bold flex items-center justify-between">
-                <span>Trip Action Portal</span>
-                <span className="text-base text-violet-400 font-black">₹{ride.price}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {/* 1) DRIVER CONTROLS */}
-              {isDriver && (
-                <div className="flex flex-col gap-3">
-                  {ride.status === 'scheduled' && (
-                    <Button
-                      onClick={() => handleUpdateStatus('ongoing')}
-                      loading={statusLoading}
-                      className="w-full py-3"
-                    >
-                      Start Trip (Ongoing)
-                    </Button>
-                  )}
-                  {ride.status === 'ongoing' && (
-                    <Button
-                      onClick={() => handleUpdateStatus('completed')}
-                      loading={statusLoading}
-                      className="w-full py-3"
-                    >
-                      Mark as Completed
-                    </Button>
-                  )}
-                  {ride.status !== 'completed' && ride.status !== 'cancelled' && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleUpdateStatus('cancelled')}
-                      loading={statusLoading}
-                      className="w-full py-3 text-xs bg-red-950/30 border border-red-800/30 hover:bg-red-950/50"
-                    >
-                      Cancel This Trip
-                    </Button>
-                  )}
-                  {ride.status === 'completed' && (
-                    <div className="text-center py-2 text-xs text-emerald-400 font-bold uppercase flex items-center justify-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      Trip Completed
-                    </div>
-                  )}
-                </div>
-              )}
+        {/* Driver: Booking Requests Management */}
+        {isDriver && (
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-slate-900">Passenger Requests ({bookings.length})</span>
+              <span className="text-[10px] font-bold text-slate-400">Available Seats: {ride.availableSeats}</span>
+            </div>
 
-              {/* 2) PASSENGER CONTROLS */}
-              {!isDriver && (
-                <div className="flex flex-col gap-4">
-                  {/* If not booked yet */}
-                  {!myBooking && (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
-                        <span>Requested Seats</span>
-                        <span>{ride.availableSeats} available</span>
+            {bookings.length === 0 ? (
+              <p className="text-center py-6 text-slate-400 text-xs font-bold">No passenger booking requests yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {bookings.map((booking) => (
+                  <div key={booking._id} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={booking.passenger.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(booking.passenger.name)}`}
+                        className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                        alt=""
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{booking.passenger.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400">{booking.seatNumber} Seat(s) • Rating: {booking.passenger.rating} ⭐</p>
                       </div>
-                      
-                      {ride.availableSeats > 0 ? (
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {booking.status === 'pending' ? (
                         <>
-                          <input
-                            type="number"
-                            min={1}
-                            max={Math.min(4, ride.availableSeats)}
-                            value={requestedSeats}
-                            onChange={(e) => setRequestedSeats(parseInt(e.target.value) || 1)}
-                            className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 light:bg-white light:border-zinc-300"
-                          />
-
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[11px] font-bold text-zinc-455 uppercase tracking-wider">Pickup Location</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. MH-2 Hostel Gate"
-                              value={pickup}
-                              onChange={(e) => setPickup(e.target.value)}
-                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 light:bg-white light:border-zinc-300"
-                              required
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[11px] font-bold text-zinc-455 uppercase tracking-wider">Dropoff Location</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Block 1 Academic Block"
-                              value={drop}
-                              onChange={(e) => setDrop(e.target.value)}
-                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 light:bg-white light:border-zinc-300"
-                              required
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[11px] font-bold text-zinc-455 uppercase tracking-wider">Message to Driver (Optional)</label>
-                            <textarea
-                              placeholder="e.g. Carrying a backpack, will wait at the gate..."
-                              value={message}
-                              onChange={(e) => setMessage(e.target.value)}
-                              rows={2}
-                              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-850 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm mb-2 resize-none light:bg-white light:border-zinc-300"
-                            />
-                          </div>
-
-                          <Button
-                            onClick={handleRequestBooking}
-                            loading={bookingLoading}
-                            className="w-full py-3 mt-2"
-                            disabled={ride.status !== 'scheduled'}
+                          <button
+                            onClick={() => handleRespondBooking(booking._id, 'rejected')}
+                            className="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-xl text-xs font-extrabold"
                           >
-                            Submit Booking Request
-                          </Button>
+                            Decline
+                          </button>
+                          <button
+                            onClick={() => handleRespondBooking(booking._id, 'accepted')}
+                            className="px-3 py-1 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm"
+                          >
+                            Approve
+                          </button>
                         </>
                       ) : (
-                        <div className="text-center text-xs text-red-400 font-bold p-3 bg-red-950/20 border border-red-900/30 rounded-xl">
-                          Seats are fully booked
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold capitalize ${
+                            booking.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-700'
+                          }`}>
+                            {booking.status}
+                          </span>
+                          {booking.status === 'accepted' && (
+                            <>
+                              <button
+                                onClick={() => handleLaunchChat(booking.passenger._id)}
+                                className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                              {ride.status === 'completed' && (
+                                <button
+                                  onClick={() => openPassengerReviewDialog(booking.passenger._id, booking.passenger.name)}
+                                  className="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-extrabold flex items-center gap-1"
+                                >
+                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                  <span>{passengerReviewedMap[booking.passenger._id] ? 'Reviewed' : 'Rate'}</span>
+                                </button>
+                              )}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                  {/* If booked and pending */}
-                  {myBooking && myBooking.status === 'pending' && (
-                    <div className="flex flex-col gap-3 text-center">
-                      <div className="p-3 bg-amber-950/20 border border-amber-900/30 text-amber-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
-                        <Clock className="w-4 h-4 animate-spin" />
-                        Awaiting Driver Approval
-                      </div>
-                      <Button
-                        variant="destructive"
-                        onClick={handleCancelBooking}
-                        loading={bookingLoading}
-                        className="w-full text-xs py-2 bg-red-950/30 border border-red-800/30 hover:bg-red-900/40 text-red-400 mt-2"
-                      >
-                        Cancel Seat Request
-                      </Button>
+        {/* Driver Trip Status Control Panel */}
+        {isDriver && (
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-2.5">
+            <span className="text-xs font-black text-slate-900 border-b border-slate-100 pb-2">Trip Status Control</span>
+            {ride.status === 'scheduled' && (
+              <button
+                onClick={() => handleUpdateStatus('ongoing')}
+                disabled={statusLoading}
+                className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-transform"
+              >
+                Start Ride (Set Status: Ongoing)
+              </button>
+            )}
+            {ride.status === 'ongoing' && (
+              <button
+                onClick={() => handleUpdateStatus('completed')}
+                disabled={statusLoading}
+                className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-extrabold text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition-transform"
+              >
+                Mark Ride as Completed
+              </button>
+            )}
+            {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+              <button
+                onClick={() => handleUpdateStatus('cancelled')}
+                disabled={statusLoading}
+                className="w-full py-2.5 bg-rose-50 text-rose-600 rounded-2xl font-bold text-xs border border-rose-200"
+              >
+                Cancel This Trip
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Passenger Review Section */}
+        {!isDriver && myBooking?.status === 'accepted' && ride.status === 'completed' && (
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-900">Rate Your Experience</span>
+              <span className="text-[10px] font-bold text-slate-400">Driver Review</span>
+            </div>
+            {existingDriverReview ? (
+              <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-emerald-900">Review Submitted</span>
+                </div>
+                <button
+                  onClick={openDriverReviewDialog}
+                  className="px-3 py-1 bg-white text-emerald-700 border border-emerald-200 rounded-xl text-xs font-extrabold"
+                >
+                  Edit Review
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={openDriverReviewDialog}
+                className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-extrabold text-xs shadow-sm flex items-center justify-center gap-2"
+              >
+                <Star className="w-4 h-4 fill-white text-white" />
+                Rate Driver {ride.driver.name}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Passenger Booking Action Card */}
+        {!isDriver && (
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-black text-slate-900">Seat Booking Portal</span>
+              <span className="text-sm font-black text-emerald-600">₹{ride.price} <span className="text-[10px] text-slate-400 font-bold">/ seat</span></span>
+            </div>
+
+            {/* Not booked yet */}
+            {!myBooking && (
+              <div className="flex flex-col gap-3">
+                {ride.availableSeats > 0 ? (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                        Seats Needed (Available: {ride.availableSeats})
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={Math.min(4, ride.availableSeats)}
+                        value={requestedSeats}
+                        onChange={(e) => setRequestedSeats(parseInt(e.target.value) || 1)}
+                        className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                      />
                     </div>
-                  )}
 
-                  {/* If booked and accepted */}
-                  {myBooking && myBooking.status === 'accepted' && (
-                    <div className="flex flex-col gap-3">
-                      <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 text-emerald-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
-                        <CheckCircle className="w-4 h-4" />
-                        Seat Confirmed 🎉
-                      </div>
-
-                      {/* Chat trigger */}
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleLaunchChat(ride.driver._id)}
-                        className="w-full py-3 flex items-center justify-center gap-2 mt-2"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        Chat with Driver
-                      </Button>
-
-                      {ride.status !== 'completed' && ride.status !== 'cancelled' && (
-                        <Button
-                          variant="destructive"
-                          onClick={handleCancelBooking}
-                          loading={bookingLoading}
-                          className="w-full text-xs py-2 bg-red-950/30 border border-red-800/30 hover:bg-red-900/40 mt-1"
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Pickup Point</label>
+                        <button
+                          type="button"
+                          onClick={handleUseCurrentLocation}
+                          disabled={gettingLocation}
+                          className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-1"
                         >
-                          Cancel Confirmed Seat
-                        </Button>
+                          <Locate className="w-3 h-3" />
+                          {gettingLocation ? 'Locating...' : 'Use GPS'}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. MH-2 Hostel Gate, Block 3"
+                          value={pickup}
+                          onChange={(e) => { setPickup(e.target.value); setPickupCoords(null); }}
+                          className="w-full pl-9 pr-3 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                          required
+                        />
+                      </div>
+                      {pickupCoords && (
+                        <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                          <CheckCircle className="w-3 h-3" />
+                          GPS location attached
+                        </p>
                       )}
                     </div>
-                  )}
 
-                  {/* If booking rejected */}
-                  {myBooking && myBooking.status === 'rejected' && (
-                    <div className="p-3 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl text-xs font-semibold text-center">
-                      Your booking request was declined.
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Dropoff Point</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Academic Block 1 Gate"
+                        value={drop}
+                        onChange={(e) => setDrop(e.target.value)}
+                        className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                        required
+                      />
                     </div>
-                  )}
 
-                  {/* If booking cancelled */}
-                  {myBooking && myBooking.status === 'cancelled' && (
-                    <div className="p-3 bg-zinc-950 border border-zinc-850 text-zinc-500 rounded-xl text-xs font-semibold text-center">
-                      Booking Cancelled.
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Message to Driver (Optional)</label>
+                      <textarea
+                        placeholder="e.g. Carrying a luggage bag..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        rows={2}
+                        className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none resize-none"
+                      />
                     </div>
-                  )}
+
+                    <button
+                      onClick={handleRequestBooking}
+                      disabled={bookingLoading || ride.status !== 'scheduled'}
+                      className="w-full py-3 bg-emerald-600 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-emerald-600/20 active:scale-95 transition-transform"
+                    >
+                      {bookingLoading ? 'Submitting Request...' : 'Submit Booking Request'}
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center text-xs text-rose-600 font-bold p-3 bg-rose-50 border border-rose-100 rounded-2xl">
+                    Seats are fully booked for this trip
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Awaiting Driver Approval */}
+            {myBooking && myBooking.status === 'pending' && (
+              <div className="flex flex-col gap-2.5 text-center">
+                <div className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2">
+                  <Clock className="w-4 h-4 animate-spin" />
+                  <span>Awaiting Driver Approval</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <button
+                  onClick={handleCancelBooking}
+                  disabled={bookingLoading}
+                  className="w-full py-2.5 bg-rose-50 text-rose-600 rounded-2xl text-xs font-extrabold border border-rose-200"
+                >
+                  Cancel Seat Request
+                </button>
+              </div>
+            )}
+
+            {/* Booking Accepted */}
+            {myBooking && myBooking.status === 'accepted' && (
+              <div className="flex flex-col gap-2.5">
+                <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Seat Booking Approved 🎉</span>
+                </div>
+                <button
+                  onClick={() => handleLaunchChat(ride.driver._id)}
+                  className="w-full py-3 bg-indigo-600 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Chat with Driver
+                </button>
+                {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                  <button
+                    onClick={handleCancelBooking}
+                    disabled={bookingLoading}
+                    className="w-full py-2.5 bg-rose-50 text-rose-600 rounded-2xl text-xs font-bold border border-rose-200"
+                  >
+                    Cancel Confirmed Seat
+                  </button>
+                )}
+              </div>
+            )}
+
+            {myBooking && myBooking.status === 'rejected' && (
+              <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-2xl text-xs font-extrabold text-center">
+                Your booking request was declined by the driver.
+              </div>
+            )}
+
+            {myBooking && myBooking.status === 'cancelled' && (
+              <div className="p-3 bg-slate-100 text-slate-500 rounded-2xl text-xs font-extrabold text-center">
+                Seat Request Cancelled.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Review Dialog (F1 + F2) */}
+        <ReviewDialog
+          isOpen={reviewDialogOpen}
+          onClose={() => setReviewDialogOpen(false)}
+          onSubmit={handleReviewSubmit}
+          targetName={reviewDialogTarget.name}
+          reviewType={reviewDialogTarget.type}
+          existingReview={reviewDialogTarget.type === 'driver' ? existingDriverReview : null}
+          loading={reviewLoading}
+        />
       </div>
     </div>
   );

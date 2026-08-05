@@ -7,8 +7,9 @@ exports.markAsRead = exports.markAllAsRead = exports.getMyNotifications = export
 const Notification_1 = __importDefault(require("../models/Notification"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const socketService_1 = require("../services/socketService");
+const notification_service_1 = __importDefault(require("../services/notification.service"));
 const logger_1 = __importDefault(require("../utils/logger"));
-// Helper function to create DB record and trigger real-time Socket event
+// Helper function to create DB record and trigger real-time Socket event & FCM Push
 const sendNotificationToUser = async (userId, title, body, type, referenceId) => {
     try {
         const notification = await Notification_1.default.create({
@@ -21,6 +22,14 @@ const sendNotificationToUser = async (userId, title, body, type, referenceId) =>
         });
         // Send real-time socket alert
         (0, socketService_1.sendToUser)(userId, 'notification', notification);
+        // Trigger FCM Push Notification via NotificationService
+        notification_service_1.default.sendPushNotification({
+            userIds: userId,
+            title,
+            body,
+            type,
+            referenceId: referenceId ? String(referenceId) : undefined,
+        }).catch((err) => logger_1.default.error(`[NotificationService] Push dispatch error: ${err.message}`));
         return notification;
     }
     catch (error) {

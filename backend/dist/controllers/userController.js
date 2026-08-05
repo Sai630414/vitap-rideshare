@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reportUser = exports.getBlocklist = exports.unblockUser = exports.blockUser = exports.uploadAvatar = exports.updateProfile = exports.getUserProfile = void 0;
+exports.removeFCMToken = exports.registerFCMToken = exports.reportUser = exports.getBlocklist = exports.unblockUser = exports.blockUser = exports.uploadAvatar = exports.updateProfile = exports.getUserProfile = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const Report_1 = __importDefault(require("../models/Report"));
 const appError_1 = __importDefault(require("../utils/appError"));
@@ -34,7 +34,7 @@ const updateProfile = async (req, res, next) => {
             return next(new appError_1.default('Unauthorized', 401));
         }
         // Filtered body parameters to restrict role or verification modification
-        const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch'];
+        const allowedFields = ['name', 'phone', 'registrationNumber', 'year', 'branch', 'fcmToken'];
         const updateData = {};
         Object.keys(req.body).forEach((key) => {
             if (allowedFields.includes(key)) {
@@ -172,3 +172,57 @@ const reportUser = async (req, res, next) => {
     }
 };
 exports.reportUser = reportUser;
+const registerFCMToken = async (req, res, next) => {
+    try {
+        if (!req.user)
+            return next(new appError_1.default('Unauthorized', 401));
+        const { token, fcmToken } = req.body;
+        const tokenToSave = token || fcmToken;
+        if (!tokenToSave || typeof tokenToSave !== 'string') {
+            return next(new appError_1.default('FCM token is required', 400));
+        }
+        const updatedUser = await User_1.default.findByIdAndUpdate(req.user.id, {
+            $set: { fcmToken: tokenToSave },
+            $addToSet: { fcmTokens: tokenToSave },
+        }, { new: true });
+        res.status(200).json({
+            status: 'success',
+            message: 'FCM token registered successfully',
+            data: {
+                user: updatedUser,
+            },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.registerFCMToken = registerFCMToken;
+const removeFCMToken = async (req, res, next) => {
+    try {
+        if (!req.user)
+            return next(new appError_1.default('Unauthorized', 401));
+        const { token, fcmToken } = req.body;
+        const tokenToRemove = token || fcmToken;
+        if (tokenToRemove) {
+            await User_1.default.findByIdAndUpdate(req.user.id, {
+                $pull: { fcmTokens: tokenToRemove },
+                $set: { fcmToken: '' },
+            });
+        }
+        else {
+            // If no specific token passed, clear tokens for this user session
+            await User_1.default.findByIdAndUpdate(req.user.id, {
+                $set: { fcmTokens: [], fcmToken: '' },
+            });
+        }
+        res.status(200).json({
+            status: 'success',
+            message: 'FCM token removed successfully',
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.removeFCMToken = removeFCMToken;

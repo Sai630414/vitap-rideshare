@@ -47,13 +47,32 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newSocket.on('notification', (notificationData: any) => {
       console.log('Socket notification received:', notificationData);
       
-      // Select appropriate toast type based on notification type
-      if (notificationData.type === 'ride_accepted' || notificationData.type === 'verification_approved') {
-        toast.success(`${notificationData.title}: ${notificationData.body}`);
-      } else if (notificationData.type === 'ride_cancelled') {
-        toast.error(`${notificationData.title}: ${notificationData.body}`);
+      const { type, title, body } = notificationData;
+      const msg = `${title}: ${body}`;
+
+      // Route to appropriate toast style based on notification type
+      if (
+        type === 'ride_accepted' ||
+        type === 'booking_accepted' ||
+        type === 'verification_approved' ||
+        type === 'ride_completed' ||
+        type === 'new_review'
+      ) {
+        toast.success(msg);
+      } else if (
+        type === 'ride_cancelled' ||
+        type === 'booking_rejected'
+      ) {
+        toast.error(msg);
+      } else if (
+        type === 'driver_started' ||
+        type === 'driver_arrived'
+      ) {
+        toast.info(`🚗 ${title}: ${body}`);
+      } else if (type === 'new_message') {
+        toast.info(`💬 ${title}: ${body}`);
       } else {
-        toast.info(`${notificationData.title}: ${notificationData.body}`);
+        toast.info(msg);
       }
     });
 

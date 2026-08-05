@@ -31,6 +31,20 @@ const bookingSchema = new mongoose_1.Schema({
         required: [true, 'Drop point address is required'],
         trim: true,
     },
+    pickupCoordinates: {
+        type: [Number],
+        validate: {
+            validator: (v) => !v || v.length === 0 || v.length === 2,
+            message: 'Pickup coordinates must be [longitude, latitude]',
+        },
+    },
+    dropCoordinates: {
+        type: [Number],
+        validate: {
+            validator: (v) => !v || v.length === 0 || v.length === 2,
+            message: 'Drop coordinates must be [longitude, latitude]',
+        },
+    },
     message: {
         type: String,
         trim: true,

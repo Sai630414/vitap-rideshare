@@ -26,12 +26,22 @@ const notificationSchema = new mongoose_1.Schema({
     type: {
         type: String,
         enum: [
+            // Legacy types (kept for backward compat)
             'ride_accepted',
             'ride_cancelled',
             'booking_request',
             'verification_approved',
             'chat_message',
             'sos_alert',
+            // New specific types (Feature 6)
+            'ride_booked',
+            'booking_accepted',
+            'booking_rejected',
+            'driver_started',
+            'driver_arrived',
+            'ride_completed',
+            'new_message',
+            'new_review',
         ],
         required: true,
     },

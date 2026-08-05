@@ -6,6 +6,7 @@ export interface IReview extends Document {
   passenger: Schema.Types.ObjectId;
   rating: number;
   comment?: string;
+  reviewType: 'driver' | 'passenger'; // 'driver' = passenger reviews driver; 'passenger' = driver reviews passenger
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,12 +38,24 @@ const reviewSchema = new Schema<IReview>(
       type: String,
       trim: true,
     },
+    reviewType: {
+      type: String,
+      enum: ['driver', 'passenger'],
+      required: [true, 'Review type (driver or passenger) is required'],
+      default: 'driver',
+    },
   },
   { timestamps: true }
 );
 
-// Unique review per ride passenger
-reviewSchema.index({ ride: 1, passenger: 1 }, { unique: true });
+// Unique review per ride + passenger + reviewType
+// A passenger can only review a driver once per ride (reviewType='driver')
+// A driver can only review a passenger once per ride (reviewType='passenger')
+reviewSchema.index({ ride: 1, passenger: 1, reviewType: 1 }, { unique: true });
+
+// Indexes for quick lookups
+reviewSchema.index({ driver: 1, reviewType: 1 });
+reviewSchema.index({ passenger: 1, reviewType: 1 });
 
 export const Review = model<IReview>('Review', reviewSchema);
 export default Review;

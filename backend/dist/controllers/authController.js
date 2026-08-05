@@ -1,9 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.applyDriver = exports.googleCallback = exports.getMe = exports.logout = exports.refreshToken = exports.resetPassword = exports.forgotPassword = exports.login = exports.resendOTP = exports.verifyOTP = exports.signupDriver = exports.signup = void 0;
+exports.verifyPhoneOTP = exports.sendPhoneOTP = exports.applyDriver = exports.googleCallback = exports.getMe = exports.logout = exports.refreshToken = exports.resetPassword = exports.forgotPassword = exports.login = exports.resendOTP = exports.verifyOTP = exports.signupDriver = exports.signup = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
 const fs_1 = __importDefault(require("fs"));
@@ -359,7 +392,7 @@ const forgotPassword = async (req, res, next) => {
         user.resetPasswordToken = hashedToken;
         user.resetPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
         await user.save({ validateBeforeSave: false });
-        const resetUrl = `${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/reset-password?token=${resetToken}`;
+        const resetUrl = `${process.env.FRONTEND_URL || 'https://vitap-rideshare.vercel.app'}/reset-password?token=${resetToken}`;
         await (0, emailService_1.sendPasswordResetEmail)(user.email, resetUrl);
         res.status(200).json({
             status: 'success',
@@ -476,13 +509,22 @@ const googleCallback = (req, res) => {
     const user = req.user;
     const accessToken = (0, jwt_1.createAccessToken)(user);
     const refreshToken = (0, jwt_1.createRefreshToken)(user);
-    res.cookie('jwt', refreshToken, {
+    // Set Refresh Token Cookie
+    res.cookie("jwt", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.redirect(`${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/auth/success?token=${accessToken}`);
+    const isMobile = req.query.mobile === "true";
+    const webClientUrl = process.env.WEB_CLIENT_URL ||
+        "https://vitap-rideshare.vercel.app";
+    const mobileAppUrl = process.env.MOBILE_APP_URL ||
+        "waygo://auth";
+    if (isMobile) {
+        return res.redirect(`${mobileAppUrl}/success?token=${encodeURIComponent(accessToken)}`);
+    }
+    return res.redirect(`${webClientUrl}/auth/success?token=${encodeURIComponent(accessToken)}`);
 };
 exports.googleCallback = googleCallback;
 /**
@@ -633,3 +675,88 @@ const applyDriver = async (req, res, next) => {
     }
 };
 exports.applyDriver = applyDriver;
+// ──────────────────────────────────────────────
+// Feature 8: Send Phone OTP via AWS SNS (or Mock)
+// ──────────────────────────────────────────────
+const sendPhoneOTP = async (req, res, next) => {
+    try {
+        const { phone } = req.body;
+        if (!req.user)
+            return next(new appError_1.default('Unauthorized', 401));
+        if (!phone || !/^\+?[1-9]\d{9,14}$/.test(phone.replace(/\s+/g, ''))) {
+            return next(new appError_1.default('Valid phone number with country code (e.g. +919876543210) is required', 400));
+        }
+        const user = await User_1.default.findById(req.user.id);
+        if (!user)
+            return next(new appError_1.default('User not found', 404));
+        // Rate-limiting check: max 5 attempts per session
+        if ((user.phoneVerificationAttempts ?? 0) >= 5) {
+            const ageMs = Date.now() - new Date(user.updatedAt).getTime();
+            if (ageMs < 15 * 60 * 1000) {
+                return next(new appError_1.default('Too many verification attempts. Please wait 15 minutes before retrying.', 429));
+            }
+            user.phoneVerificationAttempts = 0;
+        }
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        user.phone = phone;
+        user.phoneOTP = otp;
+        user.phoneOTPExpiry = expiry;
+        user.phoneVerificationAttempts = (user.phoneVerificationAttempts ?? 0) + 1;
+        await user.save();
+        // Import smsService dynamically to avoid circular issues
+        const { sendSMS } = await Promise.resolve().then(() => __importStar(require('../services/smsService')));
+        await sendSMS(phone, `[VIT RideShare] Your phone verification OTP code is: ${otp}. Valid for 10 minutes.`);
+        res.status(200).json({
+            status: 'success',
+            message: `Verification OTP sent to ${phone}`,
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.sendPhoneOTP = sendPhoneOTP;
+// ──────────────────────────────────────────────
+// Feature 8: Verify Phone OTP
+// ──────────────────────────────────────────────
+const verifyPhoneOTP = async (req, res, next) => {
+    try {
+        const { otp } = req.body;
+        if (!req.user)
+            return next(new appError_1.default('Unauthorized', 401));
+        if (!otp || otp.length !== 6) {
+            return next(new appError_1.default('6-digit OTP is required', 400));
+        }
+        const user = await User_1.default.findById(req.user.id).select('+phoneOTP');
+        if (!user)
+            return next(new appError_1.default('User not found', 404));
+        if (!user.phoneOTP || !user.phoneOTPExpiry) {
+            return next(new appError_1.default('No active phone OTP request found. Please request a new OTP.', 400));
+        }
+        if (Date.now() > new Date(user.phoneOTPExpiry).getTime()) {
+            return next(new appError_1.default('OTP has expired. Please request a new OTP.', 400));
+        }
+        if (user.phoneOTP !== otp.toString().trim()) {
+            return next(new appError_1.default('Invalid OTP code. Please check and try again.', 400));
+        }
+        user.phoneVerified = true;
+        user.phoneVerifiedAt = new Date();
+        user.phoneOTP = undefined;
+        user.phoneOTPExpiry = undefined;
+        user.phoneVerificationAttempts = 0;
+        await user.save();
+        res.status(200).json({
+            status: 'success',
+            message: '📱 Phone number verified successfully!',
+            data: {
+                user,
+            },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.verifyPhoneOTP = verifyPhoneOTP;

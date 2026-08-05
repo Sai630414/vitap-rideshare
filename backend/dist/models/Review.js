@@ -28,8 +28,19 @@ const reviewSchema = new mongoose_1.Schema({
         type: String,
         trim: true,
     },
+    reviewType: {
+        type: String,
+        enum: ['driver', 'passenger'],
+        required: [true, 'Review type (driver or passenger) is required'],
+        default: 'driver',
+    },
 }, { timestamps: true });
-// Unique review per ride passenger
-reviewSchema.index({ ride: 1, passenger: 1 }, { unique: true });
+// Unique review per ride + passenger + reviewType
+// A passenger can only review a driver once per ride (reviewType='driver')
+// A driver can only review a passenger once per ride (reviewType='passenger')
+reviewSchema.index({ ride: 1, passenger: 1, reviewType: 1 }, { unique: true });
+// Indexes for quick lookups
+reviewSchema.index({ driver: 1, reviewType: 1 });
+reviewSchema.index({ passenger: 1, reviewType: 1 });
 exports.Review = (0, mongoose_1.model)('Review', reviewSchema);
 exports.default = exports.Review;

@@ -52,7 +52,8 @@ export interface RideSearchParams {
   seats?: number;
   minPrice?: number;
   maxPrice?: number;
-  sort?: 'lowest_price' | 'earliest_time' | 'highest_driver_rating';
+  minDriverRating?: number;
+  sort?: 'lowest_price' | 'earliest_time' | 'highest_driver_rating' | 'recently_posted';
   page?: number;
   limit?: number;
 }

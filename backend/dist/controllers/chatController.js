@@ -11,6 +11,7 @@ const appError_1 = __importDefault(require("../utils/appError"));
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const socketService_1 = require("../services/socketService");
 const notificationController_1 = require("./notificationController");
+const notification_service_1 = __importDefault(require("../services/notification.service"));
 const getOrCreateChat = async (req, res, next) => {
     try {
         const { recipientId } = req.body;
@@ -104,7 +105,14 @@ const sendMessage = async (req, res, next) => {
         // Send notifications to recipient(s)
         const recipients = chat.participants.filter((p) => p.toString() !== req.user?.id);
         for (const recipientId of recipients) {
-            await (0, notificationController_1.sendNotificationToUser)(recipientId.toString(), `Message from ${req.user.name}`, text || 'Sent an image', 'chat_message', chat._id);
+            const recipientStr = recipientId.toString();
+            // Always store in-app notification & emit socket event
+            await (0, notificationController_1.sendNotificationToUser)(recipientStr, `Message from ${req.user.name}`, text || 'Sent an image', 'new_message', chat._id);
+            // Only send push notification if user is NOT currently viewing this chat room
+            const isViewingChat = (0, socketService_1.isUserInChatRoom)(recipientStr, chatId);
+            if (!isViewingChat) {
+                await notification_service_1.default.sendChatNotification(recipientStr, req.user.name, text || 'Sent an image', chatId);
+            }
         }
         res.status(201).json({
             status: 'success',

@@ -11,6 +11,8 @@ import {
   logout,
   getMe,
   googleCallback,
+  sendPhoneOTP,
+  verifyPhoneOTP,
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { upload } from '../middleware/upload';
@@ -57,5 +59,9 @@ router.get("/google/callback", passport.authenticate("google", { session: false,
 
 // Profile
 router.get('/me', protect as any, getMe as any);
+
+// Phone OTP Verification (Feature 8)
+router.post('/send-phone-otp', protect as any, sendPhoneOTP as any);
+router.post('/verify-phone-otp', protect as any, verifyPhoneOTP as any);
 
 export default router;

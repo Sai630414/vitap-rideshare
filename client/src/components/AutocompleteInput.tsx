@@ -19,7 +19,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   onChange,
   onSelect,
   placeholder,
-  icon = <MapPin className="w-4 h-4 text-zinc-500" />,
+  icon = <MapPin className="w-5 h-5 text-muted-foreground" />,
   required = false,
 }) => {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
@@ -28,7 +28,6 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Debounced search / filtering logic
   useEffect(() => {
     if (!value.trim()) {
       setSuggestions([]);
@@ -41,7 +40,6 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     setActiveIndex(-1);
   }, [value]);
 
-  // Click outside listener
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -59,7 +57,6 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showDropdown || suggestions.length === 0) return;
-
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex((prev) => (prev + 1) % suggestions.length);
@@ -82,7 +79,6 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     setShowDropdown(false);
   };
 
-  // Highlights the query text in the suggestion name
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
     const parts = text.split(new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
@@ -90,7 +86,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       <span>
         {parts.map((part, index) =>
           part.toLowerCase() === query.toLowerCase() ? (
-            <span key={index} className="text-violet-400 font-extrabold">
+            <span key={index} className="text-primary font-black">
               {part}
             </span>
           ) : (
@@ -102,14 +98,14 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-1.5 relative">
-      <label className="text-sm font-semibold text-zinc-300 light:text-zinc-700">
+    <div className="w-full flex flex-col gap-2 relative">
+      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
         {label}
       </label>
       
-      <div className="relative flex items-center">
+      <div className="relative flex items-center group">
         {icon && (
-          <div className="absolute left-4 text-zinc-500 pointer-events-none z-10">
+          <div className="absolute left-4 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none z-10">
             {icon}
           </div>
         )}
@@ -125,26 +121,25 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={twMerge(
-            'w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900',
-            icon ? 'pl-11' : ''
+            'w-full px-5 py-4 bg-white border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm shadow-soft',
+            icon ? 'pl-12' : ''
           )}
           required={required}
           autoComplete="off"
         />
       </div>
 
-      {/* Suggestion Dropdown */}
       {showDropdown && (value.trim() !== '' || campusShortcuts.length > 0) && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-[calc(100%+4px)] bg-zinc-950 border border-zinc-850 rounded-xl shadow-2xl z-40 max-h-60 overflow-y-auto light:bg-white light:border-zinc-250 scrollbar-thin"
+          className="absolute left-0 right-0 top-[calc(100%+8px)] bg-white border border-border rounded-[1.5rem] shadow-2xl z-[60] max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {value.trim() === '' ? (
-            <div className="p-3">
-              <p className="text-[10px] font-bold text-zinc-550 uppercase tracking-widest mb-2 px-1">
-                Campus Shortcuts
+            <div className="p-4">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4 px-2">
+                Quick Shortcuts
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {campusShortcuts.map((shortcut) => (
                   <button
                     key={shortcut.name}
@@ -153,7 +148,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                       name: `VIT-AP ${shortcut.name}`,
                       coordinates: shortcut.coordinates
                     })}
-                    className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 rounded-lg text-xs font-bold transition-all border border-zinc-800 hover:border-zinc-700 active:scale-95 cursor-pointer light:bg-zinc-100 light:border-zinc-200 light:text-zinc-700 light:hover:bg-zinc-200"
+                    className="px-4 py-2.5 bg-muted/5 hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all border border-border active:scale-95 cursor-pointer"
                   >
                     {shortcut.name}
                   </button>
@@ -161,24 +156,24 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
               </div>
             </div>
           ) : suggestions.length === 0 ? (
-            <div className="p-4 text-center text-xs text-zinc-550">
-              No matching locations found. You can keep this custom name.
+            <div className="p-6 text-center text-xs font-bold text-muted-foreground">
+              Location not found. Using custom address.
             </div>
           ) : (
-            <div className="py-1">
+            <div className="py-2">
               {suggestions.map((item, index) => (
                 <button
                   key={item.name}
                   type="button"
                   onClick={() => handleSelectSuggestion(item)}
                   className={twMerge(
-                    'w-full text-left px-4 py-3 text-xs font-medium flex items-center gap-3 transition-colors border-b border-zinc-900/40 last:border-b-0 cursor-pointer',
+                    'w-full text-left px-5 py-4 text-xs font-bold flex items-center gap-4 transition-all',
                     index === activeIndex
-                      ? 'bg-violet-600/15 text-violet-300 light:bg-violet-50'
-                      : 'hover:bg-zinc-900/60 text-zinc-350 hover:text-zinc-200 light:hover:bg-zinc-50 light:text-zinc-700'
+                      ? 'bg-primary text-white'
+                      : 'hover:bg-muted/5 text-foreground'
                   )}
                 >
-                  <MapPin className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <MapPin className={twMerge("w-5 h-5", index === activeIndex ? "text-white" : "text-muted-foreground")} />
                   <span className="truncate">{highlightMatch(item.name, value)}</span>
                 </button>
               ))}

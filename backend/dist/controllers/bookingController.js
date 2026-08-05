@@ -12,7 +12,7 @@ const notificationController_1 = require("./notificationController");
 const paymentController_1 = require("./paymentController");
 const createBooking = async (req, res, next) => {
     try {
-        const { rideId, seatNumber = 1, pickup, drop, message } = req.body;
+        const { rideId, seatNumber = 1, pickup, drop, message, pickupCoordinates, dropCoordinates } = req.body;
         if (!req.user)
             return next(new appError_1.default('Unauthorized', 401));
         if (!pickup || !drop) {
@@ -51,6 +51,8 @@ const createBooking = async (req, res, next) => {
             driver: ride.driver,
             pickup,
             drop,
+            pickupCoordinates: pickupCoordinates || undefined,
+            dropCoordinates: dropCoordinates || undefined,
             message,
             seatNumber: requestedSeats,
             status: 'pending',
@@ -143,13 +145,13 @@ const respondToBooking = async (req, res, next) => {
             booking.status = 'accepted';
             await booking.save();
             // Notify passenger
-            await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Booking Approved 🎉', `Your request for ${booking.seatNumber} seat(s) on the ride to ${ride.destination} has been accepted! Contact the driver.`, 'ride_accepted', ride._id);
+            await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Booking Approved 🎉', `Your request for ${booking.seatNumber} seat(s) on the ride to ${ride.destination} has been accepted! Contact the driver.`, 'booking_accepted', ride._id);
         }
         else {
             booking.status = 'rejected';
             await booking.save();
             // Notify passenger
-            await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Booking Rejected', `Your request for the ride to ${ride.destination} was rejected by the driver.`, 'ride_cancelled', ride._id);
+            await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Booking Rejected', `Your request for the ride to ${ride.destination} was rejected by the driver.`, 'booking_rejected', ride._id);
         }
         res.status(200).json({
             status: 'success',

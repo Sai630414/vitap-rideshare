@@ -36,6 +36,7 @@ import chatRoutes from './routes/chat';
 import notificationRoutes from './routes/notifications';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
+import weatherRoutes from './routes/weather';
 import passport from './config/passport';
 import { protect } from './middleware/auth';
 import { createOrderDirect, verifyPaymentDirect } from './controllers/paymentController';
@@ -136,6 +137,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/weather', weatherRoutes);
 
 // Direct Razorpay routes
 app.post('/api/create-order', protect as any, createOrderDirect as any);

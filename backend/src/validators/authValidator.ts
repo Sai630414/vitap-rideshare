@@ -18,6 +18,7 @@ export const updateProfileSchema = z.object({
     registrationNumber: z.string().min(5, 'Registration number must be valid').optional(),
     year: z.number().min(1).max(4).optional(),
     branch: z.string().min(2, 'Branch name must be valid').optional(),
+    fcmToken: z.string().optional(),
   }),
 });
 

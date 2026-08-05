@@ -18,24 +18,25 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100';
+    'inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none';
 
   const variants = {
     primary:
-      'bg-violet-600 hover:bg-violet-750 text-white shadow-md shadow-violet-600/10 hover:shadow-violet-600/25',
+      'bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30',
     secondary:
-      'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700/50 light:bg-zinc-100 light:hover:bg-zinc-200 light:text-zinc-900 light:border-zinc-300/50',
+      'bg-secondary text-secondary-foreground shadow-lg shadow-secondary/20 hover:shadow-secondary/30',
     outline:
-      'bg-transparent border border-zinc-800 hover:bg-zinc-900 text-zinc-300 hover:text-white light:border-zinc-300 light:hover:bg-zinc-100 light:text-zinc-700',
-    destructive: 'bg-red-650 hover:bg-red-750 text-white shadow-md shadow-red-650/10',
+      'bg-transparent border-2 border-border hover:bg-muted/5 text-foreground',
+    destructive:
+      'bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20',
     ghost:
-      'bg-transparent hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 light:hover:bg-zinc-100 light:text-zinc-650',
+      'bg-transparent hover:bg-muted/10 text-muted-foreground hover:text-foreground',
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2.5 text-sm',
-    lg: 'px-6 py-3.5 text-base',
+    sm: 'px-4 py-2 text-xs',
+    md: 'px-6 py-3.5 text-sm',
+    lg: 'px-8 py-4 text-base',
   };
 
   return (
@@ -47,7 +48,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <span className="flex items-center gap-2">
           <svg
-            className="animate-spin h-4 w-4 text-current"
+            className="animate-spin h-5 w-5 text-current"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -66,7 +67,7 @@ export const Button: React.FC<ButtonProps> = ({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          Loading...
+          Processing...
         </span>
       ) : (
         children

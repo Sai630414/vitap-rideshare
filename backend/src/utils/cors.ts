@@ -11,6 +11,7 @@ export const getCorsOrigin = () => {
 
   return (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // If no origin (e.g. mobile apps, postman, curl, or same-origin), allow it
+      console.log("Incoming Origin:", origin);
     if (!origin) {
       return callback(null, true);
     }

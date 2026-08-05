@@ -31,6 +31,7 @@ export interface UserProfile {
     vehicleImage: string;
     approvalStatus: 'pending' | 'approved' | 'rejected' | 'resubmission';
     rejectionReason?: string;
+    paymentStatus?: 'pending' | 'paid';
   };
 }
 

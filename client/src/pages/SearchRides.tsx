@@ -4,22 +4,18 @@ import {
   Search,
   SlidersHorizontal,
   Calendar,
-  Users,
   Car,
   Bike,
   Star,
+  X,
   MapPin,
-  Clock,
-  ArrowRight,
-  TrendingDown,
-  Sparkles,
+  ChevronRight,
+  Filter,
+  ShieldCheck,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
-import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import AutocompleteInput from '../components/AutocompleteInput';
-import Badge from '../components/ui/Badge';
 import rideService, { type RideData, type RideSearchParams } from '../services/rideService';
 import MapContainerComponent from '../components/MapContainer';
 
@@ -35,12 +31,14 @@ export const SearchRides: React.FC = () => {
   const [seats, setSeats] = useState<number>(1);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [sort, setSort] = useState<'lowest_price' | 'earliest_time' | 'highest_driver_rating'>('earliest_time');
+  const [minDriverRating, setMinDriverRating] = useState('');
+  const [sort, setSort] = useState<RideSearchParams['sort']>('earliest_time');
 
   const [rides, setRides] = useState<RideData[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Inline map preview states
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
+
+  // Map preview
   const [previewRide, setPreviewRide] = useState<RideData | null>(null);
 
   const fetchRides = async (searchParams: RideSearchParams = {}) => {
@@ -49,7 +47,6 @@ export const SearchRides: React.FC = () => {
       const res = await rideService.searchRides(searchParams);
       if (res.status === 'success') {
         setRides(res.data.rides);
-        // Clear old previews
         setPreviewRide(null);
       }
     } catch (err) {
@@ -60,12 +57,11 @@ export const SearchRides: React.FC = () => {
   };
 
   useEffect(() => {
-    // Initial fetch of all scheduled rides
     fetchRides();
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const query: RideSearchParams = {
       source: source || undefined,
       destination: destination || undefined,
@@ -74,9 +70,11 @@ export const SearchRides: React.FC = () => {
       seats: seats || undefined,
       minPrice: minPrice ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+      minDriverRating: minDriverRating ? parseFloat(minDriverRating) : undefined,
       sort,
     };
     fetchRides(query);
+    setShowFiltersModal(false);
   };
 
   const handleClearFilters = () => {
@@ -87,285 +85,343 @@ export const SearchRides: React.FC = () => {
     setSeats(1);
     setMinPrice('');
     setMaxPrice('');
+    setMinDriverRating('');
     setSort('earliest_time');
     fetchRides();
+    setShowFiltersModal(false);
   };
 
+  const activeFiltersCount = [source, destination, date, vType, minPrice, maxPrice, minDriverRating]
+    .filter(Boolean).length;
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-sans">
-        Find Campus Rides
-      </h1>
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
+      
+      {/* Sticky Native Search Header Box */}
+      <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-base font-black text-slate-900 flex items-center gap-2">
+            <Search className="w-4 h-4 text-emerald-600" />
+            Find Campus Commutes
+          </h1>
+          <button
+            onClick={() => setShowFiltersModal(true)}
+            className="px-3 py-1.5 rounded-2xl bg-emerald-50 text-emerald-700 font-extrabold text-xs flex items-center gap-1.5 active:scale-95 transition-transform"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[9px] flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Filter Card */}
-        <Card className="lg:col-span-1 h-fit">
-          <CardHeader className="border-b border-zinc-850 pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <SlidersHorizontal className="w-5 h-5 text-violet-400" />
-              Advanced Filters
-            </CardTitle>
-            <CardDescription>Narrow down routes and pricing</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSearchSubmit} className="flex flex-col gap-4">
-              <AutocompleteInput
-                label="Leaving From"
-                placeholder="Block 1, Chennai Main gate, etc."
-                value={source}
-                onChange={(val) => setSource(val)}
-                onSelect={(coords, name) => setSource(name)}
-              />
-              <AutocompleteInput
-                label="Going To"
-                placeholder="Vijayawada, Guntur, Hostel, etc."
-                value={destination}
-                onChange={(val) => setDestination(val)}
-                onSelect={(coords, name) => setDestination(name)}
-              />
+        {/* Inputs */}
+        <div className="space-y-2.5">
+          <AutocompleteInput
+            label="Pickup"
+            placeholder="Search pickup location..."
+            value={source}
+            onChange={(val) => setSource(val)}
+            onSelect={(coords, name) => setSource(name)}
+          />
+          <AutocompleteInput
+            label="Destination"
+            placeholder="Search drop location..."
+            value={destination}
+            onChange={(val) => setDestination(val)}
+            onSelect={(coords, name) => setDestination(name)}
+          />
+        </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-zinc-400 uppercase">Departure Date</label>
-                <div className="relative flex items-center">
-                  <Calendar className="absolute left-4 w-4 h-4 text-zinc-500" />
+        <button
+          onClick={() => handleSearchSubmit()}
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-emerald-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+        >
+          <Search className="w-4 h-4" />
+          <span>Search Available Rides</span>
+        </button>
+      </div>
+
+      {/* Horizontal Quick Filter Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <button
+          onClick={() => { setVType(''); handleSearchSubmit(); }}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold shrink-0 transition-all ${
+            vType === '' ? 'bg-slate-900 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'
+          }`}
+        >
+          All Vehicles
+        </button>
+        <button
+          onClick={() => { setVType('car'); handleSearchSubmit(); }}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold shrink-0 flex items-center gap-1.5 transition-all ${
+            vType === 'car' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'
+          }`}
+        >
+          <Car className="w-3.5 h-3.5" />
+          Cars
+        </button>
+        <button
+          onClick={() => { setVType('bike'); handleSearchSubmit(); }}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold shrink-0 flex items-center gap-1.5 transition-all ${
+            vType === 'bike' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'
+          }`}
+        >
+          <Bike className="w-3.5 h-3.5" />
+          Bikes
+        </button>
+        <button
+          onClick={() => { setSort('lowest_price'); handleSearchSubmit(); }}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold shrink-0 flex items-center gap-1.5 transition-all ${
+            sort === 'lowest_price' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'
+          }`}
+        >
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          Cheapest First
+        </button>
+      </div>
+
+      {/* Map Preview Container if open */}
+      {previewRide && (
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md">
+          <div className="bg-slate-900 text-white px-4 py-2.5 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-black">Route Map Preview</span>
+            </div>
+            <button
+              onClick={() => setPreviewRide(null)}
+              className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="h-56">
+            <MapContainerComponent
+              pickupCoords={previewRide.pickupLocation.coordinates}
+              dropCoords={previewRide.dropLocation.coordinates}
+              pickupAddress={previewRide.pickupLocation.address}
+              dropAddress={previewRide.dropLocation.address}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Ride Results */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
+            Available Rides ({rides.length})
+          </span>
+          {activeFiltersCount > 0 && (
+            <button onClick={handleClearFilters} className="text-[11px] font-extrabold text-rose-600">
+              Clear Filters
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-slate-100 rounded-3xl animate-pulse" />
+            ))}
+          </div>
+        ) : rides.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Car className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+            <h3 className="text-sm font-black text-slate-800">No matching rides found</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              Try adjusting your route filters or clearing search parameters.
+            </p>
+            <button
+              onClick={handleClearFilters}
+              className="mt-4 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-black"
+            >
+              Reset Search Filters
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {rides.map((ride) => (
+              <div
+                key={ride._id}
+                onClick={() => navigate(`/ride/${ride._id}`)}
+                className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm active:bg-slate-50 transition-all cursor-pointer flex flex-col gap-3"
+              >
+                {/* Top Row: Driver & Vehicle details */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={ride.driver.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(ride.driver.name)}`}
+                      alt="driver"
+                      className="w-10 h-10 rounded-full object-cover border border-slate-100"
+                    />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-900">{ride.driver.name}</span>
+                        {ride.driver.trustScore >= 90 && (
+                          <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">
+                            VERIFIED
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-bold">
+                        <span className="flex items-center text-amber-500">
+                          <Star className="w-3 h-3 fill-amber-400 mr-0.5" />
+                          {ride.driver.rating}
+                        </span>
+                        <span>•</span>
+                        <span>{ride.vehicle.brand} {ride.vehicle.model}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-lg font-black text-emerald-600 block leading-tight">₹{ride.price}</span>
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
+                      {ride.availableSeats} Seats Left
+                    </span>
+                  </div>
+                </div>
+
+                {/* Middle Route Timeline */}
+                <div className="bg-slate-50 p-3 rounded-2xl flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-xs font-bold text-slate-800 truncate">{ride.source}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-2 h-2 rounded-full bg-slate-800 shrink-0" />
+                      <span className="text-xs font-bold text-slate-800 truncate">{ride.destination}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 pl-2">
+                    <span className="text-[10px] font-extrabold text-slate-500 block">
+                      {new Date(ride.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">{ride.departureTime}</span>
+                  </div>
+                </div>
+
+                {/* Bottom Action Footer */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewRide(ride);
+                    }}
+                    className="text-[11px] font-extrabold text-slate-500 hover:text-emerald-600 flex items-center gap-1"
+                  >
+                    <MapPin className="w-3 h-3 text-emerald-600" />
+                    <span>View Map</span>
+                  </button>
+
+                  <button className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm active:scale-95 transition-transform flex items-center gap-1">
+                    <span>Book Seat</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Filter Modal */}
+      {showFiltersModal && (
+        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
+                Refine Search
+              </h3>
+              <button onClick={() => setShowFiltersModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
+              <div>
+                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                  Departure Date
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                    Seats Needed
+                  </label>
                   <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
+                    type="number"
+                    min={1}
+                    value={seats}
+                    onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                    Max Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    placeholder="e.g. 200"
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase">Required Seats</label>
-                  <div className="relative flex items-center">
-                    <Users className="absolute left-4 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="number"
-                      value={seats}
-                      onChange={(e) => setSeats(parseInt(e.target.value) || 1)}
-                      min={1}
-                      max={8}
-                      className="w-full pl-11 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-zinc-400 uppercase">Vehicle Type</label>
-                  <select
-                    value={vType}
-                    onChange={(e) => setVType(e.target.value as any)}
-                    className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300 light:text-zinc-900"
-                  >
-                    <option value="">Any Vehicle</option>
-                    <option value="car">Car Only</option>
-                    <option value="bike">Bike Only</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Price range */}
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Min Price (₹)"
-                  placeholder="0"
-                  type="number"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                />
-                <Input
-                  label="Max Price (₹)"
-                  placeholder="500"
-                  type="number"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                />
-              </div>
-
-              {/* Sort */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-zinc-400 uppercase">Sort Results</label>
+              <div>
+                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                  Sort Results By
+                </label>
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as any)}
-                  className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-150 focus:outline-none focus:ring-2 focus:ring-violet-600 transition-all text-sm light:bg-white light:border-zinc-300"
+                  className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
                 >
-                  <option value="earliest_time">Earliest departure</option>
+                  <option value="earliest_time">Earliest Departure</option>
                   <option value="lowest_price">Lowest Price</option>
-                  <option value="highest_driver_rating">Highest Rated Driver</option>
+                  <option value="highest_driver_rating">Top Rated Drivers</option>
                 </select>
               </div>
-
-              <div className="flex gap-3 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 text-xs"
-                  onClick={handleClearFilters}
-                >
-                  Reset
-                </Button>
-                <Button type="submit" className="flex-1 text-xs">
-                  Apply Filters
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Right Listings Area (span 2) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          {/* Inline Map Preview */}
-          {previewRide && (
-            <Card className="overflow-hidden border-violet-500/30">
-              <CardHeader className="bg-zinc-950 p-4 border-b border-zinc-850 flex flex-row justify-between items-center">
-                <div>
-                  <CardTitle className="text-sm font-bold">Route Visualizer</CardTitle>
-                  <CardDescription className="text-[10px]">
-                    From {previewRide.source} to {previewRide.destination}
-                  </CardDescription>
-                </div>
-                <button
-                  onClick={() => setPreviewRide(null)}
-                  className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase shrink-0"
-                >
-                  Close Preview
-                </button>
-              </CardHeader>
-              <MapContainerComponent
-                pickupCoords={previewRide.pickupLocation.coordinates}
-                dropCoords={previewRide.dropLocation.coordinates}
-                pickupAddress={previewRide.pickupLocation.address}
-                dropAddress={previewRide.dropLocation.address}
-              />
-            </Card>
-          )}
-
-          {loading ? (
-            <div className="flex flex-col gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-zinc-900 rounded-2xl animate-pulse"></div>
-              ))}
             </div>
-          ) : rides.length === 0 ? (
-            <div className="text-center py-20 bg-zinc-900 border border-zinc-800 rounded-2xl">
-              <Car className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-zinc-300">No scheduled rides found</h3>
-              <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
-                No matching drivers have offered a ride with these search criteria. Try modifying your source, destination, or dates.
-              </p>
-              <Button onClick={handleClearFilters} variant="secondary" size="sm" className="mt-6 text-xs">
-                Reset Search Filters
-              </Button>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={handleClearFilters}
+                className="flex-1 py-3 rounded-2xl text-xs font-bold text-slate-500 bg-slate-100"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => handleSearchSubmit()}
+                className="flex-1 py-3 rounded-2xl text-xs font-extrabold text-white bg-emerald-600 shadow-md shadow-emerald-600/20"
+              >
+                Apply Filters
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {rides.map((ride) => (
-                <Card
-                  key={ride._id}
-                  className={`hover:border-zinc-800 border transition-all ${
-                    previewRide?._id === ride._id ? 'border-violet-500/50' : 'border-zinc-850'
-                  }`}
-                >
-                  <CardContent className="p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div className="flex-1 min-w-0">
-                      {/* Top badges */}
-                      <div className="flex items-center gap-2 flex-wrap text-[10px] uppercase font-bold text-zinc-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                          {new Date(ride.departureDate).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                          {' '}at {ride.departureTime}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          {ride.vehicle.type === 'car' ? (
-                            <Car className="w-3.5 h-3.5 text-zinc-500" />
-                          ) : (
-                            <Bike className="w-3.5 h-3.5 text-zinc-500" />
-                          )}
-                          {ride.vehicle.brand} {ride.vehicle.model}
-                        </span>
-                      </div>
-
-                      {/* Route Path */}
-                      <div className="flex items-center gap-2 mt-3 text-base font-extrabold text-zinc-150">
-                        <span>{ride.source}</span>
-                        <ArrowRight className="w-4 h-4 text-zinc-500 shrink-0" />
-                        <span>{ride.destination}</span>
-                      </div>
-
-                      {/* Driver Row */}
-                      <div className="flex items-center gap-4 mt-4">
-                        <img
-                          src={ride.driver.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=driver'}
-                          className="w-9 h-9 rounded-full object-cover border border-zinc-700/50"
-                          alt=""
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                            {ride.driver.name}
-                            {ride.driver.trustScore >= 90 && (
-                              <Badge variant="primary" className="py-0 px-1 text-[8px]">
-                                Trusted
-                              </Badge>
-                            )}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1 text-[11px] text-zinc-400">
-                            <span className="flex items-center gap-0.5 text-amber-400">
-                              <Star className="w-3 h-3 fill-amber-400" />
-                              {ride.driver.rating}
-                            </span>
-                            <span>•</span>
-                            <span>Trust Score: {ride.driver.trustScore}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right column: price, seats, button */}
-                    <div className="flex md:flex-col items-end gap-3.5 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-zinc-850 justify-between md:justify-center shrink-0">
-                      <div className="text-right">
-                        <p className="text-[10px] text-zinc-500">Splitted cost</p>
-                        <p className="text-lg font-black text-violet-400 mt-0.5">₹{ride.price}</p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">
-                          {ride.availableSeats} seat(s) left
-                        </p>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs py-1.5 h-auto"
-                          onClick={() => setPreviewRide(ride)}
-                        >
-                          Route
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="text-xs py-1.5 h-auto"
-                          onClick={() => navigate(`/ride/${ride._id}`)}
-                        >
-                          Book Seats
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
 export default SearchRides;
+

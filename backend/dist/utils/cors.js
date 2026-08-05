@@ -11,6 +11,7 @@ const getCorsOrigin = () => {
         .map((url) => url.trim());
     return (origin, callback) => {
         // If no origin (e.g. mobile apps, postman, curl, or same-origin), allow it
+        console.log("Incoming Origin:", origin);
         if (!origin) {
             return callback(null, true);
         }

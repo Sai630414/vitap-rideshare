@@ -3,14 +3,34 @@ import { AuthRequest } from '../middleware/auth';
 import Notification from '../models/Notification';
 import AppError from '../utils/appError';
 import { sendToUser } from '../services/socketService';
+import notificationService from '../services/notification.service';
 import logger from '../utils/logger';
 
-// Helper function to create DB record and trigger real-time Socket event
+type NotificationType =
+  | 'ride_accepted'
+  | 'ride_cancelled'
+  | 'booking_request'
+  | 'verification_approved'
+  | 'chat_message'
+  | 'sos_alert'
+  | 'ride_booked'
+  | 'booking_accepted'
+  | 'booking_rejected'
+  | 'driver_started'
+  | 'driver_arrived'
+  | 'ride_completed'
+  | 'new_message'
+  | 'new_review'
+  | 'driver_approved'
+  | 'driver_rejected'
+  | 'admin_announcement';
+
+// Helper function to create DB record and trigger real-time Socket event & FCM Push
 export const sendNotificationToUser = async (
   userId: string,
   title: string,
   body: string,
-  type: 'ride_accepted' | 'ride_cancelled' | 'booking_request' | 'verification_approved' | 'chat_message' | 'sos_alert',
+  type: NotificationType,
   referenceId?: any
 ): Promise<any> => {
   try {
@@ -25,6 +45,15 @@ export const sendNotificationToUser = async (
 
     // Send real-time socket alert
     sendToUser(userId, 'notification', notification);
+
+    // Trigger FCM Push Notification via NotificationService
+    notificationService.sendPushNotification({
+      userIds: userId,
+      title,
+      body,
+      type,
+      referenceId: referenceId ? String(referenceId) : undefined,
+    }).catch((err) => logger.error(`[NotificationService] Push dispatch error: ${err.message}`));
     
     return notification;
   } catch (error) {

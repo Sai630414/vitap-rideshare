@@ -32,6 +32,20 @@ export const offerRide = async (
 
     if (!req.user) return next(new AppError('Unauthorized', 401));
 
+    // Enforce 1 active ride per driver rule
+    const existingActiveRide = await Ride.findOne({
+      driver: req.user.id,
+      status: { $in: ['scheduled', 'ongoing'] },
+    });
+    if (existingActiveRide) {
+      return next(
+        new AppError(
+          'You already have an active ride in progress. Complete or cancel your current ride before offering a new one.',
+          400
+        )
+      );
+    }
+
     // Verify driver has a verified vehicle matching vehicleId
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
@@ -136,6 +150,7 @@ export const searchRides = async (
       minPrice,
       maxPrice,
       sort,
+      minDriverRating,
       page = 1,
       limit = 10,
     } = req.query;
@@ -188,6 +203,8 @@ export const searchRides = async (
       sortOptions = { price: 1 };
     } else if (sort === 'earliest_time') {
       sortOptions = { departureDate: 1, departureTime: 1 };
+    } else if (sort === 'recently_posted') {
+      sortOptions = { createdAt: -1 };
     } else if (sort === 'highest_driver_rating') {
       // Sorted on driver rating inside populate, or sort manual. 
       // For mongoose, sort by driver rating requires an aggregation pipeline, but we can do a default sort
@@ -197,10 +214,12 @@ export const searchRides = async (
     }
 
     const skip = (parseInt(page as string, 10) - 1) * parseInt(limit as string, 10);
+    const minRating = minDriverRating ? parseFloat(minDriverRating as string) : null;
 
     let rides;
-    if (sort === 'highest_driver_rating') {
+    if (sort === 'highest_driver_rating' || minRating !== null) {
       // Use aggregation pipeline to sort globally by driver rating before skip & limit
+      // Also handles minDriverRating filter
       const pipeline: any[] = [
         { $match: filter },
         // Lookup driver
@@ -223,48 +242,64 @@ export const searchRides = async (
           },
         },
         { $unwind: '$vehicleInfo' },
-        // Sort by driver rating
-        { $sort: { 'driverInfo.rating': -1, departureDate: 1 } },
-        // Pagination
-        { $skip: skip },
-        { $limit: parseInt(limit as string, 10) },
-        // Project to map fields like populate
-        {
-          $project: {
-            driver: {
-              _id: '$driverInfo._id',
-              name: '$driverInfo.name',
-              email: '$driverInfo.email',
-              profileImage: '$driverInfo.profileImage',
-              rating: '$driverInfo.rating',
-              verifiedDriver: '$driverInfo.verifiedDriver',
-              trustScore: '$driverInfo.trustScore',
-            },
-            vehicle: {
-              _id: '$vehicleInfo._id',
-              brand: '$vehicleInfo.brand',
-              model: '$vehicleInfo.model',
-              type: '$vehicleInfo.type',
-              numberPlate: '$vehicleInfo.numberPlate',
-              color: '$vehicleInfo.color',
-            },
-            source: 1,
-            destination: 1,
-            pickupLocation: 1,
-            dropLocation: 1,
-            departureDate: 1,
-            departureTime: 1,
-            price: 1,
-            availableSeats: 1,
-            description: 1,
-            status: 1,
-            recurring: 1,
-            routePoints: 1,
-            createdAt: 1,
-            updatedAt: 1,
-          },
-        },
       ];
+
+      // Apply minDriverRating filter after driver lookup
+      if (minRating !== null) {
+        pipeline.push({ $match: { 'driverInfo.rating': { $gte: minRating } } });
+      }
+
+      // Sort
+      if (sort === 'highest_driver_rating') {
+        pipeline.push({ $sort: { 'driverInfo.rating': -1, departureDate: 1 } });
+      } else if (sort === 'lowest_price') {
+        pipeline.push({ $sort: { price: 1 } });
+      } else if (sort === 'recently_posted') {
+        pipeline.push({ $sort: { createdAt: -1 } });
+      } else {
+        pipeline.push({ $sort: { departureDate: 1, departureTime: 1 } });
+      }
+
+      // Pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: parseInt(limit as string, 10) });
+
+      // Project to map fields like populate
+      pipeline.push({
+        $project: {
+          driver: {
+            _id: '$driverInfo._id',
+            name: '$driverInfo.name',
+            email: '$driverInfo.email',
+            profileImage: '$driverInfo.profileImage',
+            rating: '$driverInfo.rating',
+            verifiedDriver: '$driverInfo.verifiedDriver',
+            trustScore: '$driverInfo.trustScore',
+          },
+          vehicle: {
+            _id: '$vehicleInfo._id',
+            brand: '$vehicleInfo.brand',
+            model: '$vehicleInfo.model',
+            type: '$vehicleInfo.type',
+            numberPlate: '$vehicleInfo.numberPlate',
+            color: '$vehicleInfo.color',
+          },
+          source: 1,
+          destination: 1,
+          pickupLocation: 1,
+          dropLocation: 1,
+          departureDate: 1,
+          departureTime: 1,
+          price: 1,
+          availableSeats: 1,
+          description: 1,
+          status: 1,
+          recurring: 1,
+          routePoints: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      });
 
       rides = await Ride.aggregate(pipeline);
     } else {
@@ -395,9 +430,9 @@ export const updateRideStatus = async (
 
           await sendNotificationToUser(
             booking.passenger.toString(),
-            'Ride Completed',
-            `Your ride from ${ride.source} to ${ride.destination} was completed.`,
-            'ride_accepted',
+            '🏁 Ride Completed',
+            `Your ride from ${ride.source} to ${ride.destination} has been completed. Please rate your driver!`,
+            'ride_completed',
             ride._id
           );
         } else {
@@ -409,9 +444,9 @@ export const updateRideStatus = async (
         if (previousBookingStatus === 'accepted') {
           await sendNotificationToUser(
             booking.passenger.toString(),
-            'Ride Started',
-            `Your ride from ${ride.source} to ${ride.destination} is now ongoing.`,
-            'ride_accepted',
+            '🚗 Driver Started the Ride',
+            `Your ride from ${ride.source} to ${ride.destination} is now underway! Track your driver's location.`,
+            'driver_started',
             ride._id
           );
         }
