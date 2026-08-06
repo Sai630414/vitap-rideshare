@@ -21,32 +21,32 @@ interface WeatherWidgetProps {
 const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, departureDate, loading }) => {
   if (loading) {
     return (
-      <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl animate-pulse">
-        <div className="h-4 bg-zinc-800 rounded w-1/3 mb-3" />
-        <div className="h-8 bg-zinc-800 rounded w-1/2 mb-2" />
-        <div className="h-3 bg-zinc-800 rounded w-full" />
+      <div className="p-4 bg-slate-100 border border-slate-200 rounded-2xl animate-pulse flex flex-col gap-2">
+        <div className="h-4 bg-slate-200 rounded w-1/3" />
+        <div className="h-6 bg-slate-200 rounded w-1/2" />
+        <div className="h-3 bg-slate-200 rounded w-full" />
       </div>
     );
   }
 
   if (!weather.available) {
-    return null; // Silently hide if weather data unavailable
+    return null;
   }
 
   const isRainy = (weather.rainProbability ?? 0) > 40;
   const isStormy = weather.weatherCode !== undefined && [95, 96, 99].includes(weather.weatherCode);
 
-  const borderColor = isStormy
-    ? 'border-red-700/50'
+  const containerStyle = isStormy
+    ? 'bg-rose-50 border-rose-200/80 text-rose-950'
     : isRainy
-    ? 'border-blue-700/50'
-    : 'border-zinc-800';
+    ? 'bg-sky-50 border-sky-200/80 text-sky-950'
+    : 'bg-slate-50 border-slate-200/80 text-slate-900';
 
-  const bgColor = isStormy
-    ? 'bg-red-950/20'
+  const badgeStyle = isStormy
+    ? 'bg-rose-100/90 border-rose-300 text-rose-900'
     : isRainy
-    ? 'bg-blue-950/20'
-    : 'bg-zinc-900/60';
+    ? 'bg-sky-100/90 border-sky-300 text-sky-900'
+    : 'bg-emerald-100/90 border-emerald-300 text-emerald-950';
 
   const formattedDate = departureDate
     ? new Date(departureDate).toLocaleDateString('en-IN', {
@@ -57,50 +57,59 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, departureDate, l
     : '';
 
   return (
-    <div className={`p-4 rounded-2xl border ${bgColor} ${borderColor}`}>
+    <div className={`p-4 rounded-2xl border shadow-xs ${containerStyle} flex flex-col gap-3 transition-all`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{weather.weatherIcon}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl filter drop-shadow-xs">{weather.weatherIcon || '⛅'}</span>
           <div>
-            <p className="text-xs font-bold text-zinc-300">{weather.weatherDescription}</p>
+            <h4 className="text-sm font-extrabold text-slate-900 leading-tight">
+              {weather.weatherDescription}
+            </h4>
             {formattedDate && (
-              <p className="text-[10px] text-zinc-500">{formattedDate} forecast</p>
+              <p className="text-[10px] font-extrabold text-slate-500 mt-0.5 uppercase tracking-wider">
+                {formattedDate} forecast
+              </p>
             )}
           </div>
         </div>
         {isStormy && (
-          <AlertTriangle className="w-4 h-4 text-red-400 animate-pulse" />
+          <div className="p-1.5 bg-rose-100 text-rose-600 rounded-xl animate-bounce">
+            <AlertTriangle className="w-4.5 h-4.5" />
+          </div>
         )}
       </div>
 
       {/* Stats Row */}
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-4 py-2 px-3 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-xl shadow-xs">
         <div className="flex items-center gap-1.5">
-          <Thermometer className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-sm font-bold text-zinc-200">{weather.temperature}°C</span>
+          <Thermometer className="w-4 h-4 text-amber-500" />
+          <span className="text-xs font-black text-slate-900">{weather.temperature}°C</span>
         </div>
+        <div className="h-4 w-px bg-slate-200" />
         <div className="flex items-center gap-1.5">
-          <Droplets className="w-3.5 h-3.5 text-blue-400" />
-          <span className="text-sm font-bold text-zinc-200">{weather.rainProbability}%</span>
-          <span className="text-[10px] text-zinc-500">rain</span>
+          <Droplets className="w-4 h-4 text-blue-500" />
+          <span className="text-xs font-black text-slate-900">{weather.rainProbability}%</span>
+          <span className="text-[10px] font-bold text-slate-500">rain</span>
         </div>
         {weather.windspeed !== undefined && (
-          <div className="flex items-center gap-1.5">
-            <Wind className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-sm font-bold text-zinc-200">{weather.windspeed}</span>
-            <span className="text-[10px] text-zinc-500">km/h</span>
-          </div>
+          <>
+            <div className="h-4 w-px bg-slate-200" />
+            <div className="flex items-center gap-1.5">
+              <Wind className="w-4 h-4 text-slate-600" />
+              <span className="text-xs font-black text-slate-900">{weather.windspeed}</span>
+              <span className="text-[10px] font-bold text-slate-500">km/h</span>
+            </div>
+          </>
         )}
       </div>
 
       {/* Travel Advice */}
       {weather.travelAdvice && (
-        <p className={`text-[11px] leading-relaxed font-medium ${
-          isStormy ? 'text-red-300' : isRainy ? 'text-blue-300' : 'text-emerald-300'
-        }`}>
-          {weather.travelAdvice}
-        </p>
+        <div className={`p-2.5 rounded-xl border text-xs font-extrabold flex items-center gap-2 ${badgeStyle}`}>
+          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+          <span className="leading-snug">{weather.travelAdvice}</span>
+        </div>
       )}
     </div>
   );
