@@ -88,19 +88,20 @@ export const RideDetails: React.FC = () => {
       } else {
         const bookRes = await bookingService.getMyBookings();
         if (bookRes.status === 'success') {
-          const matched = bookRes.data.bookings.find((b: any) => b.ride._id === id);
+          const matched = bookRes.data.bookings.find((b: any) => {
+            const rideId = typeof b.ride === 'object' && b.ride?._id ? b.ride._id : String(b.ride || '');
+            return rideId === id;
+          });
           setMyBooking(matched || null);
-
-          // Check if already reviewed driver
-          if (matched) {
-            try {
-              const revRes = await bookingService.getMyReview(id, 'driver');
-              if (revRes.status === 'success') {
-                setExistingDriverReview(revRes.data.review);
-              }
-            } catch (_) {}
-          }
         }
+
+        // Always check if passenger already reviewed driver for this ride
+        try {
+          const revRes = await bookingService.getMyReview(id, 'driver');
+          if (revRes.status === 'success' && revRes.data?.review) {
+            setExistingDriverReview(revRes.data.review);
+          }
+        } catch (_) {}
       }
     } catch (err) {
       toast.error('Failed to load ride details.');
