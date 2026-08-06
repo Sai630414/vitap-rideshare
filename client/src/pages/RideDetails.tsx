@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useSocket } from '../context/SocketContext';
@@ -15,6 +15,8 @@ import {
   MessageSquare,
   AlertTriangle,
   Navigation,
+  Navigation2,
+  ShieldCheck,
   CloudSun,
   Locate,
   Map,
@@ -63,6 +65,7 @@ export const RideDetails: React.FC = () => {
   const [existingDriverReview, setExistingDriverReview] = useState<any>(null);
   const [passengerReviewedMap, setPassengerReviewedMap] = useState<Record<string, any>>({});
   const [isMandatoryReview, setIsMandatoryReview] = useState(false);
+  const [hasDismissedMandatory, setHasDismissedMandatory] = useState(false);
 
   // Weather (F5)
   const [weather, setWeather] = useState<any>(null);
@@ -157,7 +160,7 @@ export const RideDetails: React.FC = () => {
 
   // Auto-trigger mandatory driver review modal when driver completes the ride
   useEffect(() => {
-    if (!ride || !user) return;
+    if (!ride || !user || hasDismissedMandatory) return;
     const isRideDriver = ride.driver._id === user._id;
     if (
       ride.status === 'completed' &&
@@ -170,7 +173,7 @@ export const RideDetails: React.FC = () => {
       setIsMandatoryReview(true);
       setReviewDialogOpen(true);
     }
-  }, [ride, user, myBooking, existingDriverReview]);
+  }, [ride, user, myBooking, existingDriverReview, hasDismissedMandatory]);
 
   // Fetch weather for ride (F5)
   useEffect(() => {
@@ -335,19 +338,22 @@ export const RideDetails: React.FC = () => {
         if (existingDriverReview) {
           await bookingService.updateReview(existingDriverReview._id, rating, comment);
           toast.success('Review updated!');
+          setExistingDriverReview((prev: any) => ({ ...prev, rating, comment }));
         } else {
-          await bookingService.createReview(ride._id, rating, comment);
+          const res = await bookingService.createReview(ride._id, rating, comment);
           toast.success('Driver review submitted! ⭐');
-          setExistingDriverReview({ rating, comment, createdAt: new Date().toISOString() });
-          setIsMandatoryReview(false);
-          setReviewDialogOpen(false);
+          setExistingDriverReview(
+            res?.data?.review || res?.review || { _id: 'rev_' + Date.now(), rating, comment, createdAt: new Date().toISOString() }
+          );
         }
+        setIsMandatoryReview(false);
+        setHasDismissedMandatory(true);
       } else if (reviewDialogTarget.passengerId) {
         await bookingService.createPassengerReview(ride._id, reviewDialogTarget.passengerId, rating, comment);
         toast.success('Passenger review submitted! ⭐');
         setPassengerReviewedMap((prev) => ({ ...prev, [reviewDialogTarget.passengerId!]: true }));
-        setReviewDialogOpen(false);
       }
+      setReviewDialogOpen(false);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to submit review.');
     } finally {
@@ -368,65 +374,53 @@ export const RideDetails: React.FC = () => {
       <div className="text-center py-16">
         <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto mb-3 animate-pulse" />
         <p className="text-slate-600 font-extrabold text-sm">Ride not found or has been removed.</p>
+        <Link to="/search-rides" className="inline-block mt-4 text-xs font-black text-emerald-600 hover:underline">
+          ← Back to Ride Search
+        </Link>
       </div>
     );
   }
 
-  const departureDateObj = new Date(ride.departureDate);
-
   return (
-    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
-      
-      {/* Route Header Card */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-black text-slate-900">
-              {ride.source}
-            </span>
-            <span className="text-slate-400 font-bold">→</span>
-            <span className="text-base font-black text-slate-900">
-              {ride.destination}
-            </span>
-          </div>
-
-          <div>
-            {ride.status === 'scheduled' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700">Scheduled</span>}
-            {ride.status === 'ongoing' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700">On the Road 🚗</span>}
-            {ride.status === 'completed' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700">Completed</span>}
-            {ride.status === 'cancelled' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700">Cancelled</span>}
-          </div>
+    <div className="flex flex-col gap-4 py-2 max-w-xl mx-auto animate-in fade-in duration-300 pb-12">
+      {/* Top Banner & Header */}
+      <div className="bg-slate-900 text-white p-4 rounded-3xl shadow-lg flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Trip Specification</span>
+          <h1 className="text-base font-black tracking-tight mt-0.5">
+            {ride.source} → {ride.destination}
+          </h1>
         </div>
-
-        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-50 p-3 rounded-2xl">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-emerald-600" />
-            <span>
-              {departureDateObj.toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
+        <div className="flex items-center gap-2">
+          {ride.status === 'ongoing' && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse">
+              Trip Ongoing
             </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-emerald-600" />
-            <span>{ride.departureTime}</span>
-          </div>
-          <div className="ml-auto font-black text-slate-900 text-sm">
-            ₹{ride.price} <span className="text-[10px] text-slate-400 font-bold">/ seat</span>
-          </div>
+          )}
+          {ride.status === 'completed' && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              Completed
+            </span>
+          )}
+          {ride.status === 'scheduled' && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              Scheduled
+            </span>
+          )}
         </div>
       </div>
 
+      {/* Live Map or Route Preview */}
       <div className="flex flex-col gap-4">
-
-        {/* Feature 3: Live Tracking Map (shown when ride is ongoing) */}
-        {ride.status === 'ongoing' && (isDriver || myBooking?.status === 'accepted') && (
+        {/* Live GPS Tracking Map Section (if ongoing) */}
+        {(ride.status === 'ongoing' || ride.status === 'scheduled') && (
           <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-              <Navigation className="w-4 h-4 text-emerald-600 animate-pulse" />
-              <span className="text-xs font-black text-slate-900">Live Driver Tracking</span>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <Navigation2 className="w-4 h-4 text-emerald-600 animate-pulse" />
+                <span className="text-xs font-black text-slate-900">Live GPS Radar & Passenger Locations</span>
+              </div>
+              <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Realtime Socket</span>
             </div>
             <LiveTrackingMap
               socket={socket}
@@ -435,7 +429,7 @@ export const RideDetails: React.FC = () => {
               driverId={ride.driver._id}
               currentUserId={user?._id}
               passengers={bookings
-                .filter((b) => b.status === 'accepted')
+                .filter((b) => b.status === 'accepted' || b.status === 'completed')
                 .map((b) => ({
                   id: typeof b.passenger === 'object' && b.passenger?._id ? b.passenger._id : String(b.passenger || ''),
                   name: typeof b.passenger === 'object' && b.passenger?.name ? b.passenger.name : 'Passenger',
@@ -444,12 +438,12 @@ export const RideDetails: React.FC = () => {
                 }))}
               passengerPickupCoords={
                 isDriver
-                  ? bookings.find((b) => b.status === 'accepted')?.pickupCoordinates
+                  ? bookings.find((b) => b.status === 'accepted' || b.status === 'completed')?.pickupCoordinates
                   : myBooking?.pickupCoordinates
               }
               passengerPickupAddress={
                 isDriver
-                  ? bookings.find((b) => b.status === 'accepted')?.pickup
+                  ? bookings.find((b) => b.status === 'accepted' || b.status === 'completed')?.pickup
                   : myBooking?.pickup
               }
               rideStatus={ride.status}
@@ -498,12 +492,8 @@ export const RideDetails: React.FC = () => {
             <div className="flex-1 min-w-0">
               <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
                 {ride.driver.name}
-                {ride.driver.verifiedDriver && <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold bg-emerald-50 text-emerald-700">Verified Driver</span>}
+                <ShieldCheck className="w-4 h-4 text-emerald-600 fill-emerald-100 shrink-0" />
               </h3>
-              <p className="text-[10px] font-bold text-slate-400">{ride.driver.email}</p>
-              {((myBooking?.status === 'accepted') || isDriver) && ride.driver.phone && (
-                <p className="text-[11px] font-extrabold text-emerald-600 mt-0.5">Phone: {ride.driver.phone}</p>
-              )}
             </div>
 
             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-100">
@@ -817,7 +807,9 @@ export const RideDetails: React.FC = () => {
         <ReviewDialog
           isOpen={reviewDialogOpen}
           onClose={() => {
-            if (!isMandatoryReview) setReviewDialogOpen(false);
+            setReviewDialogOpen(false);
+            setIsMandatoryReview(false);
+            setHasDismissedMandatory(true);
           }}
           onSubmit={handleReviewSubmit}
           targetName={reviewDialogTarget.name}

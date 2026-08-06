@@ -29,6 +29,12 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
+    if (isOpen) {
+      setSubmitted(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (existingReview) {
       setRating(existingReview.rating);
       setComment(existingReview.comment ?? '');
@@ -90,18 +96,20 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           )}
         </div>
 
-        {mandatory && (
+        {mandatory && !submitted && (
           <div className="mx-5 mt-4 p-3 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center gap-2 text-[11px] font-bold text-amber-900 shadow-sm">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Ride has been completed. Please rate your driver to proceed with next actions.</span>
+            <span>Ride has been completed. Please rate your driver to proceed.</span>
           </div>
         )}
 
-        {submitted && !existingReview ? (
+        {submitted ? (
           // Success state
           <div className="p-8 flex flex-col items-center text-center gap-3">
             <CheckCircle className="w-14 h-14 text-emerald-600 animate-bounce" />
-            <h3 className="text-base font-extrabold text-slate-900">Review Submitted!</h3>
+            <h3 className="text-base font-extrabold text-slate-900">
+              {existingReview ? 'Review Updated!' : 'Review Submitted!'}
+            </h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
               Thank you for your rating. Your feedback helps keep WayGo safe and reliable.
             </p>
