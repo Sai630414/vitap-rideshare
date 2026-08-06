@@ -51,6 +51,7 @@ interface MapContainerProps {
   dropAddress?: string;
   interactive?: boolean;
   onSelectCoords?: (type: 'pickup' | 'drop', coords: [number, number], address: string) => void;
+  infoPosition?: 'top' | 'bottom';
 }
 
 export const MapContainerComponent: React.FC<MapContainerProps> = ({
@@ -60,6 +61,7 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
   dropAddress = 'Drop',
   interactive = false,
   onSelectCoords,
+  infoPosition = 'top',
 }) => {
   const defaultCenter: [number, number] = [16.4971, 80.4992];
   const [distance, setDistance] = useState<number>(0);
@@ -115,21 +117,31 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
       </MapContainer>
 
       {pickupCoords && dropCoords && (
-        <div className="absolute bottom-6 left-6 right-6 z-20 bg-white/90 backdrop-blur-xl border border-border p-6 rounded-[2rem] flex items-center justify-around shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 text-primary rounded-2xl"><Navigation className="w-6 h-6" /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Distance</p><p className="text-lg font-black">{distance} km</p></div>
+        <div className={`absolute ${infoPosition === 'bottom' ? 'bottom-3 left-3 right-3' : 'top-3 left-3 right-3'} z-[1001] bg-white/95 backdrop-blur-xl border border-slate-200/80 px-4 py-2 rounded-2xl flex items-center justify-around shadow-xl animate-in ${infoPosition === 'bottom' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} duration-300`}>
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl">
+              <Navigation className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Distance</p>
+              <p className="text-xs font-black text-slate-800">{distance} km</p>
+            </div>
           </div>
-          <div className="h-10 w-px bg-border"></div>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 text-primary rounded-2xl"><Clock className="w-6 h-6" /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Time</p><p className="text-lg font-black">{duration} mins</p></div>
+          <div className="h-6 w-px bg-slate-200"></div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Time</p>
+              <p className="text-xs font-black text-slate-800">{duration} mins</p>
+            </div>
           </div>
         </div>
       )}
 
       {interactive && !dropCoords && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 bg-foreground text-white px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest shadow-2xl animate-bounce">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1001] bg-slate-900/90 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg animate-bounce">
           Tap Map to set {!pickupCoords ? 'Pickup' : 'Dropoff'}
         </div>
       )}
