@@ -463,14 +463,13 @@ export const RideDetails: React.FC = () => {
             <Map className="w-4 h-4 text-emerald-600" />
             <span className="text-xs font-black text-slate-900">Trip Route Preview</span>
           </div>
-          <div className="h-56 rounded-2xl overflow-hidden">
-            <MapContainerComponent
-              pickupCoords={ride.pickupLocation.coordinates}
-              dropCoords={ride.dropLocation.coordinates}
-              pickupAddress={ride.pickupLocation.address}
-              dropAddress={ride.dropLocation.address}
-            />
-          </div>
+          <MapContainerComponent
+            pickupCoords={ride.pickupLocation.coordinates}
+            dropCoords={ride.dropLocation.coordinates}
+            pickupAddress={ride.pickupLocation.address}
+            dropAddress={ride.dropLocation.address}
+            height="h-56"
+          />
         </div>
 
         {/* Departure Day Weather */}

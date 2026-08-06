@@ -348,16 +348,15 @@ export const OfferRide: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="h-44 rounded-2xl overflow-hidden border border-slate-200 relative">
-            <MapContainerComponent
-              pickupCoords={pickupCoords}
-              dropCoords={dropCoords}
-              pickupAddress={pickupAddress}
-              dropAddress={dropAddress}
-              interactive={true}
-              onSelectCoords={handleMapSelect}
-            />
-          </div>
+          <MapContainerComponent
+            pickupCoords={pickupCoords}
+            dropCoords={dropCoords}
+            pickupAddress={pickupAddress}
+            dropAddress={dropAddress}
+            interactive={true}
+            onSelectCoords={handleMapSelect}
+            height="h-44"
+          />
         </div>
 
         {/* Submit Floating Button */}

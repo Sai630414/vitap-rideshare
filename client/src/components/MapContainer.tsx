@@ -51,7 +51,7 @@ interface MapContainerProps {
   dropAddress?: string;
   interactive?: boolean;
   onSelectCoords?: (type: 'pickup' | 'drop', coords: [number, number], address: string) => void;
-  infoPosition?: 'top' | 'bottom';
+  height?: string;
 }
 
 export const MapContainerComponent: React.FC<MapContainerProps> = ({
@@ -61,7 +61,7 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
   dropAddress = 'Drop',
   interactive = false,
   onSelectCoords,
-  infoPosition = 'top',
+  height = 'h-48',
 }) => {
   const defaultCenter: [number, number] = [16.4971, 80.4992];
   const [distance, setDistance] = useState<number>(0);
@@ -92,59 +92,61 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full bg-muted/5 border-2 border-border rounded-[2.5rem] overflow-hidden shadow-soft">
-      <MapContainer
-        center={activeCoordinates.length > 0 ? activeCoordinates[0] : defaultCenter}
-        zoom={15}
-        className="w-full h-full z-10"
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {pickupCoords && (
-          <Marker position={[pickupCoords[1], pickupCoords[0]]} icon={greenIcon}>
-            <Popup><p className="font-black text-xs">{pickupAddress}</p></Popup>
-          </Marker>
-        )}
-        {dropCoords && (
-          <Marker position={[dropCoords[1], dropCoords[0]]} icon={redIcon}>
-            <Popup><p className="font-black text-xs">{dropAddress}</p></Popup>
-          </Marker>
-        )}
-        {pickupCoords && dropCoords && (
-          <Polyline positions={[[pickupCoords[1], pickupCoords[0]], [dropCoords[1], dropCoords[0]]]} color="#0F9D58" weight={5} opacity={0.6} dashArray="1, 10" />
-        )}
-        {activeCoordinates.length > 0 && <AutoFitBounds coords={activeCoordinates} />}
-        <MapClickHandler />
-      </MapContainer>
-
+    <div className="flex flex-col gap-2.5 w-full">
       {pickupCoords && dropCoords && (
-        <div className={`absolute ${infoPosition === 'bottom' ? 'bottom-3 left-3 right-3' : 'top-3 left-3 right-3'} z-[1001] bg-white/95 backdrop-blur-xl border border-slate-200/80 px-4 py-2 rounded-2xl flex items-center justify-around shadow-xl animate-in ${infoPosition === 'bottom' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} duration-300`}>
+        <div className="bg-emerald-50/70 border border-emerald-200/60 px-4 py-2.5 rounded-2xl flex items-center justify-around shadow-xs animate-in fade-in duration-300">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl">
+            <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-xl">
               <Navigation className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Distance</p>
-              <p className="text-xs font-black text-slate-800">{distance} km</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-800/70">Distance</p>
+              <p className="text-xs font-black text-slate-900">{distance} km</p>
             </div>
           </div>
-          <div className="h-6 w-px bg-slate-200"></div>
+          <div className="h-6 w-px bg-emerald-200/80"></div>
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl">
+            <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-xl">
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Time</p>
-              <p className="text-xs font-black text-slate-800">{duration} mins</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-800/70">Estimated Time</p>
+              <p className="text-xs font-black text-slate-900">{duration} mins</p>
             </div>
           </div>
         </div>
       )}
 
-      {interactive && !dropCoords && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1001] bg-slate-900/90 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg animate-bounce">
-          Tap Map to set {!pickupCoords ? 'Pickup' : 'Dropoff'}
-        </div>
-      )}
+      <div className={`relative w-full ${height} border border-slate-200 rounded-2xl overflow-hidden shadow-xs bg-slate-50`}>
+        <MapContainer
+          center={activeCoordinates.length > 0 ? activeCoordinates[0] : defaultCenter}
+          zoom={15}
+          className="w-full h-full z-10"
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {pickupCoords && (
+            <Marker position={[pickupCoords[1], pickupCoords[0]]} icon={greenIcon}>
+              <Popup><p className="font-black text-xs">{pickupAddress}</p></Popup>
+            </Marker>
+          )}
+          {dropCoords && (
+            <Marker position={[dropCoords[1], dropCoords[0]]} icon={redIcon}>
+              <Popup><p className="font-black text-xs">{dropAddress}</p></Popup>
+            </Marker>
+          )}
+          {pickupCoords && dropCoords && (
+            <Polyline positions={[[pickupCoords[1], pickupCoords[0]], [dropCoords[1], dropCoords[0]]]} color="#0F9D58" weight={5} opacity={0.6} dashArray="1, 10" />
+          )}
+          {activeCoordinates.length > 0 && <AutoFitBounds coords={activeCoordinates} />}
+          <MapClickHandler />
+        </MapContainer>
+
+        {interactive && !dropCoords && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1001] bg-slate-900/90 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg animate-bounce pointer-events-none">
+            Tap Map to set {!pickupCoords ? 'Pickup' : 'Dropoff'}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

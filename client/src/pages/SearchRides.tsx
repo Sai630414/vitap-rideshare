@@ -230,12 +230,13 @@ export const SearchRides: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="h-56">
+          <div className="p-3">
             <MapContainerComponent
               pickupCoords={previewRide.pickupLocation.coordinates}
               dropCoords={previewRide.dropLocation.coordinates}
               pickupAddress={previewRide.pickupLocation.address}
               dropAddress={previewRide.dropLocation.address}
+              height="h-56"
             />
           </div>
         </div>
