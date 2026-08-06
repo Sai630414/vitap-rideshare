@@ -161,7 +161,7 @@ export const RideDetails: React.FC = () => {
 
   // Auto-trigger mandatory driver review modal when driver completes the ride
   useEffect(() => {
-    if (!ride || !user || hasDismissedMandatory) return;
+    if (loading || !ride || !user || hasDismissedMandatory) return;
     const isRideDriver = ride.driver._id === user._id;
     if (
       ride.status === 'completed' &&
@@ -174,7 +174,7 @@ export const RideDetails: React.FC = () => {
       setIsMandatoryReview(true);
       setReviewDialogOpen(true);
     }
-  }, [ride, user, myBooking, existingDriverReview, hasDismissedMandatory]);
+  }, [loading, ride, user, myBooking, existingDriverReview, hasDismissedMandatory]);
 
   // Fetch weather for ride (F5)
   useEffect(() => {
@@ -356,7 +356,16 @@ export const RideDetails: React.FC = () => {
       }
       setReviewDialogOpen(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to submit review.');
+      const msg = err.response?.data?.message || '';
+      if (msg.toLowerCase().includes('already reviewed')) {
+        toast.info('You have already reviewed this ride.');
+        setExistingDriverReview({ rating: 5, comment: '', createdAt: new Date().toISOString() });
+        setIsMandatoryReview(false);
+        setHasDismissedMandatory(true);
+        setReviewDialogOpen(false);
+      } else {
+        toast.error(msg || 'Failed to submit review.');
+      }
     } finally {
       setReviewLoading(false);
     }
