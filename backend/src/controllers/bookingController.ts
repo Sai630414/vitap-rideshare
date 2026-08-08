@@ -6,6 +6,7 @@ import { Chat } from '../models/Chat';
 import AppError from '../utils/appError';
 import { sendNotificationToUser } from './notificationController';
 import { refundPayment } from './paymentController';
+import { sendToUser, broadcastToAll } from '../services/socketService';
 
 export const createBooking = async (
   req: AuthRequest,
@@ -83,6 +84,20 @@ export const createBooking = async (
       });
     }
 
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('passenger', 'name email phone registrationNumber branch year profileImage rating trustScore')
+      .populate({
+        path: 'ride',
+        populate: [
+          { path: 'driver', select: 'name email phone profileImage rating verifiedDriver trustScore' },
+          { path: 'vehicle', select: 'brand model type numberPlate color' },
+        ],
+      });
+
+    // Emit real-time socket event to driver & passenger
+    sendToUser(ride.driver.toString(), 'booking_created', populatedBooking);
+    sendToUser(req.user.id, 'booking_created', populatedBooking);
+
     // Notify the driver
     await sendNotificationToUser(
       ride.driver.toString(),
@@ -95,7 +110,7 @@ export const createBooking = async (
     res.status(201).json({
       status: 'success',
       data: {
-        booking,
+        booking: populatedBooking,
       },
     });
   } catch (error) {
@@ -218,10 +233,25 @@ export const respondToBooking = async (
       );
     }
 
+    const updatedBookingPopulated = await Booking.findById(booking._id)
+      .populate('passenger', 'name email phone registrationNumber branch year profileImage rating trustScore')
+      .populate({
+        path: 'ride',
+        populate: [
+          { path: 'driver', select: 'name email phone profileImage rating verifiedDriver trustScore' },
+          { path: 'vehicle', select: 'brand model type numberPlate color' },
+        ],
+      });
+
+    // Emit real-time booking status update to passenger & driver
+    sendToUser(booking.passenger.toString(), 'booking_updated', updatedBookingPopulated);
+    sendToUser(ride.driver.toString(), 'booking_updated', updatedBookingPopulated);
+    broadcastToAll('ride_updated', ride);
+
     res.status(200).json({
       status: 'success',
       data: {
-        booking,
+        booking: updatedBookingPopulated,
       },
     });
   } catch (error) {

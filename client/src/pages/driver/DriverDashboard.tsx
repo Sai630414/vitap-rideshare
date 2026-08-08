@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Calendar,
   Users,
+  Ticket,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -28,6 +29,8 @@ import rideService, { type RideData } from '../../services/rideService';
 import bookingService from '../../services/bookingService';
 import chatService from '../../services/chatService';
 import ReviewDialog from '../../components/ReviewDialog';
+
+import useSocket from '../../context/SocketContext';
 
 // Dynamic Script Loader for Razorpay Checkout
 const loadRazorpayScript = () => {
@@ -48,6 +51,7 @@ const loadRazorpayScript = () => {
 export const DriverDashboard: React.FC = () => {
   const { user, login } = useAuth();
   const { toast } = useToast();
+  const { socket } = useSocket();
   const navigate = useNavigate();
 
   const driver = user?.driverDetails as any;
@@ -60,10 +64,15 @@ export const DriverDashboard: React.FC = () => {
   const [earnings, setEarnings] = useState(0);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
-  // Ride Requests States
+  // Ride Requests & Passenger Bookings States
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [activeTab, setActiveTab] = useState<'rides' | 'requests'>('rides');
+
+  // Driver's own seat bookings on other rides
+  const [myBookings, setMyBookings] = useState<any[]>([]);
+  const [loadingMyBookings, setLoadingMyBookings] = useState(true);
+
+  const [activeTab, setActiveTab] = useState<'rides' | 'requests' | 'myBookings'>('rides');
 
   // Feature 2: Passenger reviews by driver
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
@@ -83,41 +92,150 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
+  const computeEarnings = (ridesList: RideData[], requestsList: any[]) => {
+    let sum = 0;
+    const countedRideIds = new Set<string>();
+
+    // 1. Calculate earnings from accepted or completed bookings
+    if (Array.isArray(requestsList)) {
+      requestsList.forEach((req) => {
+        if (req.status === 'accepted' || req.status === 'completed') {
+          const seats = req.seatNumber || 1;
+          const pricePerSeat = req.ride?.price ?? 0;
+          sum += seats * pricePerSeat;
+          if (req.ride?._id) {
+            countedRideIds.add(req.ride._id.toString());
+          }
+        }
+      });
+    }
+
+    // 2. Add earnings from completed rides without explicit booking items
+    if (Array.isArray(ridesList)) {
+      ridesList.forEach((ride) => {
+        if (ride.status === 'completed' && !countedRideIds.has(ride._id)) {
+          const totalSeats = (ride.vehicle as any)?.seats || 4;
+          const bookedSeats = Math.max(1, totalSeats - (ride.availableSeats ?? totalSeats));
+          sum += bookedSeats * (ride.price || 0);
+        }
+      });
+    }
+
+    return sum;
+  };
+
+  const fetchDriverRides = async () => {
+    try {
+      const response = await api.get('/rides/mine');
+      if (response.data.status === 'success') {
+        const allRides: RideData[] = response.data.data.rides;
+        setMyRides(allRides);
+      }
+    } catch (err) {
+      console.error('Failed to load driver rides:', err);
+    } finally {
+      setLoadingRides(false);
+    }
+  };
+
+  const fetchRequests = async () => {
+    try {
+      const res = await bookingService.getDriverRequests();
+      if (res.status === 'success') {
+        setRequests(res.data.bookings);
+      }
+    } catch (err) {
+      console.error('Failed to load ride requests:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  const fetchMyBookings = async () => {
+    try {
+      const res = await bookingService.getMyBookings();
+      if (res.status === 'success') {
+        setMyBookings(res.data.bookings);
+      }
+    } catch (err) {
+      console.error('Failed to load my seat bookings:', err);
+    } finally {
+      setLoadingMyBookings(false);
+    }
+  };
+
+  const handleCancelMyBooking = async (bookingId: string) => {
+    if (!window.confirm('Are you sure you want to cancel your seat booking?')) return;
+    try {
+      const res = await bookingService.cancelBooking(bookingId);
+      if (res.status === 'success') {
+        toast.success('Booking cancelled successfully.');
+        fetchMyBookings();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to cancel booking.');
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'driver' && user?.verifiedDriver && hasPaid) {
-      const fetchDriverRides = async () => {
-        try {
-          const response = await api.get('/rides/mine');
-          if (response.data.status === 'success') {
-            const allRides: RideData[] = response.data.data.rides;
-            setMyRides(allRides);
-            const completed = allRides.filter((r) => r.status === 'completed');
-            setEarnings(completed.length * 150);
-          }
-        } catch (err) {
-          console.error('Failed to load driver rides:', err);
-        } finally {
-          setLoadingRides(false);
-        }
-      };
-
-      const fetchRequests = async () => {
-        try {
-          const res = await bookingService.getDriverRequests();
-          if (res.status === 'success') {
-            setRequests(res.data.bookings);
-          }
-        } catch (err) {
-          console.error('Failed to load ride requests:', err);
-        } finally {
-          setLoadingRequests(false);
-        }
-      };
-
       fetchDriverRides();
       fetchRequests();
+      fetchMyBookings();
     }
   }, [user, hasPaid]);
+
+  useEffect(() => {
+    const total = computeEarnings(myRides, requests);
+    setEarnings(total);
+  }, [myRides, requests]);
+
+  // Real-time Socket listeners for Driver Dashboard
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRideCreated = (newRide: RideData) => {
+      if (newRide.driver?._id === user?._id) {
+        setMyRides((prev) => [newRide, ...prev.filter((r) => r._id !== newRide._id)]);
+      }
+    };
+
+    const handleRideUpdated = (updatedRide: RideData) => {
+      if (updatedRide.driver?._id === user?._id) {
+        setMyRides((prev) => prev.map((r) => (r._id === updatedRide._id ? updatedRide : r)));
+      }
+    };
+
+    const handleBookingCreated = (newBooking: any) => {
+      if (newBooking.driver === user?._id || newBooking.ride?.driver?._id === user?._id) {
+        setRequests((prev) => [newBooking, ...prev.filter((b) => b._id !== newBooking._id)]);
+      }
+    };
+
+    const handleBookingUpdated = (updatedBooking: any) => {
+      if (updatedBooking.driver === user?._id || updatedBooking.ride?.driver?._id === user?._id) {
+        setRequests((prev) => prev.map((b) => (b._id === updatedBooking._id ? updatedBooking : b)));
+      }
+    };
+
+    const handleDriverApprovalUpdated = (driverDoc: any) => {
+      refreshUserState();
+    };
+
+    socket.on('driver_ride_created', handleRideCreated);
+    socket.on('ride_updated', handleRideUpdated);
+    socket.on('booking_created', handleBookingCreated);
+    socket.on('booking_updated', handleBookingUpdated);
+    socket.on('driver_approval_updated', handleDriverApprovalUpdated);
+
+    return () => {
+      socket.off('driver_ride_created', handleRideCreated);
+      socket.off('ride_updated', handleRideUpdated);
+      socket.off('booking_created', handleBookingCreated);
+      socket.off('booking_updated', handleBookingUpdated);
+      socket.off('driver_approval_updated', handleDriverApprovalUpdated);
+    };
+  }, [socket, user]);
 
   const handleUpdateStatus = async (rideId: string, newStatus: 'ongoing' | 'completed' | 'cancelled') => {
     try {
@@ -128,7 +246,10 @@ export const DriverDashboard: React.FC = () => {
           prev.map((r) => (r._id === rideId ? { ...r, status: newStatus } : r))
         );
 
-        if (newStatus === 'completed') {
+        if (newStatus === 'ongoing') {
+          // Instantly open live tracking map route page for driver and passengers
+          navigate(`/ride/${rideId}`);
+        } else if (newStatus === 'completed') {
           // Find first passenger for this completed ride to review
           const matchedReq = requests.find(req => (req.ride?._id === rideId || req.ride === rideId) && req.status === 'accepted');
           if (matchedReq && matchedReq.passenger) {
@@ -358,19 +479,19 @@ export const DriverDashboard: React.FC = () => {
         </p>
 
         {/* Subscription Deadline Card */}
-        <div className="mt-6 w-full max-w-md bg-amber-50 border border-amber-200 rounded-3xl p-4 flex items-center justify-between shadow-sm">
+        <div className="mt-6 w-full max-w-md bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-5 text-white flex items-center justify-between shadow-lg shadow-amber-500/20">
           <div className="flex items-center gap-3 text-left">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
-              <Clock className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center font-black">
+              <Clock className="w-6 h-6 text-white animate-pulse" />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase text-amber-600 tracking-wider block">Subscription Deadline</span>
-              <span className="text-xs font-extrabold text-amber-900 block">Complete payment to activate</span>
+              <span className="text-[10px] font-black uppercase text-amber-100 tracking-wider block">Subscription Deadline</span>
+              <span className="text-sm font-black text-white block">Complete ₹50 payment to activate</span>
             </div>
           </div>
-          <div className="bg-white px-3 py-1.5 rounded-2xl border border-amber-200 shadow-sm text-center">
-            <span className="text-base font-black text-amber-700 block">{daysLeft}</span>
-            <span className="text-[9px] font-bold text-amber-600 block uppercase tracking-wider">{daysLeft === 1 ? 'Day Left' : 'Days Left'}</span>
+          <div className="bg-white px-4 py-2 rounded-2xl shadow-md text-center shrink-0">
+            <span className="text-xl font-black text-amber-600 block leading-tight">{daysLeft}</span>
+            <span className="text-[9px] font-extrabold text-amber-700 block uppercase tracking-wider">{daysLeft === 1 ? 'Day Left' : 'Days Left'}</span>
           </div>
         </div>
 
@@ -422,6 +543,27 @@ export const DriverDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Subscription / Days Left Status Card if subscription active */}
+      {driver?.updatedAt && (
+        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-3xl flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider block">Active Driver Subscription</span>
+              <span className="text-xs font-extrabold text-emerald-950 block">Verified & Subscription Active</span>
+            </div>
+          </div>
+          <div className="bg-white px-3 py-1.5 rounded-2xl border border-emerald-200 shadow-sm text-center">
+            <span className="text-base font-black text-emerald-700 block">
+              {Math.max(0, Math.ceil((new Date(new Date(driver.updatedAt).getTime() + 30 * 24 * 60 * 60 * 1000).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
+            </span>
+            <span className="text-[9px] font-bold text-emerald-600 block uppercase tracking-wider">Days Left</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats Quick Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
@@ -438,32 +580,44 @@ export const DriverDashboard: React.FC = () => {
       </div>
 
       {/* Tab Selector */}
-      <div className="bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-1">
+      <div className="bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('rides')}
-          className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
             activeTab === 'rides'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          <Car className="w-4 h-4" />
-          <span>My Offered Rides ({myRides.length})</span>
+          <Car className="w-4 h-4 shrink-0" />
+          <span>Offered Rides ({myRides.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('requests')}
-          className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 relative ${
+          className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 relative whitespace-nowrap ${
             activeTab === 'requests'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          <MessageSquare className="w-4 h-4" />
-          <span>Passenger Bookings</span>
+          <MessageSquare className="w-4 h-4 shrink-0" />
+          <span>Passenger Requests</span>
           {pendingRequestsCount > 0 && (
             <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
           )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('myBookings')}
+          className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'myBookings'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Ticket className="w-4 h-4 shrink-0" />
+          <span>My Booked Rides ({myBookings.length})</span>
         </button>
       </div>
 
@@ -559,7 +713,7 @@ export const DriverDashboard: React.FC = () => {
             ))}
           </div>
         )
-      ) : (
+      ) : activeTab === 'requests' ? (
         loadingRequests ? (
           <div className="space-y-2.5">
             {[1, 2].map(i => <div key={i} className="h-24 bg-slate-100 rounded-3xl animate-pulse" />)}
@@ -649,6 +803,107 @@ export const DriverDashboard: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )
+      ) : (
+        loadingMyBookings ? (
+          <div className="space-y-2.5">
+            {[1, 2].map(i => <div key={i} className="h-24 bg-slate-100 rounded-3xl animate-pulse" />)}
+          </div>
+        ) : myBookings.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Ticket className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-500">You haven't booked any seats on other rides yet</p>
+            <button
+              onClick={() => navigate('/search-rides')}
+              className="mt-3 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-extrabold"
+            >
+              Search Rides
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {myBookings.map((b) => {
+              const ride = b.ride;
+              if (!ride) return null;
+              const driverObj = ride.driver || {};
+              return (
+                <div key={b._id} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
+                  {/* Driver Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={driverObj.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(driverObj.name || 'driver')}`}
+                        className="w-8 h-8 rounded-full object-cover border border-slate-100"
+                        alt=""
+                      />
+                      <div className="min-w-0">
+                        <span className="text-xs font-black text-slate-900 block truncate">{driverObj.name || 'Driver'}</span>
+                        <span className="text-[9px] font-bold text-slate-400 block truncate">Driver Rating: {driverObj.rating || 5.0} ⭐</span>
+                      </div>
+                    </div>
+
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold capitalize ${
+                      b.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' :
+                      b.status === 'completed' ? 'bg-blue-50 text-blue-700' :
+                      b.status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {b.status}
+                    </span>
+                  </div>
+
+                  {/* Route & Price Details */}
+                  <div className="bg-slate-50 p-2.5 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-800">
+                    <div className="truncate">
+                      <span className="text-[9px] font-extrabold text-slate-400 block uppercase">Route</span>
+                      <span className="truncate block">{ride.source} → {ride.destination}</span>
+                    </div>
+                    <div className="text-right shrink-0 pl-2">
+                      <span className="text-xs font-black text-slate-900 block">₹{ride.price * (b.seatNumber || 1)}</span>
+                      <span className="text-[9px] font-bold text-slate-400 block">{b.seatNumber || 1} Seat(s)</span>
+                    </div>
+                  </div>
+
+                  {/* Pickup Location details */}
+                  <div className="text-[11px] text-slate-500 font-bold px-1 flex items-center gap-1">
+                    <span className="text-slate-400">Pickup:</span>
+                    <span className="text-slate-800 truncate">{b.pickup}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <button
+                      onClick={() => navigate(`/ride/${ride._id}`)}
+                      className="text-xs font-extrabold text-emerald-600 flex items-center gap-1"
+                    >
+                      <span>View Details</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      {b.status === 'accepted' && ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                        <button
+                          onClick={() => handleLaunchChat(driverObj._id)}
+                          className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-extrabold flex items-center gap-1"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Chat Driver</span>
+                        </button>
+                      )}
+
+                      {(b.status === 'pending' || b.status === 'accepted') && ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                        <button
+                          onClick={() => handleCancelMyBooking(b._id)}
+                          className="px-2.5 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )
       )}

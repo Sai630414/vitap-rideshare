@@ -12,6 +12,39 @@ const cloudinaryService_1 = require("../services/cloudinaryService");
 const socketService_1 = require("../services/socketService");
 const notificationController_1 = require("./notificationController");
 const notification_service_1 = __importDefault(require("../services/notification.service"));
+/**
+ * Helper function to verify whether chat messaging is allowed between two users.
+ * Returns { allowed: boolean; reason?: string }
+ * If all bookings between users belong to completed/cancelled rides or bookings, chat is disabled.
+ */
+const checkChatEligibility = async (userId1, userId2) => {
+    const bookings = await Booking_1.default.find({
+        $or: [
+            { passenger: userId1, driver: userId2 },
+            { passenger: userId2, driver: userId1 },
+        ],
+    }).populate('ride');
+    if (!bookings || bookings.length === 0) {
+        return {
+            allowed: false,
+            reason: 'No ride booking connection exists between these users.',
+        };
+    }
+    // Check if there is AT LEAST ONE active booking (pending or accepted) where ride status is scheduled or ongoing
+    const hasActiveRideBooking = bookings.some((b) => {
+        const rideStatus = b.ride?.status;
+        const isBookingActive = b.status === 'accepted' || b.status === 'pending';
+        const isRideActive = rideStatus === 'scheduled' || rideStatus === 'ongoing';
+        return isBookingActive && isRideActive;
+    });
+    if (!hasActiveRideBooking) {
+        return {
+            allowed: false,
+            reason: 'Chat is disabled because the ride has been completed.',
+        };
+    }
+    return { allowed: true };
+};
 const getOrCreateChat = async (req, res, next) => {
     try {
         const { recipientId } = req.body;
@@ -24,19 +57,11 @@ const getOrCreateChat = async (req, res, next) => {
         if (!recipient) {
             return next(new appError_1.default('Recipient user not found', 404));
         }
-        // Security validation: Only booking participants can access chats.
-        // Students cannot chat with random drivers. Drivers cannot message unrelated students.
-        // Verify there is an active/completed booking connection between the participants.
+        // Security validation: Only booking participants with active rides can chat.
         if (req.user.role !== 'admin') {
-            const hasBooking = await Booking_1.default.findOne({
-                $or: [
-                    { passenger: req.user.id, driver: recipientId },
-                    { passenger: recipientId, driver: req.user.id },
-                ],
-                status: { $in: ['pending', 'accepted', 'completed'] },
-            });
-            if (!hasBooking) {
-                return next(new appError_1.default('You are not authorized to start a chat with this user as there is no active ride booking connection between you.', 403));
+            const eligibility = await checkChatEligibility(req.user.id, recipientId);
+            if (!eligibility.allowed) {
+                return next(new appError_1.default(eligibility.reason || 'Chat is disabled because the ride has been completed.', 403));
             }
         }
         // Check if chat already exists (exactly these two participants)
@@ -71,8 +96,20 @@ const sendMessage = async (req, res, next) => {
             return next(new appError_1.default('Chat not found', 404));
         }
         // Verify user is a participant
-        if (!chat.participants.map(p => p.toString()).includes(req.user.id)) {
+        if (!chat.participants.map((p) => p.toString()).includes(req.user.id)) {
             return next(new appError_1.default('You are not authorized in this chat thread', 403));
+        }
+        // Check if ride is completed or booking connection is inactive
+        if (req.user.role !== 'admin') {
+            const recipientId = chat.participants
+                .find((p) => p.toString() !== req.user?.id)
+                ?.toString();
+            if (recipientId) {
+                const eligibility = await checkChatEligibility(req.user.id, recipientId);
+                if (!eligibility.allowed) {
+                    return next(new appError_1.default(eligibility.reason || 'Chat is disabled because the ride has been completed.', 403));
+                }
+            }
         }
         let imageUrl = '';
         if (req.file) {
@@ -129,12 +166,26 @@ exports.sendMessage = sendMessage;
 const getChatMessages = async (req, res, next) => {
     try {
         const { chatId } = req.params;
+        if (!req.user)
+            return next(new appError_1.default('Unauthorized', 401));
         const chat = await Chat_1.Chat.findById(chatId);
         if (!chat) {
             return next(new appError_1.default('Chat not found', 404));
         }
-        if (!chat.participants.map(p => p.toString()).includes(req.user?.id || '')) {
+        if (!chat.participants.map((p) => p.toString()).includes(req.user?.id || '')) {
             return next(new appError_1.default('You do not belong to this chat', 403));
+        }
+        let isCompleted = false;
+        if (req.user?.role !== 'admin') {
+            const recipientId = chat.participants
+                .find((p) => p.toString() !== req.user?.id)
+                ?.toString();
+            if (recipientId) {
+                const eligibility = await checkChatEligibility(req.user.id, recipientId);
+                if (!eligibility.allowed) {
+                    isCompleted = true;
+                }
+            }
         }
         const messages = await Chat_1.Message.find({ chat: chatId })
             .populate('sender', 'name email profileImage role')
@@ -144,6 +195,7 @@ const getChatMessages = async (req, res, next) => {
             results: messages.length,
             data: {
                 messages,
+                isCompleted,
             },
         });
     }
@@ -157,7 +209,7 @@ const getUserChats = async (req, res, next) => {
         if (!req.user)
             return next(new appError_1.default('Unauthorized', 401));
         // Get all chats where user is participant
-        const chats = await Chat_1.Chat.find({
+        const rawChats = await Chat_1.Chat.find({
             participants: req.user.id,
         })
             .populate('participants', 'name email profileImage role rating verifiedDriver status')
@@ -166,6 +218,21 @@ const getUserChats = async (req, res, next) => {
             populate: { path: 'sender', select: 'name' },
         })
             .sort({ updatedAt: -1 });
+        const chats = await Promise.all(rawChats.map(async (chat) => {
+            const chatObj = chat.toObject();
+            const otherParticipant = chat.participants.find((p) => p._id.toString() !== req.user?.id);
+            let isCompleted = false;
+            if (otherParticipant && req.user?.role !== 'admin') {
+                const eligibility = await checkChatEligibility(req.user.id, otherParticipant._id.toString());
+                if (!eligibility.allowed) {
+                    isCompleted = true;
+                }
+            }
+            return {
+                ...chatObj,
+                isCompleted,
+            };
+        }));
         res.status(200).json({
             status: 'success',
             results: chats.length,
@@ -188,7 +255,7 @@ const markAsSeen = async (req, res, next) => {
         if (!chat) {
             return next(new appError_1.default('Chat not found', 404));
         }
-        if (!chat.participants.map(p => p.toString()).includes(req.user.id)) {
+        if (!chat.participants.map((p) => p.toString()).includes(req.user.id)) {
             return next(new appError_1.default('Unauthorized', 403));
         }
         // Set messages from other participants to seen

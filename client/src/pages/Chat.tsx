@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   X,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import chatService from '../services/chatService';
 import fcmPushService from '../services/fcmPushService';
@@ -71,12 +72,19 @@ export const Chat: React.FC = () => {
     fetchInbox(selectChatId || undefined);
   }, [location.search]);
 
+  const [isChatDisabled, setIsChatDisabled] = useState(false);
+
   const fetchMessages = async (chatId: string) => {
     setLoadingMessages(true);
     try {
       const res = await chatService.getChatMessages(chatId);
       if (res.status === 'success') {
         setMessages(res.data.messages);
+        if (res.data.isCompleted) {
+          setIsChatDisabled(true);
+        } else {
+          setIsChatDisabled(false);
+        }
         await chatService.markAsSeen(chatId);
         setChats((prev) =>
           prev.map((c) =>
@@ -95,6 +103,7 @@ export const Chat: React.FC = () => {
 
   const handleSelectChat = (chat: ChatData) => {
     setSelectedChat(chat);
+    setIsChatDisabled(!!chat.isCompleted);
     fcmPushService.setActiveChatRoom(chat._id);
     fetchMessages(chat._id);
     if (socket) socket.emit('join_chat', chat._id);
@@ -143,6 +152,7 @@ export const Chat: React.FC = () => {
   }, [socket, selectedChat, user]);
 
   const handleInputChange = (val: string) => {
+    if (isChatDisabled) return;
     setText(val);
     if (!socket || !selectedChat || !user) return;
     if (!isTypingLocal) {
@@ -166,7 +176,7 @@ export const Chat: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedChat || (!text && !imageFile)) return;
+    if (!selectedChat || (!text && !imageFile) || isChatDisabled) return;
     setSendLoading(true);
     try {
       const res = await chatService.sendMessage(selectedChat._id, text || undefined, imageFile || undefined);
@@ -178,8 +188,12 @@ export const Chat: React.FC = () => {
         setIsTypingLocal(false);
         if (socket) socket.emit('typing', { chatId: selectedChat._id, userId: user?._id, isTyping: false });
       }
-    } catch (err) {
-      toast.error('Failed to send message.');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to send message.';
+      toast.error(msg);
+      if (msg.includes('completed')) {
+        setIsChatDisabled(true);
+      }
     } finally {
       setSendLoading(false);
     }
@@ -335,43 +349,50 @@ export const Chat: React.FC = () => {
 
           {/* Bottom input area */}
           <div className="p-3 bg-white border-t border-slate-100 shrink-0">
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-              <label className="p-2.5 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer active:scale-95 transition-transform">
-                <ImageIcon className="w-4 h-4" />
-                <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
-              </label>
+            {isChatDisabled ? (
+              <div className="p-3 bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-600 text-xs font-extrabold shadow-inner">
+                <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                <span>Chat disabled because the ride is completed.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <label className="p-2.5 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer active:scale-95 transition-transform">
+                  <ImageIcon className="w-4 h-4" />
+                  <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
+                </label>
 
-              <input
-                type="text"
-                placeholder="Type a message..."
-                value={text}
-                onChange={(e) => handleInputChange(e.target.value)}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  value={text}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
 
-              {imagePreview && (
-                <div className="relative w-8 h-8 rounded-xl overflow-hidden border border-slate-200 shrink-0">
-                  <img src={imagePreview} className="w-full h-full object-cover" alt="" />
-                  <button
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreview(null);
-                    }}
-                    className="absolute top-0 right-0 p-0.5 bg-rose-600 text-white rounded-full"
-                  >
-                    <X className="w-2 h-2" />
-                  </button>
-                </div>
-              )}
+                {imagePreview && (
+                  <div className="relative w-8 h-8 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                    <img src={imagePreview} className="w-full h-full object-cover" alt="" />
+                    <button
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                      }}
+                      className="absolute top-0 right-0 p-0.5 bg-rose-600 text-white rounded-full"
+                    >
+                      <X className="w-2 h-2" />
+                    </button>
+                  </div>
+                )}
 
-              <button
-                type="submit"
-                disabled={!text && !imageFile}
-                className="w-10 h-10 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20 active:scale-95 transition-transform disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={!text && !imageFile}
+                  className="w-10 h-10 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20 active:scale-95 transition-transform disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

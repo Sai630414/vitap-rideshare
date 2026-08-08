@@ -16,6 +16,7 @@ import { useSocket } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
 import notificationService from '../services/notificationService';
 import fcmPushService from '../services/fcmPushService';
+import locationPermissionService from '../services/locationPermissionService';
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -69,28 +70,21 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     const sendSos = (lat: number, lng: number) => {
       if (socket) {
         socket.emit('sos_alert', {
-          userId: user._id,
-          userName: user.name,
-          phone: user.phone || 'No phone number linked',
+          userId: user?._id,
+          userName: user?.name,
+          phone: user?.phone,
           coordinates: [lng, lat],
         });
-        toast.error('🚨 Emergency SOS alert has been broadcast to all admins.');
-      } else {
-        toast.error('Emergency trigger failed: No server connection.');
+        toast.success('🚨 SOS alert broadcasted to safety monitoring team!');
       }
       setSosLoading(false);
       setShowSosModal(false);
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => sendSos(position.coords.latitude, position.coords.longitude),
-        () => sendSos(16.4971, 80.4992),
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    } else {
-      sendSos(16.4971, 80.4992);
-    }
+    locationPermissionService
+      .getCurrentPosition()
+      .then((coords) => sendSos(coords.latitude, coords.longitude))
+      .catch(() => sendSos(16.4971, 80.4992));
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -101,7 +95,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       <div className="w-full max-w-[480px] min-h-screen sm:min-h-[92vh] sm:max-h-[92vh] bg-slate-50 sm:rounded-[2.5rem] shadow-2xl relative flex flex-col overflow-hidden border border-slate-800/20">
         
         {/* Native Top Header */}
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 flex items-center justify-between shadow-sm">
+        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
           <Link to="/dashboard" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-md shadow-emerald-600/20 group-active:scale-95 transition-transform">
               <Compass className="text-white w-5 h-5" />
@@ -134,12 +128,12 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </header>
 
         {/* Scrollable Screen Content */}
-        <main className="flex-1 overflow-y-auto pb-28 pt-2 px-4 no-scrollbar">
+        <main className="flex-1 overflow-y-auto pb-24 pt-2 px-4 no-scrollbar">
           {children}
         </main>
 
         {/* Material 3 Native Fixed Bottom Navigation Bar */}
-        <nav className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 z-50 px-2 h-20 flex items-center justify-around rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.06)] pb-safe shrink-0">
+        <nav className="fixed bottom-0 sm:absolute left-0 right-0 max-w-[480px] mx-auto bg-white/95 backdrop-blur-lg border-t border-slate-100 z-50 px-2 h-16 flex items-center justify-around rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.08)] shrink-0">
           
           {/* Home Tab */}
           <Link
@@ -148,7 +142,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               isActive('/dashboard') ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <div className={`px-4 py-1.5 rounded-full transition-all ${isActive('/dashboard') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
+            <div className={`px-3 py-1 rounded-full transition-all ${isActive('/dashboard') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
               <Home className="w-5 h-5" strokeWidth={isActive('/dashboard') ? 2.5 : 2} />
             </div>
             <span className="text-[10px] font-bold mt-0.5 tracking-tight">Home</span>
@@ -161,7 +155,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               isActive('/search') ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <div className={`px-4 py-1.5 rounded-full transition-all ${isActive('/search') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
+            <div className={`px-3 py-1 rounded-full transition-all ${isActive('/search') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
               <Search className="w-5 h-5" strokeWidth={isActive('/search') ? 2.5 : 2} />
             </div>
             <span className="text-[10px] font-bold mt-0.5 tracking-tight">Find</span>
@@ -171,11 +165,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           <div className="flex-1 flex flex-col items-center justify-center h-full relative">
             <Link
               to="/offer-ride"
-              className="absolute -top-5 w-14 h-14 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/35 border-[3px] border-white active:scale-95 transition-all group"
+              className="absolute -top-4 w-12 h-12 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/35 border-[3px] border-white active:scale-95 transition-all group"
             >
-              <Plus className="w-7 h-7 text-white group-hover:rotate-90 transition-transform duration-300" strokeWidth={3} />
+              <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" strokeWidth={3} />
             </Link>
-            <span className="text-[10px] font-extrabold mt-8 text-emerald-700 tracking-tight">Offer</span>
+            <span className="text-[10px] font-extrabold mt-7 text-emerald-700 tracking-tight">Offer</span>
           </div>
 
           {/* Chats Tab */}
@@ -185,10 +179,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               isActive('/chat') ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <div className={`px-4 py-1.5 rounded-full transition-all relative ${isActive('/chat') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
+            <div className={`px-3 py-1 rounded-full transition-all relative ${isActive('/chat') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
               <MessageSquare className="w-5 h-5" strokeWidth={isActive('/chat') ? 2.5 : 2} />
               {unreadNotifications > 0 && (
-                <span className="absolute top-1 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
+                <span className="absolute top-0.5 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
               )}
             </div>
             <span className="text-[10px] font-bold mt-0.5 tracking-tight">Chats</span>
@@ -201,7 +195,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               isActive('/profile') ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <div className={`px-4 py-1.5 rounded-full transition-all ${isActive('/profile') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
+            <div className={`px-3 py-1 rounded-full transition-all ${isActive('/profile') ? 'bg-emerald-50 text-emerald-600 scale-105' : 'active:scale-90'}`}>
               <User className="w-5 h-5" strokeWidth={isActive('/profile') ? 2.5 : 2} />
             </div>
             <span className="text-[10px] font-bold mt-0.5 tracking-tight">Profile</span>

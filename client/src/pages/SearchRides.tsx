@@ -19,9 +19,12 @@ import AutocompleteInput from '../components/AutocompleteInput';
 import rideService, { type RideData, type RideSearchParams } from '../services/rideService';
 import MapContainerComponent from '../components/MapContainer';
 
+import useSocket from '../context/SocketContext';
+
 export const SearchRides: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   // Search parameters
   const [source, setSource] = useState('');
@@ -59,6 +62,34 @@ export const SearchRides: React.FC = () => {
   useEffect(() => {
     fetchRides();
   }, []);
+
+  // Real-time socket updates for SearchRides page
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRideCreated = (newRide: RideData) => {
+      if (newRide.status === 'scheduled') {
+        setRides((prev) => [newRide, ...prev.filter((r) => r._id !== newRide._id)]);
+      }
+    };
+
+    const handleRideUpdated = (updatedRide: RideData) => {
+      setRides((prev) => {
+        if (updatedRide.status !== 'scheduled') {
+          return prev.filter((r) => r._id !== updatedRide._id);
+        }
+        return prev.map((r) => (r._id === updatedRide._id ? updatedRide : r));
+      });
+    };
+
+    socket.on('ride_created', handleRideCreated);
+    socket.on('ride_updated', handleRideUpdated);
+
+    return () => {
+      socket.off('ride_created', handleRideCreated);
+      socket.off('ride_updated', handleRideUpdated);
+    };
+  }, [socket]);
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -199,12 +230,13 @@ export const SearchRides: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="h-56">
+          <div className="p-3">
             <MapContainerComponent
               pickupCoords={previewRide.pickupLocation.coordinates}
               dropCoords={previewRide.dropLocation.coordinates}
               pickupAddress={previewRide.pickupLocation.address}
               dropAddress={previewRide.dropLocation.address}
+              height="h-56"
             />
           </div>
         </div>

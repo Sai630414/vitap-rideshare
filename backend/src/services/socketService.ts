@@ -97,6 +97,20 @@ export const initSocket = (server: any) => {
     });
 
     /**
+     * Passenger updates their live location.
+     * Payload: { rideId, passengerId, passengerName, lat, lng }
+     */
+    socket.on(
+      'passenger_location_update',
+      (payload: { rideId: string; passengerId?: string; passengerName?: string; lat: number; lng: number }) => {
+        const { rideId, passengerId, passengerName, lat, lng } = payload;
+        const trackingRoom = `tracking:${rideId}`;
+        const locationData = { passengerId, passengerName, lat, lng, timestamp: Date.now() };
+        io?.to(trackingRoom).emit('passenger_location', locationData);
+      }
+    );
+
+    /**
      * Driver stops sharing location (ride completed or manually stopped).
      * Payload: { rideId }
      */
@@ -145,6 +159,18 @@ export const getIO = (): SocketIOServer => {
 export const sendToUser = (userId: string, eventName: string, data: any) => {
   if (io) {
     io.to(userId).emit(eventName, data);
+  }
+};
+
+export const broadcastToAll = (eventName: string, data: any) => {
+  if (io) {
+    io.emit(eventName, data);
+  }
+};
+
+export const broadcastToRoom = (room: string, eventName: string, data: any) => {
+  if (io) {
+    io.to(room).emit(eventName, data);
   }
 };
 

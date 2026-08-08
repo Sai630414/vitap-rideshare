@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useSocket } from '../context/SocketContext';
@@ -15,6 +15,8 @@ import {
   MessageSquare,
   AlertTriangle,
   Navigation,
+  Navigation2,
+  ShieldCheck,
   CloudSun,
   Locate,
   Map,
@@ -26,10 +28,12 @@ import Badge from '../components/ui/Badge';
 import ReviewDialog from '../components/ReviewDialog';
 import WeatherWidget from '../components/WeatherWidget';
 import LiveTrackingMap from '../components/LiveTrackingMap';
+import AutocompleteInput from '../components/AutocompleteInput';
 import rideService, { type RideData } from '../services/rideService';
 import bookingService, { type BookingData } from '../services/bookingService';
 import chatService from '../services/chatService';
 import MapContainerComponent from '../components/MapContainer';
+import locationPermissionService from '../services/locationPermissionService';
 import api from '../services/api';
 
 export const RideDetails: React.FC = () => {
@@ -60,6 +64,8 @@ export const RideDetails: React.FC = () => {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [existingDriverReview, setExistingDriverReview] = useState<any>(null);
   const [passengerReviewedMap, setPassengerReviewedMap] = useState<Record<string, any>>({});
+  const [isMandatoryReview, setIsMandatoryReview] = useState(false);
+  const [hasDismissedMandatory, setHasDismissedMandatory] = useState(false);
 
   // Weather (F5)
   const [weather, setWeather] = useState<any>(null);
@@ -82,19 +88,20 @@ export const RideDetails: React.FC = () => {
       } else {
         const bookRes = await bookingService.getMyBookings();
         if (bookRes.status === 'success') {
-          const matched = bookRes.data.bookings.find((b: any) => b.ride._id === id);
+          const matched = bookRes.data.bookings.find((b: any) => {
+            const rideId = typeof b.ride === 'object' && b.ride?._id ? b.ride._id : String(b.ride || '');
+            return rideId === id;
+          });
           setMyBooking(matched || null);
-
-          // Check if already reviewed driver
-          if (matched) {
-            try {
-              const revRes = await bookingService.getMyReview(id, 'driver');
-              if (revRes.status === 'success') {
-                setExistingDriverReview(revRes.data.review);
-              }
-            } catch (_) {}
-          }
         }
+
+        // Always check if passenger already reviewed driver for this ride
+        try {
+          const revRes = await bookingService.getMyReview(id, 'driver');
+          if (revRes.status === 'success' && revRes.data?.review) {
+            setExistingDriverReview(revRes.data.review);
+          }
+        } catch (_) {}
       }
     } catch (err) {
       toast.error('Failed to load ride details.');
@@ -107,12 +114,67 @@ export const RideDetails: React.FC = () => {
     fetchRideAndBookings();
   }, [fetchRideAndBookings]);
 
+  // Real-time Socket listeners for active trip screen
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handleRideUpdated = (updatedRide: RideData) => {
+      if (updatedRide._id === id) {
+        setRide(updatedRide);
+      }
+    };
+
+    const handleBookingCreated = (newBooking: BookingData) => {
+      const bRideId = typeof newBooking.ride === 'string' ? newBooking.ride : newBooking.ride?._id;
+      if (bRideId === id) {
+        setBookings((prev) => [newBooking, ...prev.filter((b) => b._id !== newBooking._id)]);
+      }
+    };
+
+    const handleBookingUpdated = (updatedBooking: BookingData) => {
+      const bRideId = typeof updatedBooking.ride === 'string' ? updatedBooking.ride : updatedBooking.ride?._id;
+      if (bRideId === id) {
+        setBookings((prev) => prev.map((b) => (b._id === updatedBooking._id ? updatedBooking : b)));
+        if (updatedBooking.passenger._id === user?._id) {
+          setMyBooking(updatedBooking);
+        }
+      }
+    };
+
+    socket.on('ride_updated', handleRideUpdated);
+    socket.on('booking_created', handleBookingCreated);
+    socket.on('booking_updated', handleBookingUpdated);
+
+    return () => {
+      socket.off('ride_updated', handleRideUpdated);
+      socket.off('booking_created', handleBookingCreated);
+      socket.off('booking_updated', handleBookingUpdated);
+    };
+  }, [socket, id, user]);
+
   useEffect(() => {
     if (ride) {
       setPickup(ride.source || '');
       setDrop(ride.destination || '');
     }
   }, [ride]);
+
+  // Auto-trigger mandatory driver review modal when driver completes the ride
+  useEffect(() => {
+    if (loading || !ride || !user || hasDismissedMandatory) return;
+    const isRideDriver = ride.driver._id === user._id;
+    if (
+      ride.status === 'completed' &&
+      !isRideDriver &&
+      myBooking &&
+      (myBooking.status === 'accepted' || myBooking.status === 'completed') &&
+      !existingDriverReview
+    ) {
+      setReviewDialogTarget({ name: ride.driver.name, type: 'driver' });
+      setIsMandatoryReview(true);
+      setReviewDialogOpen(true);
+    }
+  }, [loading, ride, user, myBooking, existingDriverReview, hasDismissedMandatory]);
 
   // Fetch weather for ride (F5)
   useEffect(() => {
@@ -134,34 +196,27 @@ export const RideDetails: React.FC = () => {
 
   const isDriver = ride?.driver._id === user?._id;
 
-  // ─── Passenger: Get current GPS location ────────────────────────────────────
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser.');
-      return;
-    }
+  // ─── Passenger: Get current GPS location with Android location permissions ─
+  const handleUseCurrentLocation = async () => {
     setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        setPickupCoords([lng, lat]);
-        try {
-          const res = await api.get(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          const addr = res.data?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          setPickup(addr);
-        } catch {
-          setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-        }
-        setGettingLocation(false);
-      },
-      () => {
-        toast.error('Could not get your current location.');
-        setGettingLocation(false);
-      },
-      { enableHighAccuracy: true }
-    );
+    try {
+      const coords = await locationPermissionService.getCurrentPosition();
+      const { latitude: lat, longitude: lng } = coords;
+      setPickupCoords([lng, lat]);
+      try {
+        const res = await api.get(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+        const addr = res.data?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        setPickup(addr);
+      } catch {
+        setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Could not get your current location.');
+    } finally {
+      setGettingLocation(false);
+    }
   };
 
   // ─── Booking ─────────────────────────────────────────────────────────────────
@@ -284,18 +339,33 @@ export const RideDetails: React.FC = () => {
         if (existingDriverReview) {
           await bookingService.updateReview(existingDriverReview._id, rating, comment);
           toast.success('Review updated!');
+          setExistingDriverReview((prev: any) => ({ ...prev, rating, comment }));
         } else {
-          await bookingService.createReview(ride._id, rating, comment);
+          const res = await bookingService.createReview(ride._id, rating, comment);
           toast.success('Driver review submitted! ⭐');
-          setExistingDriverReview({ rating, comment, createdAt: new Date().toISOString() });
+          setExistingDriverReview(
+            res?.data?.review || res?.review || { _id: 'rev_' + Date.now(), rating, comment, createdAt: new Date().toISOString() }
+          );
         }
+        setIsMandatoryReview(false);
+        setHasDismissedMandatory(true);
       } else if (reviewDialogTarget.passengerId) {
         await bookingService.createPassengerReview(ride._id, reviewDialogTarget.passengerId, rating, comment);
         toast.success('Passenger review submitted! ⭐');
         setPassengerReviewedMap((prev) => ({ ...prev, [reviewDialogTarget.passengerId!]: true }));
       }
+      setReviewDialogOpen(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to submit review.');
+      const msg = err.response?.data?.message || '';
+      if (msg.toLowerCase().includes('already reviewed')) {
+        toast.info('You have already reviewed this ride.');
+        setExistingDriverReview({ rating: 5, comment: '', createdAt: new Date().toISOString() });
+        setIsMandatoryReview(false);
+        setHasDismissedMandatory(true);
+        setReviewDialogOpen(false);
+      } else {
+        toast.error(msg || 'Failed to submit review.');
+      }
     } finally {
       setReviewLoading(false);
     }
@@ -314,73 +384,78 @@ export const RideDetails: React.FC = () => {
       <div className="text-center py-16">
         <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto mb-3 animate-pulse" />
         <p className="text-slate-600 font-extrabold text-sm">Ride not found or has been removed.</p>
+        <Link to="/search-rides" className="inline-block mt-4 text-xs font-black text-emerald-600 hover:underline">
+          ← Back to Ride Search
+        </Link>
       </div>
     );
   }
 
-  const departureDateObj = new Date(ride.departureDate);
-
   return (
-    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300">
-      
-      {/* Route Header Card */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-black text-slate-900">
-              {ride.source}
-            </span>
-            <span className="text-slate-400 font-bold">→</span>
-            <span className="text-base font-black text-slate-900">
-              {ride.destination}
-            </span>
-          </div>
-
-          <div>
-            {ride.status === 'scheduled' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700">Scheduled</span>}
-            {ride.status === 'ongoing' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700">On the Road 🚗</span>}
-            {ride.status === 'completed' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700">Completed</span>}
-            {ride.status === 'cancelled' && <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700">Cancelled</span>}
-          </div>
+    <div className="flex flex-col gap-4 py-2 max-w-xl mx-auto animate-in fade-in duration-300 pb-12">
+      {/* Top Banner & Header */}
+      <div className="bg-slate-900 text-white p-4 rounded-3xl shadow-lg flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Trip Specification</span>
+          <h1 className="text-base font-black tracking-tight mt-0.5">
+            {ride.source} → {ride.destination}
+          </h1>
         </div>
-
-        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-50 p-3 rounded-2xl">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-emerald-600" />
-            <span>
-              {departureDateObj.toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
+        <div className="flex items-center gap-2">
+          {ride.status === 'ongoing' && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse">
+              Trip Ongoing
             </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-emerald-600" />
-            <span>{ride.departureTime}</span>
-          </div>
-          <div className="ml-auto font-black text-slate-900 text-sm">
-            ₹{ride.price} <span className="text-[10px] text-slate-400 font-bold">/ seat</span>
-          </div>
+          )}
+          {ride.status === 'completed' && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              Completed
+            </span>
+          )}
+          {ride.status === 'scheduled' && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              Scheduled
+            </span>
+          )}
         </div>
       </div>
 
+      {/* Live Map or Route Preview */}
       <div className="flex flex-col gap-4">
-
-        {/* Feature 3: Live Tracking Map (shown when ride is ongoing) */}
-        {ride.status === 'ongoing' && (isDriver || myBooking?.status === 'accepted') && (
+        {/* Live GPS Tracking Map Section (if ongoing) */}
+        {(ride.status === 'ongoing' || ride.status === 'scheduled') && (
           <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-3">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-              <Navigation className="w-4 h-4 text-emerald-600 animate-pulse" />
-              <span className="text-xs font-black text-slate-900">Live Driver Tracking</span>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <Navigation2 className="w-4 h-4 text-emerald-600 animate-pulse" />
+                <span className="text-xs font-black text-slate-900">Live GPS Radar & Passenger Locations</span>
+              </div>
+              <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Realtime Socket</span>
             </div>
             <LiveTrackingMap
               socket={socket}
               rideId={ride._id}
               isDriver={isDriver}
               driverId={ride.driver._id}
-              passengerPickupCoords={myBooking?.pickupCoordinates}
-              passengerPickupAddress={myBooking?.pickup}
+              currentUserId={user?._id}
+              passengers={bookings
+                .filter((b) => b.status === 'accepted' || b.status === 'completed')
+                .map((b) => ({
+                  id: typeof b.passenger === 'object' && b.passenger?._id ? b.passenger._id : String(b.passenger || ''),
+                  name: typeof b.passenger === 'object' && b.passenger?.name ? b.passenger.name : 'Passenger',
+                  pickupCoords: b.pickupCoordinates,
+                  pickupAddress: b.pickup,
+                }))}
+              passengerPickupCoords={
+                isDriver
+                  ? bookings.find((b) => b.status === 'accepted' || b.status === 'completed')?.pickupCoordinates
+                  : myBooking?.pickupCoordinates
+              }
+              passengerPickupAddress={
+                isDriver
+                  ? bookings.find((b) => b.status === 'accepted' || b.status === 'completed')?.pickup
+                  : myBooking?.pickup
+              }
               rideStatus={ride.status}
             />
           </div>
@@ -392,14 +467,13 @@ export const RideDetails: React.FC = () => {
             <Map className="w-4 h-4 text-emerald-600" />
             <span className="text-xs font-black text-slate-900">Trip Route Preview</span>
           </div>
-          <div className="h-56 rounded-2xl overflow-hidden">
-            <MapContainerComponent
-              pickupCoords={ride.pickupLocation.coordinates}
-              dropCoords={ride.dropLocation.coordinates}
-              pickupAddress={ride.pickupLocation.address}
-              dropAddress={ride.dropLocation.address}
-            />
-          </div>
+          <MapContainerComponent
+            pickupCoords={ride.pickupLocation.coordinates}
+            dropCoords={ride.dropLocation.coordinates}
+            pickupAddress={ride.pickupLocation.address}
+            dropAddress={ride.dropLocation.address}
+            height="h-56"
+          />
         </div>
 
         {/* Departure Day Weather */}
@@ -428,12 +502,8 @@ export const RideDetails: React.FC = () => {
             <div className="flex-1 min-w-0">
               <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
                 {ride.driver.name}
-                {ride.driver.verifiedDriver && <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold bg-emerald-50 text-emerald-700">Verified Driver</span>}
+                <ShieldCheck className="w-4 h-4 text-emerald-600 fill-emerald-100 shrink-0" />
               </h3>
-              <p className="text-[10px] font-bold text-slate-400">{ride.driver.email}</p>
-              {((myBooking?.status === 'accepted') || isDriver) && ride.driver.phone && (
-                <p className="text-[11px] font-extrabold text-emerald-600 mt-0.5">Phone: {ride.driver.phone}</p>
-              )}
             </div>
 
             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-100">
@@ -506,12 +576,15 @@ export const RideDetails: React.FC = () => {
                           </span>
                           {booking.status === 'accepted' && (
                             <>
-                              <button
-                                onClick={() => handleLaunchChat(booking.passenger._id)}
-                                className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                              </button>
+                              {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                                <button
+                                  onClick={() => handleLaunchChat(booking.passenger._id)}
+                                  className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl"
+                                  title="Chat with Passenger"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               {ride.status === 'completed' && (
                                 <button
                                   onClick={() => openPassengerReviewDialog(booking.passenger._id, booking.passenger.name)}
@@ -626,49 +699,33 @@ export const RideDetails: React.FC = () => {
                       />
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Pickup Point</label>
-                        <button
-                          type="button"
-                          onClick={handleUseCurrentLocation}
-                          disabled={gettingLocation}
-                          className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-1"
-                        >
-                          <Locate className="w-3 h-3" />
-                          {gettingLocation ? 'Locating...' : 'Use GPS'}
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder="e.g. MH-2 Hostel Gate, Block 3"
-                          value={pickup}
-                          onChange={(e) => { setPickup(e.target.value); setPickupCoords(null); }}
-                          className="w-full pl-9 pr-3 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                          required
-                        />
-                      </div>
-                      {pickupCoords && (
-                        <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
-                          <CheckCircle className="w-3 h-3" />
-                          GPS location attached
-                        </p>
-                      )}
-                    </div>
+                    <AutocompleteInput
+                      label="Pickup Point"
+                      placeholder="Search pickup place, hostel, campus gate..."
+                      value={pickup}
+                      onChange={(val) => setPickup(val)}
+                      onSelect={(coords, name) => {
+                        setPickup(name);
+                        setPickupCoords(coords);
+                      }}
+                      required
+                    />
 
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Dropoff Point</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Academic Block 1 Gate"
-                        value={drop}
-                        onChange={(e) => setDrop(e.target.value)}
-                        className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                        required
-                      />
-                    </div>
+                    {pickupCoords && (
+                      <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1 ml-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Exact coordinates attached ({pickupCoords[1].toFixed(4)}, {pickupCoords[0].toFixed(4)})
+                      </p>
+                    )}
+
+                    <AutocompleteInput
+                      label="Dropoff Point"
+                      placeholder="Search drop location, landmark, station..."
+                      value={drop}
+                      onChange={(val) => setDrop(val)}
+                      onSelect={(coords, name) => setDrop(name)}
+                      required
+                    />
 
                     <div>
                       <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Message to Driver (Optional)</label>
@@ -721,13 +778,15 @@ export const RideDetails: React.FC = () => {
                   <CheckCircle className="w-4 h-4 text-emerald-600" />
                   <span>Seat Booking Approved 🎉</span>
                 </div>
-                <button
-                  onClick={() => handleLaunchChat(ride.driver._id)}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Chat with Driver
-                </button>
+                {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                  <button
+                    onClick={() => handleLaunchChat(ride.driver._id)}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Chat with Driver
+                  </button>
+                )}
                 {ride.status !== 'completed' && ride.status !== 'cancelled' && (
                   <button
                     onClick={handleCancelBooking}
@@ -757,12 +816,17 @@ export const RideDetails: React.FC = () => {
         {/* Review Dialog (F1 + F2) */}
         <ReviewDialog
           isOpen={reviewDialogOpen}
-          onClose={() => setReviewDialogOpen(false)}
+          onClose={() => {
+            setReviewDialogOpen(false);
+            setIsMandatoryReview(false);
+            setHasDismissedMandatory(true);
+          }}
           onSubmit={handleReviewSubmit}
           targetName={reviewDialogTarget.name}
           reviewType={reviewDialogTarget.type}
           existingReview={reviewDialogTarget.type === 'driver' ? existingDriverReview : null}
           loading={reviewLoading}
+          mandatory={isMandatoryReview}
         />
       </div>
     </div>

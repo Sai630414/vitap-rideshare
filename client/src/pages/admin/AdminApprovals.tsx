@@ -15,9 +15,12 @@ import Button from '../../components/ui/Button';
 import adminService from '../../services/adminService';
 import Dialog from '../../components/ui/Dialog';
 
+import useSocket from '../../context/SocketContext';
+
 export const AdminApprovals: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -54,6 +57,21 @@ export const AdminApprovals: React.FC = () => {
   useEffect(() => {
     fetchPendingDrivers();
   }, [searchQuery]);
+
+  // Real-time socket listener for admin approvals queue
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleAdminDriverUpdated = (updatedDriver: any) => {
+      fetchPendingDrivers();
+    };
+
+    socket.on('admin_driver_updated', handleAdminDriverUpdated);
+
+    return () => {
+      socket.off('admin_driver_updated', handleAdminDriverUpdated);
+    };
+  }, [socket]);
 
   const handleApprove = async (driverId: string) => {
     if (!window.confirm('Are you sure you want to APPROVE this driver registration?')) return;

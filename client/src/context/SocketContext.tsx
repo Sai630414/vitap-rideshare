@@ -74,6 +74,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } else {
         toast.info(msg);
       }
+
+      // Trigger native System Push Notification on mobile devices for ALL notification types (Rides, Approvals, Rejections, Chat)
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title || 'Waygo Alert', { body: body || msg });
+        } catch (e) {
+          console.warn('[SocketContext] System Notification error:', e);
+        }
+      }
     });
 
     // SOS Emergency Alert listener (Admins and nearby users receive this)

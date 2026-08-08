@@ -6,6 +6,7 @@ import Booking from '../models/Booking';
 import User from '../models/User';
 import AppError from '../utils/appError';
 import { sendNotificationToUser } from './notificationController';
+import { sendToUser } from '../services/socketService';
 
 // ──────────────────────────────────────────────
 // Helper: recalculate & persist average rating
@@ -97,6 +98,8 @@ export const createReview = async (
       'new_review',
       ride._id
     );
+
+    sendToUser(ride.driver.toString(), 'review_submitted', review);
 
     res.status(201).json({ status: 'success', data: { review } });
   } catch (error) {

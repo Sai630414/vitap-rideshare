@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, X, CheckCircle, Pencil } from 'lucide-react';
+import { Star, X, CheckCircle, Pencil, AlertCircle } from 'lucide-react';
 import Button from './ui/Button';
 
 interface ReviewDialogProps {
@@ -10,6 +10,7 @@ interface ReviewDialogProps {
   reviewType: 'driver' | 'passenger';
   existingReview?: { _id: string; rating: number; comment?: string; createdAt: string } | null;
   loading?: boolean;
+  mandatory?: boolean;
 }
 
 const ReviewDialog: React.FC<ReviewDialogProps> = ({
@@ -20,11 +21,18 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
   reviewType,
   existingReview,
   loading = false,
+  mandatory = false,
 }) => {
   const [rating, setRating] = useState(existingReview?.rating ?? 5);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState(existingReview?.comment ?? '');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSubmitted(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (existingReview) {
@@ -59,35 +67,55 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ backgroundColor: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(6px)' }}
+      onClick={(e) => {
+        if (!mandatory && e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-white border border-slate-100 rounded-3xl w-full max-w-md shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <div>
             <h2 className="text-base font-extrabold text-slate-900">
-              {existingReview ? 'Edit Your Review' : `Rate ${reviewType === 'driver' ? 'Driver' : 'Passenger'}`}
+              {mandatory
+                ? '⭐ Mandatory Driver Review'
+                : existingReview
+                ? 'Edit Your Review'
+                : `Rate ${reviewType === 'driver' ? 'Driver' : 'Passenger'}`}
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">{targetName}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {!mandatory && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {submitted && !existingReview ? (
+        {mandatory && !submitted && (
+          <div className="mx-5 mt-4 p-3 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center gap-2 text-[11px] font-bold text-amber-900 shadow-sm">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Ride has been completed. Please rate your driver to proceed.</span>
+          </div>
+        )}
+
+        {submitted ? (
           // Success state
           <div className="p-8 flex flex-col items-center text-center gap-3">
             <CheckCircle className="w-14 h-14 text-emerald-600 animate-bounce" />
-            <h3 className="text-base font-extrabold text-slate-900">Review Submitted!</h3>
+            <h3 className="text-base font-extrabold text-slate-900">
+              {existingReview ? 'Review Updated!' : 'Review Submitted!'}
+            </h3>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              Thank you for your feedback. It helps build a safer campus community.
+              Thank you for your rating. Your feedback helps keep WayGo safe and reliable.
             </p>
-            <Button onClick={onClose} className="mt-2 w-full">Close</Button>
+            <Button onClick={onClose} className="mt-2 w-full">
+              Continue
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
@@ -108,9 +136,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
                   >
                     <Star
                       className={`w-9 h-9 transition-colors duration-150 ${
-                        star <= activeRating
-                          ? 'text-amber-400 fill-amber-400'
-                          : 'text-slate-200'
+                        star <= activeRating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
                       }`}
                     />
                   </button>
@@ -157,16 +183,18 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
             )}
 
             <div className="flex gap-2.5 mt-1">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
+              {!mandatory && (
+                <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                  Cancel
+                </Button>
+              )}
               <Button
                 type="submit"
-                className="flex-1"
+                className={mandatory ? 'w-full' : 'flex-1'}
                 loading={loading}
                 disabled={(existingReview && !canEdit) || loading}
               >
-                {existingReview ? 'Update Review' : 'Submit Review'}
+                {existingReview ? 'Update Review' : 'Submit Rating & Continue'}
               </Button>
             </div>
           </form>

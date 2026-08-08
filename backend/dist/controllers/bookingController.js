@@ -10,6 +10,7 @@ const Chat_1 = require("../models/Chat");
 const appError_1 = __importDefault(require("../utils/appError"));
 const notificationController_1 = require("./notificationController");
 const paymentController_1 = require("./paymentController");
+const socketService_1 = require("../services/socketService");
 const createBooking = async (req, res, next) => {
     try {
         const { rideId, seatNumber = 1, pickup, drop, message, pickupCoordinates, dropCoordinates } = req.body;
@@ -67,12 +68,24 @@ const createBooking = async (req, res, next) => {
                 participants: [req.user.id, ride.driver],
             });
         }
+        const populatedBooking = await Booking_1.default.findById(booking._id)
+            .populate('passenger', 'name email phone registrationNumber branch year profileImage rating trustScore')
+            .populate({
+            path: 'ride',
+            populate: [
+                { path: 'driver', select: 'name email phone profileImage rating verifiedDriver trustScore' },
+                { path: 'vehicle', select: 'brand model type numberPlate color' },
+            ],
+        });
+        // Emit real-time socket event to driver & passenger
+        (0, socketService_1.sendToUser)(ride.driver.toString(), 'booking_created', populatedBooking);
+        (0, socketService_1.sendToUser)(req.user.id, 'booking_created', populatedBooking);
         // Notify the driver
         await (0, notificationController_1.sendNotificationToUser)(ride.driver.toString(), 'New Ride Request 🚗', `${req.user.name} requested ${requestedSeats} seat(s) on your ride from ${ride.source} to ${ride.destination}.`, 'booking_request', booking._id);
         res.status(201).json({
             status: 'success',
             data: {
-                booking,
+                booking: populatedBooking,
             },
         });
     }
@@ -153,10 +166,23 @@ const respondToBooking = async (req, res, next) => {
             // Notify passenger
             await (0, notificationController_1.sendNotificationToUser)(booking.passenger.toString(), 'Booking Rejected', `Your request for the ride to ${ride.destination} was rejected by the driver.`, 'booking_rejected', ride._id);
         }
+        const updatedBookingPopulated = await Booking_1.default.findById(booking._id)
+            .populate('passenger', 'name email phone registrationNumber branch year profileImage rating trustScore')
+            .populate({
+            path: 'ride',
+            populate: [
+                { path: 'driver', select: 'name email phone profileImage rating verifiedDriver trustScore' },
+                { path: 'vehicle', select: 'brand model type numberPlate color' },
+            ],
+        });
+        // Emit real-time booking status update to passenger & driver
+        (0, socketService_1.sendToUser)(booking.passenger.toString(), 'booking_updated', updatedBookingPopulated);
+        (0, socketService_1.sendToUser)(ride.driver.toString(), 'booking_updated', updatedBookingPopulated);
+        (0, socketService_1.broadcastToAll)('ride_updated', ride);
         res.status(200).json({
             status: 'success',
             data: {
-                booking,
+                booking: updatedBookingPopulated,
             },
         });
     }

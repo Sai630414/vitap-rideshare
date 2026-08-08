@@ -136,285 +136,310 @@ export const DriverRegister: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center p-4 bg-zinc-950/20 font-sans">
-      <div className="w-full max-w-lg z-10 flex flex-col gap-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-black tracking-tight text-zinc-100 flex items-center justify-center gap-2">
-            <Sparkles className="w-6 h-6 text-violet-400 animate-pulse" />
-            Driver Registration
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1 font-bold uppercase tracking-wider">
-            Onboard vehicle and apply to host rides
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in duration-300 font-sans">
+      <div className="w-full max-w-lg mx-auto flex flex-col gap-4">
+        
+        {/* Header Title Card */}
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-5 text-white shadow-md shadow-emerald-600/20 text-center flex flex-col items-center gap-1">
+          <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-1">
+            <Sparkles className="w-5 h-5 text-white animate-pulse" />
+          </div>
+          <h1 className="text-xl font-black tracking-tight">Driver Registration</h1>
+          <p className="text-xs text-emerald-100 font-bold uppercase tracking-wider">
+            Onboard vehicle and apply to host campus rides
           </p>
         </div>
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader className="text-center border-b border-zinc-850 pb-4">
+        <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col gap-5">
+          {/* Step Indicators */}
+          <div className="border-b border-slate-100 pb-4">
             <div className="flex justify-center items-center gap-3 mb-2">
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                step >= 1 ? 'bg-violet-600 text-white shadow' : 'bg-zinc-800 text-zinc-500'
+              <span className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-black transition-all ${
+                step >= 1 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'
               }`}>1</span>
-              <div className={`h-0.5 w-6 ${step >= 2 ? 'bg-violet-600' : 'bg-zinc-800'}`}></div>
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                step >= 2 ? 'bg-violet-600 text-white shadow' : 'bg-zinc-800 text-zinc-500'
+              <div className={`h-0.5 w-8 ${step >= 2 ? 'bg-emerald-600' : 'bg-slate-100'}`}></div>
+              <span className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-black transition-all ${
+                step >= 2 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'
               }`}>2</span>
-              <div className={`h-0.5 w-6 ${step >= 3 ? 'bg-violet-600' : 'bg-zinc-800'}`}></div>
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                step >= 3 ? 'bg-violet-600 text-white shadow' : 'bg-zinc-800 text-zinc-500'
+              <div className={`h-0.5 w-8 ${step >= 3 ? 'bg-emerald-600' : 'bg-slate-100'}`}></div>
+              <span className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-black transition-all ${
+                step >= 3 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'
               }`}>3</span>
             </div>
-            <CardTitle className="text-base text-zinc-200">
-              {step === 1 && 'Contact Configuration'}
-              {step === 2 && 'Vehicle Details'}
-              {step === 3 && 'Submit Scans'}
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {step === 1 && 'Setup active contacts'}
-              {step === 2 && 'Model specification and plate registers'}
-              {step === 3 && 'Upload files for review'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-xs">
-              {/* STEP 1: Contacts info */}
-              {step === 1 && (
-                <div className="flex flex-col gap-4">
-                  <Input
-                    label="Full Name"
+            <div className="text-center">
+              <h2 className="text-sm font-black text-slate-900">
+                {step === 1 && 'Contact Setup'}
+                {step === 2 && 'Vehicle Specifics'}
+                {step === 3 && 'Document Uploads'}
+              </h2>
+              <p className="text-[10px] font-bold text-slate-400">
+                {step === 1 && 'Verify active contact numbers'}
+                {step === 2 && 'Model specification & registration plates'}
+                {step === 3 && 'Submit photo scans for admin review'}
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-xs">
+            {/* STEP 1: Contacts info */}
+            {step === 1 && (
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Full Name</label>
+                  <input
+                    type="text"
                     value={user?.name || ''}
                     disabled
-                    icon={<User className="w-4 h-4 text-zinc-500" />}
+                    className="w-full p-3 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-500 outline-none"
                   />
-                  <Input
-                    label="College Email"
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">College Email</label>
+                  <input
+                    type="email"
                     value={user?.email || ''}
                     disabled
-                    icon={<Mail className="w-4 h-4 text-zinc-500" />}
+                    className="w-full p-3 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-500 outline-none"
                   />
-                  <Input
-                    label="Active Phone Number"
-                    placeholder="e.g. 9876543210"
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Active Phone Number *</label>
+                  <input
                     type="tel"
+                    placeholder="e.g. 9876543210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    icon={<Phone className="w-4 h-4" />}
-                    required
-                  />
-                  <Input
-                    label="Emergency Contact Number"
-                    placeholder="e.g. 9876543211"
-                    type="tel"
-                    value={emergencyContact}
-                    onChange={(e) => setEmergencyContact(e.target.value)}
-                    icon={<Phone className="w-4 h-4 text-red-500" />}
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                     required
                   />
                 </div>
-              )}
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Emergency Contact Number *</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876543211"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
-              {/* STEP 2: Vehicle specifics */}
-              {step === 2 && (
-                <div className="flex flex-col gap-4">
-                  <Input
-                    label="Driving Licence Number"
+            {/* STEP 2: Vehicle specifics */}
+            {step === 2 && (
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Driving Licence Number</label>
+                  <input
+                    type="text"
                     placeholder="e.g. AP07XX1234 (Optional if College ID specified)"
                     value={licenceNumber}
                     onChange={(e) => setLicenceNumber(e.target.value.toUpperCase())}
-                    icon={<FileText className="w-4 h-4" />}
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                   />
-                  <Input
-                    label="College ID Card Number"
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">College ID Card Number</label>
+                  <input
+                    type="text"
                     placeholder="e.g. 23MICXXXX (Optional if Licence specified)"
                     value={collegeCardNumber}
                     onChange={(e) => setCollegeCardNumber(e.target.value.toUpperCase())}
-                    icon={<FileText className="w-4 h-4 text-indigo-400" />}
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                   />
-                  <Input
-                    label="Vehicle Number Plate"
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Vehicle Number Plate *</label>
+                  <input
+                    type="text"
                     placeholder="e.g. AP39XX1234"
                     value={vehicleNumber}
                     onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                    icon={<Car className="w-4 h-4" />}
+                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                     required
                   />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="Vehicle Model"
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Vehicle Model *</label>
+                    <input
+                      type="text"
                       placeholder="e.g. Activa 6G / Swift"
                       value={vehicleModel}
                       onChange={(e) => setVehicleModel(e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                       required
                     />
-                    <Input
-                      label="Vehicle Colour"
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Vehicle Colour *</label>
+                    <input
+                      type="text"
                       placeholder="e.g. Black / White"
                       value={vehicleColour}
                       onChange={(e) => setVehicleColour(e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1">
-                      <label className="font-semibold text-zinc-400">Vehicle Type</label>
-                      <select
-                        value={vehicleType}
-                        onChange={(e) => setVehicleType(e.target.value as 'bike' | 'car')}
-                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 outline-none text-xs"
-                      >
-                        <option value="car">Car (4 Wheeler)</option>
-                        <option value="bike">Bike (2 Wheeler)</option>
-                      </select>
-                    </div>
-                    <Input
-                      label="Driving Experience (Years)"
-                      placeholder="e.g. 3"
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Vehicle Type</label>
+                    <select
+                      value={vehicleType}
+                      onChange={(e) => setVehicleType(e.target.value as 'bike' | 'car')}
+                      className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                    >
+                      <option value="car">Car (4 Wheeler)</option>
+                      <option value="bike">Bike (2 Wheeler)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">Experience (Years) *</label>
+                    <input
                       type="number"
+                      placeholder="e.g. 3"
                       value={drivingExperience}
                       onChange={(e) => setDrivingExperience(e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                       required
                     />
                   </div>
                 </div>
-              )}
-
-              {/* STEP 3: Scans & Uploads */}
-              {step === 3 && (
-                <div className="flex flex-col gap-4">
-                  {/* profilePhoto (optional) */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-semibold text-zinc-400">Optional: Update Profile Photo</span>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="profilePhotoInput"
-                        onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="profilePhotoInput"
-                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
-                      >
-                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                        <span className="text-zinc-500 truncate">
-                          {profilePhoto ? profilePhoto.name : 'Select profile photo scan'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* licenceImage */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-semibold text-zinc-400">Driving Licence Image Scan (Optional if ID uploaded)</span>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="licenceImageInput"
-                        onChange={(e) => setLicenceImage(e.target.files?.[0] || null)}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="licenceImageInput"
-                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
-                      >
-                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                        <span className="text-zinc-500 truncate">
-                          {licenceImage ? licenceImage.name : 'Select licence card photo'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* collegeCardImage */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-semibold text-zinc-400">College ID Image Scan (Optional if Licence uploaded)</span>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="collegeCardImageInput"
-                        onChange={(e) => setCollegeCardImage(e.target.files?.[0] || null)}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="collegeCardImageInput"
-                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
-                      >
-                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                        <span className="text-zinc-500 truncate">
-                          {collegeCardImage ? collegeCardImage.name : 'Select college ID card photo'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* vehicleImage */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-semibold text-zinc-400">Vehicle Photo Scan *</span>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="vehicleImageInput"
-                        onChange={(e) => setVehicleImage(e.target.files?.[0] || null)}
-                        className="hidden"
-                        required
-                      />
-                      <label
-                        htmlFor="vehicleImageInput"
-                        className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all flex-1"
-                      >
-                        <Upload className="w-4 h-4 text-violet-400 shrink-0" />
-                        <span className="text-zinc-500 truncate">
-                          {vehicleImage ? vehicleImage.name : 'Select vehicle photo'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Navigation buttons */}
-              <div className="flex justify-between items-center gap-4 mt-6 border-t border-zinc-850 pt-4">
-                {step > 1 ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={prevStep}
-                    className="flex items-center gap-1.5 px-4"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back
-                  </Button>
-                ) : (
-                  <Link to="/dashboard" className="text-zinc-400 hover:text-zinc-300 font-semibold py-2">
-                    Cancel Onboarding
-                  </Link>
-                )}
-
-                {step < 3 ? (
-                  <Button
-                    type="button"
-                    onClick={nextStep}
-                    className="flex items-center gap-1.5 px-5 ml-auto"
-                  >
-                    Next Step
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    loading={loading}
-                    className="ml-auto bg-violet-650 hover:bg-violet-700 text-white font-bold"
-                  >
-                    Submit Application
-                  </Button>
-                )}
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            )}
+
+            {/* STEP 3: Scans & Uploads */}
+            {step === 3 && (
+              <div className="flex flex-col gap-3">
+                {/* profilePhoto */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Optional: Profile Photo Scan</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="profilePhotoInput"
+                    onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="profilePhotoInput"
+                    className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-600 transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-slate-600 font-bold truncate">
+                      {profilePhoto ? profilePhoto.name : 'Select profile photo scan'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* licenceImage */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Driving Licence Scan (Optional if ID uploaded)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="licenceImageInput"
+                    onChange={(e) => setLicenceImage(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="licenceImageInput"
+                    className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-600 transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-slate-600 font-bold truncate">
+                      {licenceImage ? licenceImage.name : 'Select licence card photo'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* collegeCardImage */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">College ID Scan (Optional if Licence uploaded)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="collegeCardImageInput"
+                    onChange={(e) => setCollegeCardImage(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="collegeCardImageInput"
+                    className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-600 transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-slate-600 font-bold truncate">
+                      {collegeCardImage ? collegeCardImage.name : 'Select college ID card photo'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* vehicleImage */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Vehicle Photo Scan *</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="vehicleImageInput"
+                    onChange={(e) => setVehicleImage(e.target.files?.[0] || null)}
+                    className="hidden"
+                    required
+                  />
+                  <label
+                    htmlFor="vehicleImageInput"
+                    className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-600 transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-slate-600 font-bold truncate">
+                      {vehicleImage ? vehicleImage.name : 'Select vehicle photo'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation buttons */}
+            <div className="flex justify-between items-center gap-3 mt-4 border-t border-slate-100 pt-4">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-black flex items-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+              ) : (
+                <Link to="/dashboard" className="text-slate-400 hover:text-slate-600 text-xs font-bold py-2">
+                  Cancel Onboarding
+                </Link>
+              )}
+
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-emerald-600/20 ml-auto flex items-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <span>Next Step</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-emerald-600/20 ml-auto active:scale-95 transition-transform disabled:opacity-50"
+                >
+                  {loading ? 'Submitting Application...' : 'Submit Application'}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
