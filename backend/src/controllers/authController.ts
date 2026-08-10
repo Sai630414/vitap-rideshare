@@ -8,7 +8,7 @@ import Driver from '../models/Driver';
 import AppError from '../utils/appError';
 import logger from '../utils/logger';
 import { createAccessToken, createRefreshToken } from '../utils/jwt';
-import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
+import { uploadToR2, deleteFromR2 } from '../services/r2Service';
 import {
   sendWelcomeEmail,
   sendOTPEmail,
@@ -202,18 +202,23 @@ export const signupDriver = async (
       return next(new AppError('Vehicle number plate is already registered.', 400));
     }
 
-    // Upload documents
-    const profilePhotoUrl = await uploadToCloudinaryOrLocal(files.profilePhoto[0].path, 'profiles');
-    const vehicleImageUrl = await uploadToCloudinaryOrLocal(files.vehicleImage[0].path, 'vehicles');
+    // Upload documents to Cloudflare R2
+    const profileRes = await uploadToR2(files.profilePhoto[0], 'profiles');
+    const profilePhotoUrl = profileRes.url;
+
+    const vehicleRes = await uploadToR2(files.vehicleImage[0], 'vehicles');
+    const vehicleImageUrl = vehicleRes.url;
     
     let licenceImageUrl = '';
     if (files.licenceImage && files.licenceImage.length > 0) {
-      licenceImageUrl = await uploadToCloudinaryOrLocal(files.licenceImage[0].path, 'licences');
+      const licenceRes = await uploadToR2(files.licenceImage[0], 'licences');
+      licenceImageUrl = licenceRes.url;
     }
 
     let collegeCardImageUrl = '';
     if (files.collegeCardImage && files.collegeCardImage.length > 0) {
-      collegeCardImageUrl = await uploadToCloudinaryOrLocal(files.collegeCardImage[0].path, 'college_cards');
+      const collegeRes = await uploadToR2(files.collegeCardImage[0], 'college_cards');
+      collegeCardImageUrl = collegeRes.url;
     }
 
     logger.info("Documents Uploaded");
@@ -708,14 +713,20 @@ export const applyDriver = async (
     let collegeCardImageUrl = driver?.collegeCardImage;
     let vehicleImageUrl = driver?.vehicleImage;
 
-    if (files?.licenceImage) {
-      licenceImageUrl = await uploadToCloudinaryOrLocal(files.licenceImage[0].path, 'licences');
+    if (files?.licenceImage?.[0]) {
+      if (driver?.licenceImage) await deleteFromR2(driver.licenceImage);
+      const res = await uploadToR2(files.licenceImage[0], 'licences', userId);
+      licenceImageUrl = res.url;
     }
-    if (files?.collegeCardImage) {
-      collegeCardImageUrl = await uploadToCloudinaryOrLocal(files.collegeCardImage[0].path, 'college_cards');
+    if (files?.collegeCardImage?.[0]) {
+      if (driver?.collegeCardImage) await deleteFromR2(driver.collegeCardImage);
+      const res = await uploadToR2(files.collegeCardImage[0], 'college_cards', userId);
+      collegeCardImageUrl = res.url;
     }
-    if (files?.vehicleImage) {
-      vehicleImageUrl = await uploadToCloudinaryOrLocal(files.vehicleImage[0].path, 'vehicles');
+    if (files?.vehicleImage?.[0]) {
+      if (driver?.vehicleImage) await deleteFromR2(driver.vehicleImage);
+      const res = await uploadToR2(files.vehicleImage[0], 'vehicles', userId);
+      vehicleImageUrl = res.url;
     }
 
     if (files) {
@@ -723,9 +734,13 @@ export const applyDriver = async (
     }
 
     // Handle profile photo upload if provided
-    if (files?.profilePhoto) {
-      const profilePhotoUrl = await uploadToCloudinaryOrLocal(files.profilePhoto[0].path, 'profiles');
-      await User.findByIdAndUpdate(userId, { profileImage: profilePhotoUrl });
+    if (files?.profilePhoto?.[0]) {
+      const currentUser = await User.findById(userId);
+      if (currentUser?.profileImage) {
+        await deleteFromR2(currentUser.profileImage);
+      }
+      const profileRes = await uploadToR2(files.profilePhoto[0], 'profiles', userId);
+      await User.findByIdAndUpdate(userId, { profileImage: profileRes.url });
       logger.info(`Profile photo updated for user: ${userId}`);
     }
 

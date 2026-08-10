@@ -7,7 +7,7 @@ exports.removeFCMToken = exports.registerFCMToken = exports.reportUser = exports
 const User_1 = __importDefault(require("../models/User"));
 const Report_1 = __importDefault(require("../models/Report"));
 const appError_1 = __importDefault(require("../utils/appError"));
-const cloudinaryService_1 = require("../services/cloudinaryService");
+const r2Service_1 = require("../services/r2Service");
 const socketService_1 = require("../services/socketService");
 const getUserProfile = async (req, res, next) => {
     try {
@@ -65,9 +65,22 @@ const uploadAvatar = async (req, res, next) => {
         if (!req.file) {
             return next(new appError_1.default('Please select a file to upload', 400));
         }
-        // Upload using Cloudinary or local fallback
-        const fileUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(req.file.path, 'avatars');
-        const updatedUser = await User_1.default.findByIdAndUpdate(req.user.id, { $set: { profileImage: fileUrl } }, { new: true });
+        // Validate MIME type
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+            return next(new appError_1.default('Only JPEG, PNG and WebP images are allowed', 400));
+        }
+        const currentUser = await User_1.default.findById(req.user.id);
+        if (!currentUser) {
+            return next(new appError_1.default('User not found', 404));
+        }
+        // Delete existing avatar from R2 if present
+        if (currentUser.profileImage) {
+            await (0, r2Service_1.deleteFromR2)(currentUser.profileImage);
+        }
+        // Upload to Cloudflare R2 under uploads/avatars/{userId}/
+        const uploadResult = await (0, r2Service_1.uploadToR2)(req.file, 'avatars', req.user.id);
+        const updatedUser = await User_1.default.findByIdAndUpdate(req.user.id, { $set: { profileImage: uploadResult.url } }, { new: true }).select('-password');
         res.status(200).json({
             status: 'success',
             data: {

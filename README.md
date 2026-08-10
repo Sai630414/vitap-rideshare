@@ -9,7 +9,7 @@ Only users with `@vitapstudent.ac.in` or `@vitap.ac.in` domains are permitted to
 ## 🛠️ Tech Stack & Architecture
 
 - **Frontend**: React + Vite, TypeScript, React Router, TailwindCSS, React Query, Axios, React Hook Form, Zod, Socket.io Client, Leaflet + OpenStreetMap.
-- **Backend**: Node.js, Express, TypeScript, Mongoose, Socket.io, Multer, Cloudinary, Helmet, Rate Limiting, CORS, Winston Logger.
+- **Backend**: Node.js, Express, TypeScript, Mongoose, Socket.io, Multer, Cloudflare R2, Helmet, Rate Limiting, CORS, Winston Logger.
 - **Database**: MongoDB Atlas.
 - **Containerization**: Docker, Docker Compose.
 
@@ -20,14 +20,14 @@ Only users with `@vitapstudent.ac.in` or `@vitap.ac.in` domains are permitted to
 ### Prerequisites
 - Node.js (v18 or higher)
 - MongoDB running locally or a MongoDB Atlas URI
-- Cloudinary credentials (optional; fallback to local disk storage is fully supported)
+- Cloudflare R2 credentials (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL)
 - Google OAuth credentials (optional; developer sandbox bypass mode is enabled by default)
 
 ### Setup Configurations
 
 1. Clone the repository workspace.
 2. Setup Backend `.env` configuration:
-   Copy `backend/.env.example` to `backend/.env` and adjust the variables.
+   Ensure `backend/.env` is configured with all required environment variables.
 3. Setup Frontend `.env` configuration:
    Copy `client/.env.example` to `client/.env`.
 

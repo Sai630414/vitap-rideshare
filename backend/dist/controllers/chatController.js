@@ -8,7 +8,7 @@ const Chat_1 = require("../models/Chat");
 const User_1 = __importDefault(require("../models/User"));
 const Booking_1 = __importDefault(require("../models/Booking"));
 const appError_1 = __importDefault(require("../utils/appError"));
-const cloudinaryService_1 = require("../services/cloudinaryService");
+const r2Service_1 = require("../services/r2Service");
 const socketService_1 = require("../services/socketService");
 const notificationController_1 = require("./notificationController");
 const notification_service_1 = __importDefault(require("../services/notification.service"));
@@ -113,7 +113,8 @@ const sendMessage = async (req, res, next) => {
         }
         let imageUrl = '';
         if (req.file) {
-            imageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(req.file.path, 'chat');
+            const uploadRes = await (0, r2Service_1.uploadToR2)(req.file, 'chat', req.user.id);
+            imageUrl = uploadRes.url;
         }
         if (!text && !imageUrl) {
             return next(new appError_1.default('Cannot send an empty message', 400));
