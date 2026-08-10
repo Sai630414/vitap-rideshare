@@ -124,6 +124,7 @@ app.use('/api/admin', admin_1.default);
 app.use('/api/payments', payments_1.default);
 app.use('/api/weather', weather_1.default);
 app.use('/api/r2', r2Routes_1.default);
+app.use('/uploads', express_1.default.static(path_1.default.resolve('uploads')));
 // Direct Razorpay routes
 app.post('/api/create-order', auth_2.protect, paymentController_1.createOrderDirect);
 app.post('/api/verify-payment', auth_2.protect, paymentController_1.verifyPaymentDirect);

@@ -20,6 +20,19 @@ import Button from '../../components/ui/Button';
 import adminService from '../../services/adminService';
 import Dialog from '../../components/ui/Dialog';
 
+const formatImgUrl = (url?: string): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('.r2.cloudflarestorage.com/') && !url.includes('.r2.cloudflarestorage.com/vit-rideshare/')) {
+      return url.replace('.r2.cloudflarestorage.com/', '.r2.cloudflarestorage.com/vit-rideshare/');
+    }
+    return url;
+  }
+  const backendUrl = (import.meta.env.VITE_API_URL || 'https://vitap-rideshare.onrender.com').replace(/\/+$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${backendUrl}${cleanPath}`;
+};
+
 export const AdminDriverDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -144,7 +157,7 @@ export const AdminDriverDetails: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/60 p-6 border border-slate-850 rounded-3xl">
         <div className="flex items-center gap-4">
           <img
-            src={driver.user?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(driver.user?.name || '')}`}
+            src={formatImgUrl(driver.user?.profileImage) || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(driver.user?.name || '')}`}
             alt=""
             className="w-16 h-16 rounded-full object-cover border-2 border-emerald-950"
           />
@@ -352,10 +365,10 @@ export const AdminDriverDetails: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <p className="text-[10px] text-slate-500 font-bold uppercase text-center">Driving Licence Scan</p>
                   <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
-                    <img src={driver.licenceImage} className="w-full h-full object-cover" alt="" />
+                    <img src={formatImgUrl(driver.licenceImage)} className="w-full h-full object-cover" alt="" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                       <button
-                        onClick={() => setPreviewImage(driver.licenceImage || '')}
+                        onClick={() => setPreviewImage(formatImgUrl(driver.licenceImage))}
                         className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
                       >
                         <Eye className="w-4 h-4" />
@@ -370,10 +383,10 @@ export const AdminDriverDetails: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <p className="text-[10px] text-slate-500 font-bold uppercase text-center">College ID Card Scan</p>
                   <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
-                    <img src={driver.collegeCardImage} className="w-full h-full object-cover" alt="" />
+                    <img src={formatImgUrl(driver.collegeCardImage)} className="w-full h-full object-cover" alt="" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                       <button
-                        onClick={() => setPreviewImage(driver.collegeCardImage || '')}
+                        onClick={() => setPreviewImage(formatImgUrl(driver.collegeCardImage))}
                         className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
                       >
                         <Eye className="w-4 h-4" />
@@ -387,10 +400,10 @@ export const AdminDriverDetails: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <p className="text-[10px] text-slate-500 font-bold uppercase text-center">Vehicle Photo</p>
                 <div className="relative group bg-slate-950 rounded-2xl overflow-hidden border border-slate-850 aspect-video flex items-center justify-center">
-                  <img src={driver.vehicleImage} className="w-full h-full object-cover" alt="" />
+                  <img src={formatImgUrl(driver.vehicleImage)} className="w-full h-full object-cover" alt="" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                     <button
-                      onClick={() => setPreviewImage(driver.vehicleImage)}
+                      onClick={() => setPreviewImage(formatImgUrl(driver.vehicleImage))}
                       className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full cursor-pointer shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
                     >
                       <Eye className="w-4 h-4" />
@@ -412,9 +425,9 @@ export const AdminDriverDetails: React.FC = () => {
       >
         {previewImage && (
           <div className="flex flex-col items-center justify-center p-2">
-            <img src={previewImage} className="max-h-[70vh] rounded-xl object-contain border border-slate-800" alt="scan preview" />
+            <img src={formatImgUrl(previewImage)} className="max-h-[70vh] rounded-xl object-contain border border-slate-800" alt="scan preview" />
             <a
-              href={previewImage}
+              href={formatImgUrl(previewImage)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs font-bold text-emerald-400 hover:text-emerald-350 hover:underline mt-4 block"

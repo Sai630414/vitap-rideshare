@@ -140,6 +140,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/r2', r2Routes);
+app.use('/uploads', express.static(path.resolve('uploads')));
 
 // Direct Razorpay routes
 app.post('/api/create-order', protect as any, createOrderDirect as any);

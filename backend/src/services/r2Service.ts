@@ -40,6 +40,18 @@ export const extractKeyFromUrl = (urlOrKey: string): string | null => {
   }
 };
 
+export const getR2PublicBaseUrl = (): string => {
+  let baseUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, '') || '';
+  if (!baseUrl) {
+    throw new AppError('R2_PUBLIC_URL is not configured in environment variables', 500);
+  }
+  const bucketName = process.env.R2_BUCKET_NAME;
+  if (baseUrl.includes('.r2.cloudflarestorage.com') && bucketName && !baseUrl.endsWith(`/${bucketName}`)) {
+    baseUrl = `${baseUrl}/${bucketName}`;
+  }
+  return baseUrl;
+};
+
 /**
  * Upload an in-memory Multer file buffer to Cloudflare R2.
  */
@@ -75,11 +87,7 @@ export const uploadToR2 = async (
 
   await r2Client.send(command);
 
-  const baseUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, '');
-  if (!baseUrl) {
-    throw new AppError('R2_PUBLIC_URL is not configured in environment variables', 500);
-  }
-
+  const baseUrl = getR2PublicBaseUrl();
   const publicUrl = `${baseUrl}/${key}`;
 
   logger.info(`File uploaded successfully to Cloudflare R2: ${key}`);
