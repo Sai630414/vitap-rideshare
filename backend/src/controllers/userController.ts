@@ -111,7 +111,10 @@ export const uploadAvatar = async (
     ).select('-password');
 
     res.status(200).json({
+      success: true,
       status: 'success',
+      message: 'Profile image uploaded successfully',
+      avatarUrl: uploadResult.url,
       data: {
         user: updatedUser,
       },

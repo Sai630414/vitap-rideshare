@@ -17,23 +17,28 @@ export interface R2UploadResult {
 export const extractKeyFromUrl = (urlOrKey: string): string | null => {
   if (!urlOrKey) return null;
   
-  if (urlOrKey.includes('uploads/')) {
-    return urlOrKey.substring(urlOrKey.indexOf('uploads/'));
+  if (!urlOrKey.startsWith('http://') && !urlOrKey.startsWith('https://')) {
+    return urlOrKey; // Already an object key
   }
 
-  if (!urlOrKey.startsWith('http://') && !urlOrKey.startsWith('https://')) {
-    return urlOrKey; // Already a key
-  }
-  
   const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, '');
   if (publicUrl && urlOrKey.startsWith(publicUrl)) {
-    const key = urlOrKey.replace(`${publicUrl}/`, '');
-    return key;
+    return urlOrKey.replace(`${publicUrl}/`, '');
+  }
+
+  for (const prefix of ['avatars/', 'profiles/', 'licences/', 'vehicles/', 'chat/', 'uploads/']) {
+    if (urlOrKey.includes(prefix)) {
+      return urlOrKey.substring(urlOrKey.indexOf(prefix));
+    }
   }
   
   try {
     const urlObj = new URL(urlOrKey);
-    const pathname = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+    let pathname = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+    const bucketName = process.env.R2_BUCKET_NAME;
+    if (bucketName && pathname.startsWith(`${bucketName}/`)) {
+      pathname = pathname.replace(`${bucketName}/`, '');
+    }
     return pathname;
   } catch {
     return urlOrKey;
@@ -76,7 +81,7 @@ export const uploadToR2 = async (
   const folderStr = folder ? String(folder).trim().replace(/\/+$/, '') : 'general';
   const prefixStr = customPrefix ? String(customPrefix).trim() : '';
   const prefixPath = prefixStr ? `${prefixStr.replace(/\/+$/, '')}/` : '';
-  const key = `uploads/${folderStr}/${prefixPath}${fileName}`;
+  const key = `${folderStr}/${prefixPath}${fileName}`;
 
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME!,

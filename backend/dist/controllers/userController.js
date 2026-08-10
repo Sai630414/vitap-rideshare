@@ -82,7 +82,10 @@ const uploadAvatar = async (req, res, next) => {
         const uploadResult = await (0, r2Service_1.uploadToR2)(req.file, 'avatars', req.user.id);
         const updatedUser = await User_1.default.findByIdAndUpdate(req.user.id, { $set: { profileImage: uploadResult.url } }, { new: true }).select('-password');
         res.status(200).json({
+            success: true,
             status: 'success',
+            message: 'Profile image uploaded successfully',
+            avatarUrl: uploadResult.url,
             data: {
                 user: updatedUser,
             },
