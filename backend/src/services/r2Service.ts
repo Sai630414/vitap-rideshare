@@ -61,8 +61,10 @@ export const uploadToR2 = async (
   const randomSuffix = Math.floor(Math.random() * 10000);
   const fileName = `${timestamp}-${randomSuffix}-${cleanOriginalName}`;
 
-  const prefixPath = customPrefix ? `${customPrefix.replace(/\/+$/, '')}/` : '';
-  const key = `uploads/${folder}/${prefixPath}${fileName}`;
+  const folderStr = folder ? String(folder).trim().replace(/\/+$/, '') : 'general';
+  const prefixStr = customPrefix ? String(customPrefix).trim() : '';
+  const prefixPath = prefixStr ? `${prefixStr.replace(/\/+$/, '')}/` : '';
+  const key = `uploads/${folderStr}/${prefixPath}${fileName}`;
 
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME!,
