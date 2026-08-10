@@ -16,6 +16,11 @@ export interface R2UploadResult {
  */
 export const extractKeyFromUrl = (urlOrKey: string): string | null => {
   if (!urlOrKey) return null;
+  
+  if (urlOrKey.includes('uploads/')) {
+    return urlOrKey.substring(urlOrKey.indexOf('uploads/'));
+  }
+
   if (!urlOrKey.startsWith('http://') && !urlOrKey.startsWith('https://')) {
     return urlOrKey; // Already a key
   }

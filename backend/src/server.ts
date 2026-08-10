@@ -203,7 +203,7 @@ process.on('unhandledRejection', (err: Error) => {
 // Graceful Shutdown Handler for SIGTERM & SIGINT (essential for Render redeployments)
 const gracefulShutdown = (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
-  
+
   server.close(async () => {
     logger.info('HTTP and WebSocket servers closed.');
     try {
