@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeFCMToken = exports.registerFCMToken = exports.reportUser = exports.getBlocklist = exports.unblockUser = exports.blockUser = exports.uploadAvatar = exports.updateProfile = exports.getUserProfile = void 0;
+exports.deleteAccount = exports.removeFCMToken = exports.registerFCMToken = exports.reportUser = exports.getBlocklist = exports.unblockUser = exports.blockUser = exports.uploadAvatar = exports.updateProfile = exports.getUserProfile = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const Report_1 = __importDefault(require("../models/Report"));
 const appError_1 = __importDefault(require("../utils/appError"));
@@ -242,3 +242,25 @@ const removeFCMToken = async (req, res, next) => {
     }
 };
 exports.removeFCMToken = removeFCMToken;
+const deleteAccount = async (req, res, next) => {
+    try {
+        if (!req.user)
+            return next(new appError_1.default('Unauthorized', 401));
+        const user = await User_1.default.findById(req.user.id);
+        if (!user) {
+            return next(new appError_1.default('User not found', 404));
+        }
+        if (user.profileImage) {
+            await (0, r2Service_1.deleteFromR2)(user.profileImage);
+        }
+        await User_1.default.findByIdAndDelete(req.user.id);
+        res.status(200).json({
+            status: 'success',
+            message: 'Account and associated profile image deleted successfully',
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.deleteAccount = deleteAccount;

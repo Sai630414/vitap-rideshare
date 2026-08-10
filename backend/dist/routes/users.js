@@ -24,5 +24,6 @@ router.post('/unblock/:id', userController_1.unblockUser);
 router.post('/report/:id', userController_1.reportUser);
 router.post('/fcm-token', userController_1.registerFCMToken);
 router.delete('/fcm-token', userController_1.removeFCMToken);
+router.delete('/account', userController_1.deleteAccount);
 router.get('/:id', userController_1.getUserProfile);
 exports.default = router;

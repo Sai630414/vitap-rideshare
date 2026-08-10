@@ -309,3 +309,31 @@ export const removeFCMToken = async (
   }
 };
 
+export const deleteAccount = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    if (user.profileImage) {
+      await deleteFromR2(user.profileImage);
+    }
+
+    await User.findByIdAndDelete(req.user.id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Account and associated profile image deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
