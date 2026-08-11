@@ -78,61 +78,58 @@ exports.adminLogin = adminLogin;
  */
 const getDashboardStats = async (req, res, next) => {
     try {
-        const totalUsers = await User_1.default.countDocuments();
-        const totalStudents = await User_1.default.countDocuments({ role: 'student' });
-        const totalDriversCount = await User_1.default.countDocuments({ role: 'driver' });
-        const pendingApprovalsCount = await Driver_1.default.countDocuments({ approvalStatus: 'pending' });
-        const approvedDriversCount = await Driver_1.default.countDocuments({ approvalStatus: 'approved' });
-        // Rides stats
-        const completedTrips = await Ride_1.default.countDocuments({ status: 'completed' });
-        const cancelledTrips = await Ride_1.default.countDocuments({ status: 'cancelled' });
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        const todayTrips = await Ride_1.default.countDocuments({ createdAt: { $gte: todayStart } });
-        // Revenue from completed paid bookings (status becomes 'completed' after ride completion)
-        const paidCompletedBookings = await Booking_1.default.find({
-            status: 'completed',
-            paymentStatus: 'paid',
-        }).populate('ride').exec();
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const [totalUsers, totalStudents, totalDriversCount, pendingApprovalsCount, approvedDriversCount, completedTrips, cancelledTrips, todayTrips, paidCompletedBookings, registrationsTrend, rideTrend, approvalTrends,] = await Promise.all([
+            User_1.default.countDocuments(),
+            User_1.default.countDocuments({ role: 'student' }),
+            User_1.default.countDocuments({ role: 'driver' }),
+            Driver_1.default.countDocuments({ approvalStatus: 'pending' }),
+            Driver_1.default.countDocuments({ approvalStatus: 'approved' }),
+            Ride_1.default.countDocuments({ status: 'completed' }),
+            Ride_1.default.countDocuments({ status: 'cancelled' }),
+            Ride_1.default.countDocuments({ createdAt: { $gte: todayStart } }),
+            Booking_1.default.find({
+                status: 'completed',
+                paymentStatus: 'paid',
+            }).populate('ride').exec(),
+            User_1.default.aggregate([
+                { $match: { createdAt: { $gte: sevenDaysAgo } } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                        count: { $sum: 1 },
+                    },
+                },
+                { $sort: { _id: 1 } },
+            ]),
+            Ride_1.default.aggregate([
+                { $match: { createdAt: { $gte: sevenDaysAgo } } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                        count: { $sum: 1 },
+                    },
+                },
+                { $sort: { _id: 1 } },
+            ]),
+            Driver_1.default.aggregate([
+                {
+                    $group: {
+                        _id: '$approvalStatus',
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+        ]);
         let revenue = 0;
         paidCompletedBookings.forEach((booking) => {
             if (booking.ride) {
                 revenue += (booking.seatNumber || 1) * (booking.ride.price || 0);
             }
         });
-        // Registrations Grouped by Date (7 Days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const registrationsTrend = await User_1.default.aggregate([
-            { $match: { createdAt: { $gte: sevenDaysAgo } } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    count: { $sum: 1 },
-                },
-            },
-            { $sort: { _id: 1 } },
-        ]);
-        // Ride Growth Trend (7 Days)
-        const rideTrend = await Ride_1.default.aggregate([
-            { $match: { createdAt: { $gte: sevenDaysAgo } } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    count: { $sum: 1 },
-                },
-            },
-            { $sort: { _id: 1 } },
-        ]);
-        // Approval Status Trends
-        const approvalTrends = await Driver_1.default.aggregate([
-            {
-                $group: {
-                    _id: '$approvalStatus',
-                    count: { $sum: 1 },
-                },
-            },
-        ]);
         res.status(200).json({
             status: 'success',
             data: {

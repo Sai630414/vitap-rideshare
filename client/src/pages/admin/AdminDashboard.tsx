@@ -41,16 +41,7 @@ export const AdminDashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 text-slate-400 font-sans">
-        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-500 animate-pulse">
-          Computing analytics...
-        </p>
-      </div>
-    );
-  }
+
 
   // Render SVG Chart for Daily Registrations
   const renderLineChart = (data: { _id: string; count: number }[] = [], strokeColor = '#34d399') => {
@@ -178,7 +169,11 @@ export const AdminDashboard: React.FC = () => {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Students</p>
-              <p className="text-3xl font-black mt-1 text-slate-100">{stats?.totalStudents || 0}</p>
+              {loading ? (
+                <div className="h-8 w-16 bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-black mt-1 text-slate-100">{stats?.totalStudents || 0}</p>
+              )}
             </div>
             <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl">
               <Users className="w-5 h-5" />
@@ -190,7 +185,11 @@ export const AdminDashboard: React.FC = () => {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Approved Drivers</p>
-              <p className="text-3xl font-black mt-1 text-teal-400">{stats?.approvedDrivers || 0}</p>
+              {loading ? (
+                <div className="h-8 w-16 bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-black mt-1 text-teal-400">{stats?.approvedDrivers || 0}</p>
+              )}
             </div>
             <div className="p-3 bg-teal-500/10 text-teal-400 rounded-2xl">
               <Car className="w-5 h-5" />
@@ -202,7 +201,11 @@ export const AdminDashboard: React.FC = () => {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Approvals</p>
-              <p className="text-3xl font-black mt-1 text-amber-400">{stats?.pendingApprovals || 0}</p>
+              {loading ? (
+                <div className="h-8 w-16 bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-black mt-1 text-amber-400">{stats?.pendingApprovals || 0}</p>
+              )}
             </div>
             <div className="p-3 bg-amber-500/10 text-amber-400 rounded-2xl animate-pulse">
               <AlertTriangle className="w-5 h-5" />
@@ -214,7 +217,11 @@ export const AdminDashboard: React.FC = () => {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue Managed</p>
-              <p className="text-3xl font-black mt-1 text-emerald-400">₹{stats?.revenue || 0}</p>
+              {loading ? (
+                <div className="h-8 w-20 bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-black mt-1 text-emerald-400">₹{stats?.revenue || 0}</p>
+              )}
             </div>
             <div className="p-3 bg-emerald-500/15 text-emerald-400 rounded-2xl">
               <CircleDollarSign className="w-5 h-5" />

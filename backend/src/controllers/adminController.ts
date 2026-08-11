@@ -94,69 +94,74 @@ export const getDashboardStats = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalDriversCount = await User.countDocuments({ role: 'driver' });
-
-    const pendingApprovalsCount = await Driver.countDocuments({ approvalStatus: 'pending' });
-    const approvedDriversCount = await Driver.countDocuments({ approvalStatus: 'approved' });
-
-    // Rides stats
-    const completedTrips = await Ride.countDocuments({ status: 'completed' });
-    const cancelledTrips = await Ride.countDocuments({ status: 'cancelled' });
-
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const todayTrips = await Ride.countDocuments({ createdAt: { $gte: todayStart } });
 
-    // Revenue from completed paid bookings (status becomes 'completed' after ride completion)
-    const paidCompletedBookings = await Booking.find({
-      status: 'completed',
-      paymentStatus: 'paid',
-    }).populate('ride').exec();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [
+      totalUsers,
+      totalStudents,
+      totalDriversCount,
+      pendingApprovalsCount,
+      approvedDriversCount,
+      completedTrips,
+      cancelledTrips,
+      todayTrips,
+      paidCompletedBookings,
+      registrationsTrend,
+      rideTrend,
+      approvalTrends,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: 'student' }),
+      User.countDocuments({ role: 'driver' }),
+      Driver.countDocuments({ approvalStatus: 'pending' }),
+      Driver.countDocuments({ approvalStatus: 'approved' }),
+      Ride.countDocuments({ status: 'completed' }),
+      Ride.countDocuments({ status: 'cancelled' }),
+      Ride.countDocuments({ createdAt: { $gte: todayStart } }),
+      Booking.find({
+        status: 'completed',
+        paymentStatus: 'paid',
+      }).populate('ride').exec(),
+      User.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Ride.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Driver.aggregate([
+        {
+          $group: {
+            _id: '$approvalStatus',
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
     let revenue = 0;
     paidCompletedBookings.forEach((booking: any) => {
       if (booking.ride) {
         revenue += (booking.seatNumber || 1) * (booking.ride.price || 0);
       }
     });
-
-    // Registrations Grouped by Date (7 Days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const registrationsTrend = await User.aggregate([
-      { $match: { createdAt: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    // Ride Growth Trend (7 Days)
-    const rideTrend = await Ride.aggregate([
-      { $match: { createdAt: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    // Approval Status Trends
-    const approvalTrends = await Driver.aggregate([
-      {
-        $group: {
-          _id: '$approvalStatus',
-          count: { $sum: 1 },
-        },
-      },
-    ]);
 
     res.status(200).json({
       status: 'success',
