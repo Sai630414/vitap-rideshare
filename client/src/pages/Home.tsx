@@ -3,138 +3,416 @@ import { Link } from 'react-router-dom';
 import {
   Car,
   Shield,
-  MessageSquare,
   AlertTriangle,
-  MapPin,
   ChevronRight,
-  HelpCircle,
-  Users,
   Compass,
-  Zap,
 } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from '../context/AuthContext';
 
 export const Home: React.FC = () => {
   const { user, logout } = useAuth();
 
   const faqs = [
-    { q: 'Who can register?', a: 'Only VIT-AP members with @vitapstudent.ac.in or @vitap.ac.in emails.' },
-    { q: 'Is it free?', a: 'Prices are set by drivers to split fuel costs. We take zero commission.' },
-    { q: 'Is it safe?', a: 'All drivers are manually verified. Real-time GPS tracking and SOS alerts are active.' },
+    {
+      q: 'Who can register?',
+      a: 'Only VIT-AP members with @vitapstudent.ac.in or @vitap.ac.in emails.',
+    },
+    {
+      q: 'Is it free?',
+      a: 'Prices are set by drivers to split fuel costs. We take zero commission.',
+    },
+    {
+      q: 'Is it safe?',
+      a: 'All drivers are manually verified. Real-time GPS tracking and SOS alerts are active.',
+    },
   ];
 
   return (
     <div className="bg-background text-foreground min-h-screen flex flex-col font-sans antialiased">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-5">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Compass className="text-white w-6 h-6" />
-            </div>
-            <span className="text-2xl font-black tracking-tighter">Waygo</span>
-          </Link>
 
-          {!user ? (
-            <div className="flex items-center gap-6">
-              <Link to="/login" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Login</Link>
-              <Link to="/login"><Button size="sm" className="px-6 rounded-xl">Join Now</Button></Link>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4">
-              <Link to="/dashboard" className="flex items-center gap-3 px-4 py-2 hover:bg-muted/5 rounded-2xl transition-all">
-                <img src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt="" className="h-9 w-9 rounded-full border-2 border-primary/20 object-cover" />
-                <span className="text-sm font-black hidden md:block">{user.name.split(' ')[0]}</span>
-              </Link>
-              <Link to="/dashboard"><Button size="sm" variant="outline" className="rounded-xl">Dashboard</Button></Link>
-              <button onClick={logout} className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-destructive">Logout</button>
-            </div>
-          )}
+      {/* ================= NAVBAR ================= */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 md:px-8 pt-5">
+          <div className="flex items-center justify-between px-5 py-3 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl">
+
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+                <Compass className="text-white w-6 h-6" />
+              </div>
+
+              <div>
+                <span className="text-2xl font-black tracking-tight">
+                  Waygo
+                </span>
+                <span className="hidden sm:block text-[9px] font-bold uppercase tracking-[0.2em] text-primary">
+                  VIT-AP Rideshare
+                </span>
+              </div>
+            </Link>
+
+            {!user ? (
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/login"
+                  className="text-sm font-bold px-4 py-2 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Login
+                </Link>
+
+                <Link to="/login">
+                  <Button
+                    size="sm"
+                    className="px-6 rounded-xl shadow-lg shadow-primary/20"
+                  >
+                    Join Now
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-muted/10 rounded-xl transition-all"
+                >
+                  <img
+                    src={
+                      user.profileImage ||
+                      `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`
+                    }
+                    alt=""
+                    className="h-9 w-9 rounded-full border-2 border-primary/20 object-cover"
+                  />
+
+                  <span className="text-sm font-black hidden md:block">
+                    {user.name.split(' ')[0]}
+                  </span>
+                </Link>
+
+                <Link to="/dashboard">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl"
+                  >
+                    Dashboard
+                  </Button>
+                </Link>
+
+                <button
+                  onClick={logout}
+                  className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-destructive"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
+
+      {/* ================= HERO ================= */}
       <main className="flex-1">
-        {/* Hero */}
-        <section className="relative pt-24 pb-32 px-8 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/5 rounded-full blur-[120px] -z-10"></div>
-          <div className="max-w-5xl mx-auto text-center">
-             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-widest mb-10 animate-in fade-in slide-in-from-top-4 duration-1000">
-               <Shield className="w-3.5 h-3.5" />
-               VIT-AP Campus Network
-             </div>
-             <h1 className="text-5xl md:text-8xl font-black tracking-tight leading-[1.1] md:leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
-               Campus Travel, <br />
-               <span className="text-primary">Redefined.</span>
-             </h1>
-             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mt-10 font-medium leading-relaxed animate-in fade-in slide-in-from-bottom-10 duration-1000">
-               The official ride-sharing hub for VITians. Connect with verified drivers, share costs, and commute safely across campus.
-             </p>
-             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-16 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-               <Link to="/login" className="w-full sm:w-auto"><Button size="lg" className="w-full px-12 py-5 rounded-2xl text-lg shadow-2xl shadow-primary/30">Find a Ride <ChevronRight className="ml-2 w-5 h-5" /></Button></Link>
-               <Link to="/login" className="w-full sm:w-auto"><Button variant="outline" size="lg" className="w-full px-12 py-5 rounded-2xl text-lg bg-white">Offer a Ride</Button></Link>
-             </div>
-          </div>
-        </section>
 
-        {/* Features */}
-        <section className="py-32 px-8 bg-white border-y border-border">
-          <div className="max-w-7xl mx-auto">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-                {[
-                  { icon: Shield, title: 'Verified Only', desc: 'Strict @vitapstudent.ac.in authentication for total safety.', color: 'text-primary', bg: 'bg-primary/5' },
-                  { icon: Car, title: 'Cost Sharing', desc: 'Split fuel costs with fellow students. Zero platform fees.', color: 'text-secondary', bg: 'bg-secondary/5' },
-                  { icon: AlertTriangle, title: 'Safety First', desc: 'Real-time GPS tracking and instant SOS alert system.', color: 'text-destructive', bg: 'bg-destructive/5' },
-                ].map((f, i) => (
-                  <div key={i} className="flex flex-col items-center group">
-                    <div className={`w-20 h-20 ${f.bg} ${f.color} rounded-[2rem] flex items-center justify-center mb-8 transition-transform group-hover:scale-110 duration-500`}>
-                       <f.icon className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-2xl font-black mb-4">{f.title}</h3>
-                    <p className="text-muted-foreground font-medium leading-relaxed">{f.desc}</p>
-                  </div>
-                ))}
-             </div>
-          </div>
-        </section>
+        <section className="relative min-h-[760px] flex items-center overflow-hidden">
 
-        {/* Steps */}
-        <section className="py-32 px-8">
-           <div className="max-w-5xl mx-auto">
-              <h2 className="text-4xl font-black text-center mb-20">How it works</h2>
-              <div className="space-y-12">
-                 {[
-                   { n: '01', t: 'Search or Post', d: 'Find rides matching your schedule or list your own route if you are driving.' },
-                   { n: '02', t: 'Book & Chat', d: 'Request a seat and chat instantly with the driver once they accept.' },
-                   { n: '03', t: 'Ride & Rate', d: 'Complete your trip and rate your partner to build campus trust.' }
-                 ].map((s, i) => (
-                   <div key={i} className="flex items-start gap-10 p-10 bg-white rounded-[3rem] shadow-soft border border-border">
-                      <span className="text-6xl font-black text-primary/10">{s.n}</span>
-                      <div>
-                         <h4 className="text-2xl font-black mb-3">{s.t}</h4>
-                         <p className="text-muted-foreground font-medium text-lg">{s.d}</p>
-                      </div>
-                   </div>
-                 ))}
+          {/* VIT-AP BACKGROUND IMAGE */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: "url('/vitap-campus.jpg')",
+            }}
+          />
+
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-black/55" />
+
+          {/* Green gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-primary/20" />
+
+          {/* Hero content */}
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-8 pt-28 pb-24">
+
+            <div className="max-w-3xl">
+
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full bg-white/15 backdrop-blur-md border border-white/30 text-white text-[10px] font-black uppercase tracking-[0.2em]">
+                <Shield className="w-4 h-4 text-green-400" />
+                VIT-AP Campus Network
               </div>
-           </div>
+
+              {/* Heading */}
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95] text-white">
+                Your Campus.
+                <br />
+
+                <span className="text-primary">
+                  Your Ride.
+                </span>
+              </h1>
+
+              {/* Description */}
+              <p className="text-lg md:text-xl text-white/80 max-w-2xl mt-8 font-medium leading-relaxed">
+                The official ride-sharing hub for VITians.
+                Connect with verified drivers, share costs,
+                and travel safely across campus.
+              </p>
+
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 mt-10">
+
+                <Link
+                  to="/login"
+                  className="w-full sm:w-auto"
+                >
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto px-10 py-5 rounded-2xl text-lg shadow-2xl shadow-primary/30"
+                  >
+                    Find a Ride
+                    <ChevronRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+
+                <Link
+                  to="/login"
+                  className="w-full sm:w-auto"
+                >
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto px-10 py-5 rounded-2xl text-lg bg-white/95 hover:bg-white"
+                  >
+                    Offer a Ride
+                  </Button>
+                </Link>
+
+              </div>
+
+              {/* Trust indicators */}
+              <div className="flex flex-wrap gap-6 mt-10 text-white/80 text-sm font-semibold">
+
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-green-400" />
+                  Verified Students
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Car className="w-4 h-4 text-green-400" />
+                  Cost Sharing
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-green-400" />
+                  Safety First
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          {/* Bottom fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+
         </section>
+
+
+        {/* ================= FEATURES ================= */}
+        <section className="py-24 px-6 md:px-8 bg-background">
+
+          <div className="max-w-7xl mx-auto">
+
+            <div className="text-center mb-16">
+
+              <span className="text-primary text-xs font-black uppercase tracking-[0.25em]">
+                Why Waygo
+              </span>
+
+              <h2 className="text-4xl md:text-5xl font-black mt-3">
+                Travel smarter. Travel together.
+              </h2>
+
+              <p className="text-muted-foreground max-w-2xl mx-auto mt-5">
+                A safer and easier way for VIT-AP students to share rides
+                and reduce travel costs.
+              </p>
+
+            </div>
+
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              {[
+                {
+                  icon: Shield,
+                  title: 'Verified Only',
+                  desc: 'Strict VIT-AP authentication keeps the community trusted and secure.',
+                },
+                {
+                  icon: Car,
+                  title: 'Cost Sharing',
+                  desc: 'Split fuel costs with fellow students without platform commissions.',
+                },
+                {
+                  icon: AlertTriangle,
+                  title: 'Safety First',
+                  desc: 'Built-in safety features help students travel with confidence.',
+                },
+              ].map((f, i) => (
+
+                <div
+                  key={i}
+                  className="group p-8 md:p-10 rounded-3xl bg-white border border-border shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300"
+                >
+
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-7 group-hover:bg-primary group-hover:text-white transition-all">
+                    <f.icon className="w-7 h-7" />
+                  </div>
+
+                  <h3 className="text-2xl font-black mb-3">
+                    {f.title}
+                  </h3>
+
+                  <p className="text-muted-foreground font-medium leading-relaxed">
+                    {f.desc}
+                  </p>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* ================= HOW IT WORKS ================= */}
+        <section className="py-24 px-6 md:px-8 bg-white">
+
+          <div className="max-w-6xl mx-auto">
+
+            <div className="text-center mb-16">
+
+              <span className="text-primary text-xs font-black uppercase tracking-[0.25em]">
+                Simple Process
+              </span>
+
+              <h2 className="text-4xl md:text-5xl font-black mt-3">
+                How it works
+              </h2>
+
+            </div>
+
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+              {[
+                {
+                  n: '01',
+                  t: 'Search or Post',
+                  d: 'Find rides matching your schedule or list your own route if you are driving.',
+                },
+                {
+                  n: '02',
+                  t: 'Book & Chat',
+                  d: 'Request a seat and chat instantly with the driver once they accept.',
+                },
+                {
+                  n: '03',
+                  t: 'Ride & Rate',
+                  d: 'Complete your trip and rate your partner to build campus trust.',
+                },
+              ].map((s, i) => (
+
+                <div
+                  key={i}
+                  className="relative p-8 rounded-3xl border border-border bg-background hover:border-primary/40 transition-all"
+                >
+
+                  <span className="text-7xl font-black text-primary/10">
+                    {s.n}
+                  </span>
+
+                  <h4 className="text-2xl font-black mt-3 mb-3">
+                    {s.t}
+                  </h4>
+
+                  <p className="text-muted-foreground font-medium leading-relaxed">
+                    {s.d}
+                  </p>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          </div>
+
+        </section>
+
       </main>
 
-      <footer className="bg-foreground text-white py-20 px-8">
-         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+
+      {/* ================= FOOTER ================= */}
+      <footer className="bg-foreground text-white py-16 px-6 md:px-8">
+
+        <div className="max-w-7xl mx-auto">
+
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+
             <div className="flex items-center gap-3">
-               <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-2xl">
-                  <Compass className="text-white w-7 h-7" />
-               </div>
-               <span className="text-3xl font-black tracking-tighter">Waygo</span>
+
+              <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center">
+                <Compass className="text-white w-6 h-6" />
+              </div>
+
+              <div>
+                <span className="text-2xl font-black tracking-tight">
+                  Waygo
+                </span>
+
+                <p className="text-white/40 text-xs mt-1">
+                  VIT-AP Campus Rideshare
+                </p>
+              </div>
+
             </div>
-            <p className="text-white/40 text-sm font-medium">&copy; {new Date().getFullYear()} Waygo VIT-AP. All rights reserved.</p>
-            <div className="flex gap-8">
-               <a href="#" className="text-sm font-black uppercase tracking-widest text-white/60 hover:text-primary transition-colors">Privacy</a>
-               <a href="#" className="text-sm font-black uppercase tracking-widest text-white/60 hover:text-primary transition-colors">Terms</a>
+
+
+            <p className="text-white/40 text-sm font-medium">
+              &copy; {new Date().getFullYear()} Waygo VIT-AP. All rights reserved.
+            </p>
+
+
+            <div className="flex gap-6">
+
+              <a
+                href="#"
+                className="text-xs font-black uppercase tracking-widest text-white/50 hover:text-primary transition-colors"
+              >
+                Privacy
+              </a>
+
+              <a
+                href="#"
+                className="text-xs font-black uppercase tracking-widest text-white/50 hover:text-primary transition-colors"
+              >
+                Terms
+              </a>
+
             </div>
-         </div>
+
+          </div>
+
+        </div>
+
       </footer>
+
     </div>
   );
 };
