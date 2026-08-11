@@ -89,17 +89,6 @@ const createPassengerMarkerIcon = (colorHex: string, labelText: string) => {
   });
 };
 
-// ─── Haversine distance formula ───────────────────────────────────────────────
-const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-};
-
 // ─── Component to smoothly pan map ───────────────────────────────────────────
 const PanToDriver: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
   const map = useMap();
@@ -413,11 +402,6 @@ const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
     let distKm: number | null = null;
     let etaMins: number | null = null;
-
-    if (driverLocation && pos) {
-      distKm = parseFloat(haversineKm(driverLocation.lat, driverLocation.lng, pos[0], pos[1]).toFixed(1));
-      etaMins = Math.max(1, Math.round((distKm / 30) * 60));
-    }
 
     return {
       ...p,
