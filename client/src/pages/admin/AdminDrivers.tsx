@@ -12,6 +12,19 @@ import {
 import Button from '../../components/ui/Button';
 import adminService from '../../services/adminService';
 
+const formatImgUrl = (url?: string): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('.r2.cloudflarestorage.com/') && !url.includes('.r2.cloudflarestorage.com/vit-rideshare/')) {
+      return url.replace('.r2.cloudflarestorage.com/', '.r2.cloudflarestorage.com/vit-rideshare/');
+    }
+    return url;
+  }
+  const backendUrl = (import.meta.env.VITE_API_URL || 'https://vitap-rideshare.onrender.com').replace(/\/+$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${backendUrl}${cleanPath}`;
+};
+
 export const AdminDrivers: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -137,7 +150,7 @@ export const AdminDrivers: React.FC = () => {
                     <td className="p-4 pl-6">
                       <div className="flex items-center gap-3">
                         <img
-                          src={drv.user?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(drv.user?.name || 'Driver')}`}
+                          src={formatImgUrl(drv.user?.profileImage) || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(drv.user?.name || 'Driver')}`}
                           alt=""
                           className="w-9 h-9 rounded-full object-cover border border-slate-800"
                         />

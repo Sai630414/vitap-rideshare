@@ -4,7 +4,7 @@ import { Chat, Message } from '../models/Chat';
 import User from '../models/User';
 import Booking from '../models/Booking';
 import AppError from '../utils/appError';
-import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
+import { uploadToR2 } from '../services/r2Service';
 import { getIO, isUserInChatRoom } from '../services/socketService';
 import { sendNotificationToUser } from './notificationController';
 import notificationService from '../services/notification.service';
@@ -143,7 +143,8 @@ export const sendMessage = async (
 
     let imageUrl = '';
     if (req.file) {
-      imageUrl = await uploadToCloudinaryOrLocal(req.file.path, 'chat');
+      const uploadRes = await uploadToR2(req.file, 'chat', req.user.id);
+      imageUrl = uploadRes.url;
     }
 
     if (!text && !imageUrl) {

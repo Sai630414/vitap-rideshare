@@ -3,7 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import Report from '../models/Report';
 import AppError from '../utils/appError';
-import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
+import { uploadToR2, deleteFromR2 } from '../services/r2Service';
 import { sendToUser } from '../services/socketService';
 
 export const getUserProfile = async (
@@ -85,17 +85,36 @@ export const uploadAvatar = async (
       return next(new AppError('Please select a file to upload', 400));
     }
 
-    // Upload using Cloudinary or local fallback
-    const fileUrl = await uploadToCloudinaryOrLocal(req.file.path, 'avatars');
+    // Validate MIME type
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return next(new AppError('Only JPEG, PNG and WebP images are allowed', 400));
+    }
+
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) {
+      return next(new AppError('User not found', 404));
+    }
+
+    // Delete existing avatar from R2 if present
+    if (currentUser.profileImage) {
+      await deleteFromR2(currentUser.profileImage);
+    }
+
+    // Upload to Cloudflare R2 under uploads/avatars/{userId}/
+    const uploadResult = await uploadToR2(req.file, 'avatars', req.user.id);
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { $set: { profileImage: fileUrl } },
+      { $set: { profileImage: uploadResult.url } },
       { new: true }
-    );
+    ).select('-password');
 
     res.status(200).json({
+      success: true,
       status: 'success',
+      message: 'Profile image uploaded successfully',
+      avatarUrl: uploadResult.url,
       data: {
         user: updatedUser,
       },
@@ -287,6 +306,34 @@ export const removeFCMToken = async (
     res.status(200).json({
       status: 'success',
       message: 'FCM token removed successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAccount = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    if (user.profileImage) {
+      await deleteFromR2(user.profileImage);
+    }
+
+    await User.findByIdAndDelete(req.user.id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Account and associated profile image deleted successfully',
     });
   } catch (error) {
     next(error);

@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMyLicence = exports.uploadLicence = void 0;
 const DrivingLicence_1 = __importDefault(require("../models/DrivingLicence"));
 const appError_1 = __importDefault(require("../utils/appError"));
-const cloudinaryService_1 = require("../services/cloudinaryService");
+const r2Service_1 = require("../services/r2Service");
 const uploadLicence = async (req, res, next) => {
     try {
         const { licenceNumber, expiry } = req.body;
@@ -26,15 +26,22 @@ const uploadLicence = async (req, res, next) => {
         if (existing && existing.user.toString() !== req.user.id) {
             return next(new appError_1.default('Driving licence number already registered by another user', 400));
         }
-        // Upload to Cloudinary/Local
-        const frontUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(frontFile.path, 'licences');
-        const backUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(backFile.path, 'licences');
+        const userLicence = await DrivingLicence_1.default.findOne({ user: req.user.id });
+        if (userLicence) {
+            if (userLicence.frontImage)
+                await (0, r2Service_1.deleteFromR2)(userLicence.frontImage);
+            if (userLicence.backImage)
+                await (0, r2Service_1.deleteFromR2)(userLicence.backImage);
+        }
+        // Upload to Cloudflare R2
+        const frontResult = await (0, r2Service_1.uploadToR2)(frontFile, 'licences', req.user.id);
+        const backResult = await (0, r2Service_1.uploadToR2)(backFile, 'licences', req.user.id);
         // Create or update driving licence
         const updatedLicence = await DrivingLicence_1.default.findOneAndUpdate({ user: req.user.id }, {
             licenceNumber,
             expiry: new Date(expiry),
-            frontImage: frontUrl,
-            backImage: backUrl,
+            frontImage: frontResult.url,
+            backImage: backResult.url,
             status: 'pending',
         }, { upsert: true, new: true });
         res.status(200).json({

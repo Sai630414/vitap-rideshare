@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import DrivingLicence from '../models/DrivingLicence';
 import AppError from '../utils/appError';
-import { uploadToCloudinaryOrLocal } from '../services/cloudinaryService';
+import { uploadToR2, deleteFromR2 } from '../services/r2Service';
 
 export const uploadLicence = async (
   req: AuthRequest,
@@ -31,9 +31,15 @@ export const uploadLicence = async (
       return next(new AppError('Driving licence number already registered by another user', 400));
     }
 
-    // Upload to Cloudinary/Local
-    const frontUrl = await uploadToCloudinaryOrLocal(frontFile.path, 'licences');
-    const backUrl = await uploadToCloudinaryOrLocal(backFile.path, 'licences');
+    const userLicence = await DrivingLicence.findOne({ user: req.user.id });
+    if (userLicence) {
+      if (userLicence.frontImage) await deleteFromR2(userLicence.frontImage);
+      if (userLicence.backImage) await deleteFromR2(userLicence.backImage);
+    }
+
+    // Upload to Cloudflare R2
+    const frontResult = await uploadToR2(frontFile, 'licences', req.user.id);
+    const backResult = await uploadToR2(backFile, 'licences', req.user.id);
 
     // Create or update driving licence
     const updatedLicence = await DrivingLicence.findOneAndUpdate(
@@ -41,8 +47,8 @@ export const uploadLicence = async (
       {
         licenceNumber,
         expiry: new Date(expiry),
-        frontImage: frontUrl,
-        backImage: backUrl,
+        frontImage: frontResult.url,
+        backImage: backResult.url,
         status: 'pending',
       },
       { upsert: true, new: true }

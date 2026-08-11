@@ -38,6 +38,7 @@ import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
 import weatherRoutes from './routes/weather';
 import passport from './config/passport';
+import r2Routes from './routes/r2Routes';
 import { protect } from './middleware/auth';
 import { createOrderDirect, verifyPaymentDirect } from './controllers/paymentController';
 
@@ -138,6 +139,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/weather', weatherRoutes);
+app.use('/api/r2', r2Routes);
+app.use('/uploads', express.static(path.resolve('uploads')));
 
 // Direct Razorpay routes
 app.post('/api/create-order', protect as any, createOrderDirect as any);
@@ -201,7 +204,7 @@ process.on('unhandledRejection', (err: Error) => {
 // Graceful Shutdown Handler for SIGTERM & SIGINT (essential for Render redeployments)
 const gracefulShutdown = (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
-  
+
   server.close(async () => {
     logger.info('HTTP and WebSocket servers closed.');
     try {

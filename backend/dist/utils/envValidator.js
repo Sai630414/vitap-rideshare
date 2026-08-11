@@ -32,12 +32,17 @@ const validateEnv = () => {
         process.exit(1);
     }
     logger_1.default.info('✅ Environment variables successfully validated.');
-    // Validate optional Cloudinary configuration
-    const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME &&
-        process.env.CLOUDINARY_API_KEY &&
-        process.env.CLOUDINARY_API_SECRET;
-    if (!hasCloudinary) {
-        logger_1.default.warn('⚠️ Cloudinary API keys (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are not configured. Local disk fallback will be used.');
+    // Validate Cloudflare R2 configuration
+    const hasR2 = process.env.R2_ACCOUNT_ID &&
+        process.env.R2_ACCESS_KEY_ID &&
+        process.env.R2_SECRET_ACCESS_KEY &&
+        process.env.R2_BUCKET_NAME &&
+        process.env.R2_PUBLIC_URL;
+    if (!hasR2) {
+        logger_1.default.warn('⚠️ Cloudflare R2 environment credentials (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL) are incomplete.');
+    }
+    else {
+        logger_1.default.info('✅ Cloudflare R2 environment variables configured.');
     }
 };
 exports.validateEnv = validateEnv;

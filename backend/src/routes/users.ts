@@ -9,6 +9,7 @@ import {
   reportUser,
   registerFCMToken,
   removeFCMToken,
+  deleteAccount,
 } from '../controllers/userController';
 import { applyDriver } from '../controllers/authController';
 import { protect } from '../middleware/auth';
@@ -41,6 +42,7 @@ router.post('/unblock/:id', unblockUser as any);
 router.post('/report/:id', reportUser as any);
 router.post('/fcm-token', registerFCMToken as any);
 router.delete('/fcm-token', removeFCMToken as any);
+router.delete('/account', deleteAccount as any);
 router.get('/:id', getUserProfile as any);
 
 export default router;

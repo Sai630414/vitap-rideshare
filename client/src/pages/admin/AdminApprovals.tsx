@@ -17,6 +17,19 @@ import Dialog from '../../components/ui/Dialog';
 
 import useSocket from '../../context/SocketContext';
 
+const formatImgUrl = (url?: string): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('.r2.cloudflarestorage.com/') && !url.includes('.r2.cloudflarestorage.com/vit-rideshare/')) {
+      return url.replace('.r2.cloudflarestorage.com/', '.r2.cloudflarestorage.com/vit-rideshare/');
+    }
+    return url;
+  }
+  const backendUrl = (import.meta.env.VITE_API_URL || 'https://vitap-rideshare.onrender.com').replace(/\/+$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${backendUrl}${cleanPath}`;
+};
+
 export const AdminApprovals: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -174,7 +187,7 @@ export const AdminApprovals: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-4 border-b border-slate-850 pb-3 mb-4">
                     <img
-                      src={drv.user?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(drv.user?.name || 'Driver')}`}
+                      src={formatImgUrl(drv.user?.profileImage) || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(drv.user?.name || 'Driver')}`}
                       alt={drv.user?.name}
                       className="w-11 h-11 rounded-full object-cover border border-slate-800"
                     />

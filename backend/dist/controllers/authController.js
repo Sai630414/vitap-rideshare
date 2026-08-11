@@ -45,7 +45,7 @@ const Driver_1 = __importDefault(require("../models/Driver"));
 const appError_1 = __importDefault(require("../utils/appError"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const jwt_1 = require("../utils/jwt");
-const cloudinaryService_1 = require("../services/cloudinaryService");
+const r2Service_1 = require("../services/r2Service");
 const emailService_1 = require("../services/emailService");
 const ADMIN_EMAIL = 'sai.23mic7189@vitapstudent.ac.in';
 const createSendToken = (user, statusCode, res) => {
@@ -188,16 +188,20 @@ const signupDriver = async (req, res, next) => {
             cleanupUploadedFiles(files);
             return next(new appError_1.default('Vehicle number plate is already registered.', 400));
         }
-        // Upload documents
-        const profilePhotoUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.profilePhoto[0].path, 'profiles');
-        const vehicleImageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.vehicleImage[0].path, 'vehicles');
+        // Upload documents to Cloudflare R2
+        const profileRes = await (0, r2Service_1.uploadToR2)(files.profilePhoto[0], 'profiles');
+        const profilePhotoUrl = profileRes.url;
+        const vehicleRes = await (0, r2Service_1.uploadToR2)(files.vehicleImage[0], 'vehicles');
+        const vehicleImageUrl = vehicleRes.url;
         let licenceImageUrl = '';
         if (files.licenceImage && files.licenceImage.length > 0) {
-            licenceImageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.licenceImage[0].path, 'licences');
+            const licenceRes = await (0, r2Service_1.uploadToR2)(files.licenceImage[0], 'licences');
+            licenceImageUrl = licenceRes.url;
         }
         let collegeCardImageUrl = '';
         if (files.collegeCardImage && files.collegeCardImage.length > 0) {
-            collegeCardImageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.collegeCardImage[0].path, 'college_cards');
+            const collegeRes = await (0, r2Service_1.uploadToR2)(files.collegeCardImage[0], 'college_cards');
+            collegeCardImageUrl = collegeRes.url;
         }
         logger_1.default.info("Documents Uploaded");
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -589,22 +593,35 @@ const applyDriver = async (req, res, next) => {
         let licenceImageUrl = driver?.licenceImage;
         let collegeCardImageUrl = driver?.collegeCardImage;
         let vehicleImageUrl = driver?.vehicleImage;
-        if (files?.licenceImage) {
-            licenceImageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.licenceImage[0].path, 'licences');
+        if (files?.licenceImage?.[0]) {
+            if (driver?.licenceImage)
+                await (0, r2Service_1.deleteFromR2)(driver.licenceImage);
+            const res = await (0, r2Service_1.uploadToR2)(files.licenceImage[0], 'licences', userId);
+            licenceImageUrl = res.url;
         }
-        if (files?.collegeCardImage) {
-            collegeCardImageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.collegeCardImage[0].path, 'college_cards');
+        if (files?.collegeCardImage?.[0]) {
+            if (driver?.collegeCardImage)
+                await (0, r2Service_1.deleteFromR2)(driver.collegeCardImage);
+            const res = await (0, r2Service_1.uploadToR2)(files.collegeCardImage[0], 'college_cards', userId);
+            collegeCardImageUrl = res.url;
         }
-        if (files?.vehicleImage) {
-            vehicleImageUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.vehicleImage[0].path, 'vehicles');
+        if (files?.vehicleImage?.[0]) {
+            if (driver?.vehicleImage)
+                await (0, r2Service_1.deleteFromR2)(driver.vehicleImage);
+            const res = await (0, r2Service_1.uploadToR2)(files.vehicleImage[0], 'vehicles', userId);
+            vehicleImageUrl = res.url;
         }
         if (files) {
             logger_1.default.info("Documents Uploaded");
         }
         // Handle profile photo upload if provided
-        if (files?.profilePhoto) {
-            const profilePhotoUrl = await (0, cloudinaryService_1.uploadToCloudinaryOrLocal)(files.profilePhoto[0].path, 'profiles');
-            await User_1.default.findByIdAndUpdate(userId, { profileImage: profilePhotoUrl });
+        if (files?.profilePhoto?.[0]) {
+            const currentUser = await User_1.default.findById(userId);
+            if (currentUser?.profileImage) {
+                await (0, r2Service_1.deleteFromR2)(currentUser.profileImage);
+            }
+            const profileRes = await (0, r2Service_1.uploadToR2)(files.profilePhoto[0], 'profiles', userId);
+            await User_1.default.findByIdAndUpdate(userId, { profileImage: profileRes.url });
             logger_1.default.info(`Profile photo updated for user: ${userId}`);
         }
         // Create or update driver application
