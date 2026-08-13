@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Lock, Check, X, ArrowRight } from 'lucide-react';
@@ -78,13 +79,24 @@ export const ResetPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-6 bg-zinc-950 overflow-hidden font-sans">
+      {/* Topbar Header */}
+      <header className="w-full absolute top-0 left-0 p-4 sm:p-6 flex items-center justify-between z-20">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src={logoImg} alt="Waygo Logo" className="w-9 h-9 object-contain rounded-xl shadow-sm" />
+          <span className="text-lg font-black tracking-tight">
+            <span className="text-white">Way</span>
+            <span className="text-emerald-400">go</span>
+          </span>
+        </Link>
+      </header>
+
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      <div className="w-full max-w-md z-10 flex flex-col gap-6">
+      <div className="w-full max-w-md z-10 flex flex-col gap-6 mt-12 sm:mt-0">
         <div className="text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent flex items-center justify-center gap-2">
-            <Lock className="w-8 h-8 text-violet-400 animate-pulse" />
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent flex items-center justify-center gap-2.5">
+            <img src={logoImg} alt="Waygo Logo" className="w-8 h-8 object-contain rounded-lg" />
             New Password
           </h1>
           <p className="text-sm text-zinc-400 mt-2 font-medium">

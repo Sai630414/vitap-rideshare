@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { User, Mail, Lock, Check, X, ArrowRight, Sparkles } from 'lucide-react';
+import { User, Mail, Lock, Check, X, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
@@ -16,6 +17,8 @@ export const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Password validation state rules
@@ -76,16 +79,30 @@ export const Signup: React.FC = () => {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-6 bg-zinc-950 overflow-hidden font-sans">
+      {/* Topbar Header */}
+      <header className="w-full absolute top-0 left-0 p-4 sm:p-6 flex items-center justify-between z-20">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src={logoImg} alt="Waygo Logo" className="w-9 h-9 object-contain rounded-xl shadow-sm" />
+          <span className="text-lg font-black tracking-tight">
+            <span className="text-white">Way</span>
+            <span className="text-emerald-400">go</span>
+          </span>
+        </Link>
+      </header>
+
       {/* Glow backgrounds */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      <div className="w-full max-w-md z-10 flex flex-col gap-6">
+      <div className="w-full max-w-md z-10 flex flex-col gap-6 mt-12 sm:mt-0">
         <div className="text-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent flex items-center justify-center gap-2">
-              <Sparkles className="w-6 h-6 text-violet-400 animate-pulse" />
-              VIT RideShare
+            <h1 className="text-3xl font-extrabold tracking-tight flex items-center justify-center gap-2.5">
+              <img src={logoImg} alt="Waygo Logo" className="w-8 h-8 object-contain rounded-lg" />
+              <span>
+                <span className="text-white">Way</span>
+                <span className="text-emerald-400">go</span>
+              </span>
             </h1>
           </Link>
           <p className="text-sm text-zinc-400 mt-2 font-medium">
@@ -134,7 +151,7 @@ export const Signup: React.FC = () => {
 
               {/* Password Requirement Checks */}
               <div className="p-3 bg-zinc-900/60 border border-zinc-800/50 rounded-xl flex flex-col gap-2">
-                <p className="text-[11px] font-semibold text-zinc-400">Password must contain:</p>
+                <p className="text-[11px] font-semibold text-zinc-300">Password must contain:</p>
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                   <div className="flex items-center gap-1.5 text-xs">
                     {rules.length ? (
@@ -142,7 +159,7 @@ export const Signup: React.FC = () => {
                     ) : (
                       <X className="w-3.5 h-3.5 text-zinc-650 shrink-0" />
                     )}
-                    <span className={rules.length ? 'text-emerald-400' : 'text-zinc-500'}>8+ Characters</span>
+                    <span className={rules.length ? 'text-emerald-400' : 'text-zinc-300'}>8+ Characters</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs">
                     {rules.uppercase ? (
@@ -150,7 +167,7 @@ export const Signup: React.FC = () => {
                     ) : (
                       <X className="w-3.5 h-3.5 text-zinc-650 shrink-0" />
                     )}
-                    <span className={rules.uppercase ? 'text-emerald-400' : 'text-zinc-500'}>Uppercase letter</span>
+                    <span className={rules.uppercase ? 'text-emerald-400' : 'text-zinc-300'}>Uppercase letter</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs">
                     {rules.lowercase ? (
@@ -158,7 +175,7 @@ export const Signup: React.FC = () => {
                     ) : (
                       <X className="w-3.5 h-3.5 text-zinc-650 shrink-0" />
                     )}
-                    <span className={rules.lowercase ? 'text-emerald-400' : 'text-zinc-500'}>Lowercase letter</span>
+                    <span className={rules.lowercase ? 'text-emerald-400' : 'text-zinc-300'}>Lowercase letter</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs">
                     {rules.number ? (
@@ -166,7 +183,7 @@ export const Signup: React.FC = () => {
                     ) : (
                       <X className="w-3.5 h-3.5 text-zinc-650 shrink-0" />
                     )}
-                    <span className={rules.number ? 'text-emerald-400' : 'text-zinc-500'}>One number</span>
+                    <span className={rules.number ? 'text-emerald-400' : 'text-zinc-300'}>One number</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs col-span-2">
                     {rules.special ? (
@@ -174,7 +191,7 @@ export const Signup: React.FC = () => {
                     ) : (
                       <X className="w-3.5 h-3.5 text-zinc-650 shrink-0" />
                     )}
-                    <span className={rules.special ? 'text-emerald-400' : 'text-zinc-500'}>Special character (@$!%*?&#)</span>
+                    <span className={rules.special ? 'text-emerald-400' : 'text-zinc-300'}>Special character (@$!%*?&#)</span>
                   </div>
                 </div>
               </div>

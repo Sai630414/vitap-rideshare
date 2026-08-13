@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Mail, Lock, ChevronRight, ShieldCheck } from 'lucide-react';
@@ -48,17 +49,27 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 antialiased">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 antialiased relative">
+      {/* Topbar Header */}
+      <header className="w-full absolute top-0 left-0 p-4 sm:p-6 flex items-center justify-between z-20">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src={logoImg} alt="Waygo Logo" className="w-9 h-9 object-contain rounded-xl shadow-sm" />
+          <span className="text-lg font-black tracking-tight">
+            <span className="text-slate-900">Way</span>
+            <span className="text-emerald-600">go</span>
+          </span>
+        </Link>
+      </header>
+
       {/* Decorative Elements */}
       <div className="fixed top-0 left-0 w-full h-1/3 bg-primary/5 -z-10 rounded-b-[4rem]"></div>
 
-      <div className="w-full max-w-md flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="w-full max-w-md flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 mt-12 sm:mt-0">
         <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center shadow-2xl shadow-primary/30 mb-2 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-            <ShieldCheck className="w-12 h-12 text-white" />
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground">
-            Waygo
+          <img src={logoImg} alt="Waygo Logo" className="w-20 h-20 object-contain rounded-3xl shadow-2xl shadow-primary/30 mb-2 transform rotate-3 hover:rotate-0 transition-transform duration-500" />
+          <h1 className="text-4xl font-black tracking-tight">
+            <span className="text-slate-900">Way</span>
+            <span className="text-emerald-600">go</span>
           </h1>
           <p className="text-muted-foreground font-medium max-w-[240px]">
             The premium ride-sharing network for VIT-AP
