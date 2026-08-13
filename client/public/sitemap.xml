@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
     <url>
         <loc>https://www.way-go.tech/</loc>
+        <lastmod>2026-08-13</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
     </url>
-
     <url>
-        <loc>https://www.way-go.tech/login/</loc>
+        <loc>https://www.way-go.tech/login</loc>
+        <lastmod>2026-08-13</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
     </url>
-
     <url>
-        <loc>https://www.way-go.tech/signup/</loc>
+        <loc>https://www.way-go.tech/signup</loc>
+        <lastmod>2026-08-13</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
     </url>
-
+  
 </urlset>

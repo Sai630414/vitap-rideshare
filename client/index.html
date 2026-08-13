@@ -1,25 +1,77 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- SEO and Title -->
-    <title>VIT RideShare | Campus Travel Redefined</title>
-    <meta name="description" content="Exclusive, secure ride-sharing platform for VIT-AP students and staff. Offer rides, search routes, chat in real-time, and commute safely." />
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Leaflet CSS for Maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
-  </head>
-  <body class="bg-background text-foreground transition-colors duration-300">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#020617" />
+
+  <!-- SEO Primary Meta Tags -->
+  <title>Waygo - Official VIT-AP Campus Ride Sharing & Travel Network</title>
+  <meta name="title" content="Waygo - Official VIT-AP Campus Ride Sharing & Travel Network" />
+  <meta name="description"
+    content="Waygo is the  secure ride-sharing network for VIT-AP students & faculty. Connect with verified drivers, split fuel costs transparently, live GPS tracking & emergency SOS alerts." />
+  <meta name="keywords"
+    content="Waygo, way-go.tech, VIT AP, VIT-AP rideshare, VIT AP carpool, campus travel, Vijayawada student ride, Amaravati rideshare, college commute" />
+  <meta name="author" content="Waygo VIT-AP" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <link rel="canonical" href="https://www.way-go.tech/" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.way-go.tech/" />
+  <meta property="og:title" content="Waygo - Campus Travel, Redefined | VIT-AP Ride Sharing" />
+  <meta property="og:description"
+    content="Exclusive & secure campus ride sharing network for VIT-AP members. Connect with verified student drivers, split costs fairly, and travel safely." />
+  <meta property="og:image" content="https://www.way-go.tech/logo.png" />
+  <meta property="og:site_name" content="Waygo" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://www.way-go.tech/" />
+  <meta name="twitter:title" content="Waygo - Official VIT-AP Campus Ride Sharing" />
+  <meta name="twitter:description"
+    content="Connect with verified VIT-AP student drivers, share travel costs, and commute safely with real-time GPS & SOS alerts." />
+  <meta name="twitter:image" content="https://www.way-go.tech/logo.png" />
+
+  <!-- JSON-LD Structured Data Schema for Google Indexing -->
+  <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Waygo",
+        "url": "https://www.way-go.tech/",
+        "logo": "https://www.way-go.tech/logo.png",
+        "description": "Waygo is the official campus ride-sharing and carpooling network for VIT-AP University students and staff.",
+        "applicationCategory": "TravelApplication",
+        "operatingSystem": "All",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Waygo VIT-AP",
+          "url": "https://www.way-go.tech/",
+          "logo": "https://www.way-go.tech/logo.png"
+        }
+      }
+    </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Leaflet CSS for Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+
+<body class="bg-background text-foreground transition-colors duration-300">
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

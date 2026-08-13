@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://way-go.tech/sitemap.xml
+Sitemap: https://www.way-go.tech/sitemap.xml
