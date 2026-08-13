@@ -11,7 +11,7 @@ const getBrevoClient = () => {
 };
 
 const client = getBrevoClient();
-const FROM_EMAIL = process.env.EMAIL_FROM || 'VIT RideShare <noreply@vitapstudent.ac.in>';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'Waygo <noreply@vitapstudent.ac.in>';
 
 // Helper to parse "Sender Name <sender@email.com>" into { name, email }
 const parseSender = (senderString: string) => {
@@ -19,7 +19,7 @@ const parseSender = (senderString: string) => {
   if (match) {
     return { name: match[1].trim(), email: match[2].trim() };
   }
-  return { name: 'VIT RideShare', email: senderString.trim() };
+  return { name: 'Waygo', email: senderString.trim() };
 };
 
 const sender = parseSender(FROM_EMAIL);
@@ -93,105 +93,154 @@ export const sendEmail = async (
   }
 };
 
-// Common HTML layout wrapper for brand consistency
+// Common HTML layout wrapper matching Waygo UI design system
 const wrapHtmlLayout = (content: string) => `
   <!DOCTYPE html>
   <html>
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>VIT RideShare</title>
+      <title>Waygo</title>
       <style>
         body {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #09090b;
-          color: #e4e4e7;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #020617;
+          color: #f8fafc;
           margin: 0;
           padding: 0;
           -webkit-font-smoothing: antialiased;
         }
         .container {
-          max-width: 600px;
+          max-width: 540px;
           margin: 40px auto;
-          background-color: #18181b;
-          border: 1px solid #27272a;
-          border-radius: 16px;
+          background-color: #0f172a;
+          border: 1px solid #1e293b;
+          border-radius: 24px;
           overflow: hidden;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
         }
         .header {
-          background: linear-gradient(135deg, #7c3aed, #4f46e5);
-          padding: 30px;
+          background-color: #090d16;
+          padding: 32px 24px 24px 24px;
           text-align: center;
+          border-bottom: 1px solid #1e293b;
+          position: relative;
         }
-        .header h1 {
-          color: #ffffff;
+        .header-accent {
+          height: 4px;
+          background: linear-gradient(90deg, #059669, #0d9488, #10b981);
+          width: 100%;
+        }
+        .logo-title {
+          font-size: 28px;
+          font-weight: 900;
+          letter-spacing: -0.8px;
           margin: 0;
-          font-size: 26px;
-          font-weight: 800;
-          letter-spacing: -0.5px;
+          color: #ffffff;
+        }
+        .logo-way {
+          color: #ffffff;
+        }
+        .logo-go {
+          color: #10b981;
+        }
+        .subtitle {
+          font-size: 11px;
+          font-weight: 700;
+          color: #10b981;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          margin-top: 4px;
         }
         .content {
-          padding: 40px 30px;
+          padding: 36px 32px;
           line-height: 1.6;
-          color: #d4d4d8;
+          color: #cbd5e1;
         }
         .content p {
-          margin: 0 0 20px 0;
+          margin: 0 0 18px 0;
           font-size: 15px;
+        }
+        .content strong {
+          color: #f8fafc;
         }
         .btn-container {
           text-align: center;
-          margin: 30px 0;
+          margin: 32px 0;
         }
         .btn {
-          background-color: #7c3aed;
+          background: linear-gradient(135deg, #059669, #10b981);
           color: #ffffff !important;
-          padding: 12px 28px;
-          font-weight: bold;
+          padding: 14px 32px;
+          font-weight: 800;
           text-decoration: none;
-          border-radius: 8px;
+          border-radius: 14px;
           display: inline-block;
           font-size: 15px;
-          transition: background-color 0.2s;
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+          transition: transform 0.2s;
         }
         .otp-box {
-          font-size: 36px;
-          font-weight: 800;
-          letter-spacing: 8px;
-          padding: 14px 28px;
-          background-color: #09090b;
-          color: #a78bfa;
-          border-radius: 12px;
-          border: 1px dashed #7c3aed;
+          font-size: 38px;
+          font-weight: 900;
+          letter-spacing: 10px;
+          padding: 16px 32px;
+          background-color: #022c22;
+          color: #34d399;
+          border-radius: 16px;
+          border: 1.5px dashed #10b981;
           display: inline-block;
           margin: 20px 0;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+        .remark-box {
+          background-color: #1e293b;
+          padding: 18px 22px;
+          border-left: 4px solid #f59e0b;
+          border-radius: 12px;
+          color: #f8fafc;
+          margin: 20px 0;
+          font-size: 14px;
+        }
+        .remark-box-danger {
+          background-color: #1e293b;
+          padding: 18px 22px;
+          border-left: 4px solid #ef4444;
+          border-radius: 12px;
+          color: #f8fafc;
+          margin: 20px 0;
+          font-size: 14px;
         }
         .footer {
-          background-color: #09090b;
-          padding: 20px 30px;
-          border-top: 1px solid #27272a;
+          background-color: #090d16;
+          padding: 24px 32px;
+          border-top: 1px solid #1e293b;
           text-align: center;
           font-size: 12px;
-          color: #71717a;
+          color: #64748b;
         }
         .footer a {
-          color: #a78bfa;
+          color: #10b981;
           text-decoration: none;
+          font-weight: 700;
         }
       </style>
     </head>
     <body>
       <div class="container">
+        <div class="header-accent"></div>
         <div class="header">
-          <h1>VIT RideShare</h1>
+          <h1 class="logo-title">
+            <span class="logo-way">Way</span><span class="logo-go">go</span>
+          </h1>
+          <div class="subtitle">VIT-AP Campus Network</div>
         </div>
         <div class="content">
           ${content}
         </div>
         <div class="footer">
-          <p>This is an automated system notification from VIT RideShare.</p>
-          <p>VIT-AP University, Beside AP Secretariat, Amaravati, Andhra Pradesh.</p>
+          <p style="margin-bottom: 4px;">Automated system notification from <strong>Waygo</strong>.</p>
+          <p style="margin-top: 0;">VIT-AP University, Beside AP Secretariat, Amaravati, AP.</p>
         </div>
       </div>
     </body>
@@ -202,16 +251,16 @@ const wrapHtmlLayout = (content: string) => `
  * Send Welcome Email
  */
 export const sendWelcomeEmail = async (email: string, name: string, role: string): Promise<void> => {
-  const subject = 'Welcome to VIT RideShare! 🚀';
+  const subject = 'Welcome to Waygo! 🚀';
   const roleText = role === 'driver' ? 'Driver Profile' : 'Student Profile';
   const content = `
-    <p>Dear ${name},</p>
-    <p>Welcome to <strong>VIT RideShare</strong>, the exclusive campus ride-sharing community for VIT-AP!</p>
-    <p>Your ${roleText} account has been successfully verified. You can now log into the application, coordinate with other students, split travel costs, and commute to Vijayawada, Guntur, or nearby campuses safely.</p>
+    <p>Dear <strong>${name}</strong>,</p>
+    <p>Welcome to <strong>Waygo</strong>, the official ride-sharing network for VIT-AP!</p>
+    <p>Your ${roleText} has been successfully verified. You can now log in to manage your campus rides, connect with verified drivers or passengers, and split travel costs transparently.</p>
     ${
       role === 'driver'
-        ? `<p>As a verified driver, you can now host rides, set your pricing, customize pickup/drop schedules, and manage seat bookings from your driver portal.</p>`
-        : `<p>You can search for active rides, book empty seats, review ratings of host drivers, and message them through our real-time portal.</p>`
+        ? `<p>As a verified driver, you can now post ride offers, set seat pricing, manage pickup schedules, and approve booking requests.</p>`
+        : `<p>You can search for active rides, book empty seats, check driver ratings, and message hosts in real-time.</p>`
     }
     <div class="btn-container">
       <a href="${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/login" class="btn">Access Dashboard</a>
@@ -227,14 +276,14 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
  * Send OTP Verification Email
  */
 export const sendOTPEmail = async (email: string, otp: string): Promise<void> => {
-  const subject = 'Verify Your College Account - VIT RideShare 🔑';
+  const subject = 'Verify Your Account - Waygo 🔑';
   const content = `
     <p>Hello,</p>
-    <p>Thank you for signing up on VIT RideShare. Please verify your email using the 6-digit One-Time Password (OTP) displayed below. This code is valid for <strong>10 minutes</strong>.</p>
+    <p>Thank you for registering on <strong>Waygo</strong>. Please verify your college email address using the 6-digit One-Time Password (OTP) below. This code is valid for <strong>10 minutes</strong>.</p>
     <div style="text-align: center;">
       <span class="otp-box">${otp}</span>
     </div>
-    <p>If you did not request this code, please disregard this email and secure your credentials.</p>
+    <p>If you did not request this verification code, please disregard this email.</p>
   `;
 
   const html = wrapHtmlLayout(content);
@@ -245,15 +294,15 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<void> =>
  * Send Password Reset Email
  */
 export const sendPasswordResetEmail = async (email: string, resetUrl: string): Promise<void> => {
-  const subject = 'Reset Your Password - VIT RideShare 🔒';
+  const subject = 'Reset Your Password - Waygo 🔒';
   const content = `
     <p>Hello,</p>
-    <p>A request was received to reset the password for your VIT RideShare account. This link is secure and remains active for <strong>15 minutes</strong>.</p>
-    <p>Click the button below to complete the password reset flow:</p>
+    <p>A request was received to reset the password for your <strong>Waygo</strong> account. This link is secure and remains active for <strong>15 minutes</strong>.</p>
+    <p>Click the button below to complete your password reset:</p>
     <div class="btn-container">
       <a href="${resetUrl}" class="btn">Reset Password</a>
     </div>
-    <p>If you did not make this request, you do not need to take any action; your password will remain unchanged.</p>
+    <p>If you did not make this request, your password will remain unchanged.</p>
   `;
 
   const html = wrapHtmlLayout(content);
@@ -264,15 +313,15 @@ export const sendPasswordResetEmail = async (email: string, resetUrl: string): P
  * Send Driver Approval Email
  */
 export const sendDriverApprovalEmail = async (email: string, name: string): Promise<void> => {
-  const subject = 'Driver Registration Approved! 🎖️ - VIT RideShare';
+  const subject = 'Driver Registration Approved! 🎖️ - Waygo';
   const content = `
-    <p>Dear ${name},</p>
+    <p>Dear <strong>${name}</strong>,</p>
     <p>We are excited to inform you that your driver registration documents (Driving Licence, RC, and Vehicle photos) have been reviewed and <strong>approved</strong> by our administrator!</p>
-    <p>Your profile is upgraded to the <strong>Driver</strong> role. You can now immediately start posting ride offers, checking passenger ride requests, and coordinating bookings.</p>
+    <p>Your profile is now upgraded to <strong>Driver</strong> status. You can immediately start posting ride offers, accepting passenger bookings, and sharing trips.</p>
     <div class="btn-container">
       <a href="${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/login" class="btn">Go to Driver Dashboard</a>
     </div>
-    <p>Please make sure to drive safely and adhere to the campus guidelines.</p>
+    <p>Please make sure to drive safely and adhere to campus guidelines.</p>
   `;
 
   const html = wrapHtmlLayout(content);
@@ -289,30 +338,30 @@ export const sendDriverRejectionEmail = async (
   isResubmission = false
 ): Promise<void> => {
   const subject = isResubmission
-    ? 'Document Resubmission Required ⚠️ - VIT RideShare'
-    : 'Driver Registration Rejected ❌ - VIT RideShare';
+    ? 'Document Resubmission Required ⚠️ - Waygo'
+    : 'Driver Registration Notice ❌ - Waygo';
 
   const content = `
-    <p>Dear ${name},</p>
-    <p>We have completed reviewing the vehicle and licensing documentation you submitted for your driver profile.</p>
+    <p>Dear <strong>${name}</strong>,</p>
+    <p>We have completed reviewing the vehicle and licensing documentation for your driver profile.</p>
     ${
       isResubmission
         ? `
       <p>Our administrator requests you to <strong>resubmit</strong> certain details due to the following reason:</p>
-      <div style="background-color: #27272a; padding: 20px; border-left: 4px solid #f59e0b; border-radius: 8px; color: #f3f4f6; margin: 20px 0; font-size: 14px;">
+      <div class="remark-box">
         <strong>Admin Remarks:</strong> ${reason}
       </div>
-      <p>Please log into your dashboard, review your upload fields, and submit clear photos of your license, RC, or vehicle details.</p>
+      <p>Please log into your account, review your upload fields, and submit clear photos of your license, RC, or vehicle details.</p>
       <div class="btn-container">
         <a href="${process.env.CLIENT_URL || 'https://vitap-rideshare.vercel.app'}/login" class="btn">Resubmit Documents</a>
       </div>
       `
         : `
-      <p>Regrettably, your driver profile registration request has been <strong>rejected</strong> due to the following reason:</p>
-      <div style="background-color: #27272a; padding: 20px; border-left: 4px solid #ef4444; border-radius: 8px; color: #f3f4f6; margin: 20px 0; font-size: 14px;">
+      <p>Regrettably, your driver profile registration request was not approved due to the following reason:</p>
+      <div class="remark-box-danger">
         <strong>Reason:</strong> ${reason}
       </div>
-      <p>If you believe this was an error, please reach out to the support desk or request assistance.</p>
+      <p>If you believe this was an error, please contact support for assistance.</p>
       `
     }
   `;

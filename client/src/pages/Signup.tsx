@@ -78,13 +78,13 @@ export const Signup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-6 bg-zinc-950 overflow-hidden font-sans">
+    <div className="min-h-screen relative flex items-center justify-center p-6  overflow-hidden font-sans">
       {/* Topbar Header */}
       <header className="w-full absolute top-0 left-0 p-4 sm:p-6 flex items-center justify-between z-20">
         <Link to="/" className="flex items-center gap-2.5">
           <img src={logoImg} alt="Waygo Logo" className="w-9 h-9 object-contain rounded-xl shadow-sm" />
           <span className="text-lg font-black tracking-tight">
-            <span className="text-white">Way</span>
+            <span className="text-slate-900">Way</span>
             <span className="text-emerald-400">go</span>
           </span>
         </Link>
@@ -100,7 +100,7 @@ export const Signup: React.FC = () => {
             <h1 className="text-3xl font-extrabold tracking-tight flex items-center justify-center gap-2.5">
               <img src={logoImg} alt="Waygo Logo" className="w-8 h-8 object-contain rounded-lg" />
               <span>
-                <span className="text-white">Way</span>
+                <span className="text-slate-900">Way</span>
                 <span className="text-emerald-400">go</span>
               </span>
             </h1>

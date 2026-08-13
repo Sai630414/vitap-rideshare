@@ -26,118 +26,149 @@ export const Home: React.FC = () => {
   ];
 
   return (
-    <div className="bg-background text-foreground min-h-screen flex flex-col font-sans antialiased">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-5">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={logoImg} alt="Waygo Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-primary/20" />
-            <span className="text-2xl font-black tracking-tighter">
-              <span className="text-slate-900">Way</span>
-              <span className="text-emerald-600">go</span>
-            </span>
+    <div className="min-h-screen  flex flex-col items-center justify-start antialiased sm:py-4 font-sans text-slate-900 dark:text-slate-100">
+      {/* Mobile-First Frame Container (Max 480px width centered on desktop, edge-to-edge on mobile) */}
+      <div className="w-full max-w-[480px] min-h-screen sm:min-h-[92vh] sm:max-h-[92vh] bg-slate-50 dark:bg-slate-950 sm:rounded-[2.5rem] shadow-2xl relative flex flex-col overflow-hidden border border-slate-800/20">
+
+        {/* Native Top Header */}
+        <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <img src={logoImg} alt="Waygo Logo" className="w-8 h-8 object-contain rounded-xl shadow-md group-active:scale-95 transition-transform" />
+            <div>
+              <span className="text-lg font-black tracking-tight leading-none block">
+                <span className="text-slate-900 dark:text-white">Way</span>
+                <span className="text-emerald-600 dark:text-emerald-400">go</span>
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider uppercase leading-none block mt-0.5">VITAP Campus</span>
+            </div>
           </Link>
 
           {!user ? (
-            <div className="flex items-center gap-6">
-              <Link to="/login" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Login</Link>
-              <Link to="/login"><Button size="sm" className="px-6 rounded-xl">Join Now</Button></Link>
+            <div className="flex items-center gap-2">
+              <Link to="/login" className="text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 px-2 py-1 transition-colors">
+                Login
+              </Link>
+              <Link to="/login">
+                <Button size="sm" className="px-3.5 py-1.5 rounded-xl text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 font-bold">
+                  Join Now
+                </Button>
+              </Link>
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              <Link to="/dashboard" className="flex items-center gap-3 px-4 py-2 hover:bg-muted/5 rounded-2xl transition-all">
-                <img src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt="" className="h-9 w-9 rounded-full border-2 border-primary/20 object-cover" />
-                <span className="text-sm font-black hidden md:block">{user.name.split(' ')[0]}</span>
+            <div className="flex items-center gap-2">
+              <Link to="/dashboard" className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <img src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt="" className="h-6 w-6 rounded-full object-cover border border-emerald-500/30" />
+                <span className="text-xs font-black truncate max-w-[80px]">{user.name.split(' ')[0]}</span>
               </Link>
-              <Link to="/dashboard"><Button size="sm" variant="outline" className="rounded-xl">Dashboard</Button></Link>
-              <button onClick={logout} className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-destructive">Logout</button>
+              <Link to="/dashboard">
+                <Button size="sm" variant="outline" className="rounded-xl text-xs px-2.5 py-1">
+                  Dashboard
+                </Button>
+              </Link>
+              <button onClick={logout} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors ml-1">
+                Logout
+              </button>
             </div>
           )}
-        </div>
-      </header>
+        </header>
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="relative pt-24 pb-32 px-8 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/5 rounded-full blur-[120px] -z-10"></div>
-          <div className="max-w-5xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-widest mb-10 animate-in fade-in slide-in-from-top-4 duration-1000">
+        {/* Scrollable Screen Content */}
+        <main className="flex-1 overflow-y-auto px-4 py-5 space-y-6 no-scrollbar">
+
+          {/* Hero */}
+          <section className="relative pt-4 pb-6 text-center overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
               <Shield className="w-3.5 h-3.5" />
-              VIT-AP Campus Network
+              <span>VIT-AP Campus Network</span>
             </div>
-            <h1 className="text-5xl md:text-8xl font-black tracking-tight leading-[1.1] md:leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
+
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
               Campus Travel, <br />
-              <span className="text-primary">Redefined.</span>
+              <span className="text-emerald-600 dark:text-emerald-400">Redefined.</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mt-10 font-medium leading-relaxed animate-in fade-in slide-in-from-bottom-10 duration-1000">
+
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-3 font-medium leading-relaxed max-w-xs mx-auto">
               The official ride-sharing hub for VITians. Connect with verified drivers, share costs, and commute safely across campus.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-16 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-              <Link to="/login" className="w-full sm:w-auto"><Button size="lg" className="w-full px-12 py-5 rounded-2xl text-lg shadow-2xl shadow-primary/30">Find a Ride <ChevronRight className="ml-2 w-5 h-5" /></Button></Link>
-              <Link to="/login" className="w-full sm:w-auto"><Button variant="outline" size="lg" className="w-full px-12 py-5 rounded-2xl text-lg bg-white">Offer a Ride</Button></Link>
-            </div>
-          </div>
-        </section>
 
-        {/* Features */}
-        <section className="py-32 px-8 bg-white border-y border-border">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+            <div className="flex flex-col gap-2.5 mt-6">
+              <Link to="/login" className="w-full">
+                <Button size="lg" className="w-full py-3.5 rounded-2xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all">
+                  Find a Ride <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Link to="/login" className="w-full">
+                <Button variant="outline" size="lg" className="w-full py-3.5 rounded-2xl text-sm font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                  Offer a Ride
+                </Button>
+              </Link>
+            </div>
+          </section>
+
+          {/* Features */}
+          <section className="space-y-3 pt-2">
+            <div className="space-y-3">
               {[
-                { icon: Shield, title: 'Verified Only', desc: 'Strict @vitapstudent.ac.in authentication for total safety.', color: 'text-primary', bg: 'bg-primary/5' },
-                { icon: Car, title: 'Cost Sharing', desc: 'Split fuel costs with fellow students. Zero platform fees.', color: 'text-secondary', bg: 'bg-secondary/5' },
-                { icon: AlertTriangle, title: 'Safety First', desc: 'Real-time GPS tracking and instant SOS alert system.', color: 'text-destructive', bg: 'bg-destructive/5' },
+                { icon: Shield, title: 'Verified Only', desc: 'Strict @vitapstudent.ac.in authentication for total safety.', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { icon: Car, title: 'Cost Sharing', desc: 'Split fuel costs with fellow students. Zero platform fees.', color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                { icon: AlertTriangle, title: 'Safety First', desc: 'Real-time GPS tracking and instant SOS alert system.', color: 'text-rose-500', bg: 'bg-rose-500/10' },
               ].map((f, i) => (
-                <div key={i} className="flex flex-col items-center group">
-                  <div className={`w-20 h-20 ${f.bg} ${f.color} rounded-[2rem] flex items-center justify-center mb-8 transition-transform group-hover:scale-110 duration-500`}>
-                    <f.icon className="w-10 h-10" />
+                <div key={i} className="flex items-start gap-3.5 p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <div className={`w-10 h-10 ${f.bg} ${f.color} rounded-xl flex items-center justify-center shrink-0 mt-0.5`}>
+                    <f.icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-2xl font-black mb-4">{f.title}</h3>
-                  <p className="text-muted-foreground font-medium leading-relaxed">{f.desc}</p>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">{f.title}</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed mt-0.5">{f.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Steps */}
-        <section className="py-32 px-8">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-4xl font-black text-center mb-20">How it works</h2>
-            <div className="space-y-12">
+          {/* Steps */}
+          <section className="space-y-3 pt-2">
+            <div className="text-left px-1">
+              <h2 className="text-base font-black tracking-tight text-slate-900 dark:text-white">How it works</h2>
+            </div>
+
+            <div className="space-y-3">
               {[
                 { n: '01', t: 'Search or Post', d: 'Find rides matching your schedule or list your own route if you are driving.' },
                 { n: '02', t: 'Book & Chat', d: 'Request a seat and chat instantly with the driver once they accept.' },
                 { n: '03', t: 'Ride & Rate', d: 'Complete your trip and rate your partner to build campus trust.' }
               ].map((s, i) => (
-                <div key={i} className="flex items-start gap-10 p-10 bg-white rounded-[3rem] shadow-soft border border-border">
-                  <span className="text-6xl font-black text-primary/10">{s.n}</span>
+                <div key={i} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                  <span className="text-3xl font-black text-emerald-500/30 shrink-0">{s.n}</span>
                   <div>
-                    <h4 className="text-2xl font-black mb-3">{s.t}</h4>
-                    <p className="text-muted-foreground font-medium text-lg">{s.d}</p>
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white">{s.t}</h4>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed">{s.d}</p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-      </main>
+          </section>
 
-      <footer className="bg-foreground text-white py-20 px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
-          <div className="flex items-center gap-3">
-            <img src={logoImg} alt="Waygo Logo" className="w-12 h-12 object-contain rounded-2xl shadow-2xl" />
-            <span className="text-3xl font-black tracking-tighter">
-              <span className="text-white">Way</span>
-              <span className="text-emerald-500">go</span>
-            </span>
-          </div>
-          <p className="text-white/40 text-sm font-medium">&copy; {new Date().getFullYear()} Waygo VIT-AP. All rights reserved.</p>
-          <div className="flex gap-8">
-            <a href="#" className="text-sm font-black uppercase tracking-widest text-white/60 hover:text-primary transition-colors">Privacy</a>
-            <a href="#" className="text-sm font-black uppercase tracking-widest text-white/60 hover:text-primary transition-colors">Terms</a>
-          </div>
-        </div>
-      </footer>
+          {/* Frame Footer */}
+          <footer className="pt-6 pb-2 border-t border-slate-200/60 dark:border-slate-800/60 text-center space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <img src={logoImg} alt="Waygo Logo" className="w-6 h-6 object-contain rounded-lg" />
+              <span className="text-sm font-black tracking-tighter">
+                <span className="text-slate-900 dark:text-white">Way</span>
+                <span className="text-emerald-500">go</span>
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">&copy; {new Date().getFullYear()} Waygo VIT-AP. All rights reserved.</p>
+            <div className="flex justify-center gap-6 pt-1">
+              <a href="#" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-500 transition-colors">Privacy</a>
+              <a href="#" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-500 transition-colors">Terms</a>
+            </div>
+          </footer>
+
+        </main>
+      </div>
     </div>
   );
 };
