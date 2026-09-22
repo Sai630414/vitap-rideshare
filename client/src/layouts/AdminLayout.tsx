@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 import {
   LayoutDashboard,
   Users,
@@ -42,8 +43,11 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
         {/* Brand */}
         <div className="p-6 border-b border-emerald-950/40">
           <Link to="/admin/dashboard" className="flex items-center gap-3">
-            <span className="text-lg font-black tracking-wider bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-              ADMIN PORTAL
+            <img src={logoImg} alt="Waygo Logo" className="w-8 h-8 object-contain rounded-lg" />
+            <span className="text-lg font-black tracking-tight">
+              <span className="text-white">Way</span>
+              <span className="text-emerald-400">go</span>
+              <span className="ml-2 text-xs font-bold text-emerald-400 tracking-wider uppercase">Admin</span>
             </span>
           </Link>
         </div>
@@ -101,8 +105,13 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
       {/* Mobile Header & Sidebar */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="flex md:hidden items-center justify-between px-6 py-4 border-b border-emerald-950/40 bg-slate-900/80 backdrop-blur-md">
-          <Link to="/admin/dashboard" className="text-sm font-black tracking-widest text-emerald-400">
-            ADMIN PORTAL
+          <Link to="/admin/dashboard" className="text-sm font-black tracking-wider flex items-center gap-2.5">
+            <img src={logoImg} alt="Waygo Logo" className="w-7 h-7 object-contain rounded-lg" />
+            <span>
+              <span className="text-white">Way</span>
+              <span className="text-emerald-400">go</span>
+              <span className="ml-1.5 text-xs font-bold text-emerald-400 tracking-widest uppercase">Admin</span>
+            </span>
           </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
