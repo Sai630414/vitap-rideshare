@@ -40,6 +40,7 @@ const payments_1 = __importDefault(require("./routes/payments"));
 const weather_1 = __importDefault(require("./routes/weather"));
 const passport_1 = __importDefault(require("./config/passport"));
 const r2Routes_1 = __importDefault(require("./routes/r2Routes"));
+const routes_1 = __importDefault(require("./routes/routes"));
 const auth_2 = require("./middleware/auth");
 const paymentController_1 = require("./controllers/paymentController");
 const app = (0, express_1.default)();
@@ -124,6 +125,7 @@ app.use('/api/admin', admin_1.default);
 app.use('/api/payments', payments_1.default);
 app.use('/api/weather', weather_1.default);
 app.use('/api/r2', r2Routes_1.default);
+app.use('/api/routes', routes_1.default);
 app.use('/uploads', express_1.default.static(path_1.default.resolve('uploads')));
 // Direct Razorpay routes
 app.post('/api/create-order', auth_2.protect, paymentController_1.createOrderDirect);

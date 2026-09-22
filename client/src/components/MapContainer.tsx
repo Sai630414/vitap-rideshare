@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Navigation, Clock } from 'lucide-react';
+import { Navigation, Clock } from 'lucide-react';
 import { reverseGeocode } from '../utils/locationUtils';
+import { getRouteEstimate } from '../services/routeService';
 
 const createMarkerIcon = (color: string) => {
   return L.divIcon({
@@ -23,14 +24,6 @@ const createMarkerIcon = (color: string) => {
 const greenIcon = createMarkerIcon('#0F9D58');
 const redIcon = createMarkerIcon('#EF4444');
 
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1));
-};
-
 const AutoFitBounds: React.FC<{ coords: [number, number][] }> = ({ coords }) => {
   const map = useMap();
   useEffect(() => {
@@ -45,8 +38,8 @@ const AutoFitBounds: React.FC<{ coords: [number, number][] }> = ({ coords }) => 
 };
 
 interface MapContainerProps {
-  pickupCoords?: [number, number];
-  dropCoords?: [number, number];
+  pickupCoords?: [number, number]; // [lng, lat]
+  dropCoords?: [number, number];   // [lng, lat]
   pickupAddress?: string;
   dropAddress?: string;
   interactive?: boolean;
@@ -64,16 +57,48 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
   height = 'h-48',
 }) => {
   const defaultCenter: [number, number] = [16.4971, 80.4992];
-  const [distance, setDistance] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
+  const [distanceDisplay, setDistanceDisplay] = useState<string | null>(null);
+  const [durationDisplay, setDurationDisplay] = useState<string | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState<boolean>(false);
+  const [routeError, setRouteError] = useState<boolean>(false);
 
   useEffect(() => {
+    let isMounted = true;
     if (pickupCoords && dropCoords) {
-      const roadDistance = parseFloat((calculateDistance(pickupCoords[1], pickupCoords[0], dropCoords[1], dropCoords[0]) * 1.3).toFixed(1));
-      setDistance(roadDistance);
-      setDuration(Math.max(5, Math.round((roadDistance / 35) * 60)));
+      setLoadingRoute(true);
+      setRouteError(false);
+      setDistanceDisplay(null);
+      setDurationDisplay(null);
+
+      getRouteEstimate(
+        { latitude: pickupCoords[1], longitude: pickupCoords[0] },
+        { latitude: dropCoords[1], longitude: dropCoords[0] }
+      )
+        .then((res) => {
+          if (isMounted) {
+            setDistanceDisplay(`${res.distanceKm} km`);
+            setDurationDisplay(`${res.durationMinutes} mins`);
+            setLoadingRoute(false);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to get route estimate from backend:', err);
+          if (isMounted) {
+            setRouteError(true);
+            setLoadingRoute(false);
+          }
+        });
+    } else {
+      setDistanceDisplay(null);
+      setDurationDisplay(null);
+      setLoadingRoute(false);
+      setRouteError(false);
     }
-  }, [pickupCoords, dropCoords]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pickupCoords?.[0], pickupCoords?.[1], dropCoords?.[0], dropCoords?.[1]]);
 
   const activeCoordinates: [number, number][] = [];
   if (pickupCoords) activeCoordinates.push([pickupCoords[1], pickupCoords[0]]);
@@ -101,7 +126,9 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
             </div>
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest text-emerald-800/70">Distance</p>
-              <p className="text-xs font-black text-slate-900">{distance} km</p>
+              <p className="text-xs font-black text-slate-900">
+                {loadingRoute ? 'Calculating...' : routeError ? 'Unavailable' : distanceDisplay}
+              </p>
             </div>
           </div>
           <div className="h-6 w-px bg-emerald-200/80"></div>
@@ -111,7 +138,9 @@ export const MapContainerComponent: React.FC<MapContainerProps> = ({
             </div>
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest text-emerald-800/70">Estimated Time</p>
-              <p className="text-xs font-black text-slate-900">{duration} mins</p>
+              <p className="text-xs font-black text-slate-900">
+                {loadingRoute ? 'Calculating...' : routeError ? 'Unavailable' : durationDisplay}
+              </p>
             </div>
           </div>
         </div>

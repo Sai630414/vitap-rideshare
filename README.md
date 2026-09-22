@@ -20,7 +20,6 @@ Only users with `@vitapstudent.ac.in` or `@vitap.ac.in` domains are permitted to
 ### Prerequisites
 - Node.js (v18 or higher)
 - MongoDB running locally or a MongoDB Atlas URI
-- Cloudflare R2 credentials (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL)
 - Google OAuth credentials (optional; developer sandbox bypass mode is enabled by default)
 
 ### Setup Configurations

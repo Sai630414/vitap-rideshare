@@ -19,9 +19,9 @@ import {
 } from 'lucide-react';
 import bookingService, { type BookingData } from '../services/bookingService';
 import notificationService, { type NotificationData } from '../services/notificationService';
-import DriverDashboard from './driver/DriverDashboard';
-
 import useSocket from '../context/SocketContext';
+
+const DriverDashboard = React.lazy(() => import('./driver/DriverDashboard'));
 
 // ==========================================
 // STUDENT DASHBOARD COMPONENT (Mobile First)
@@ -426,7 +426,14 @@ export const Dashboard: React.FC = () => {
   return (
     <>
       {user.role === 'driver' ? (
-        <DriverDashboard />
+        <React.Suspense fallback={
+          <div className="min-h-[300px] flex flex-col items-center justify-center gap-3">
+            <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-slate-500">Loading driver portal...</p>
+          </div>
+        }>
+          <DriverDashboard />
+        </React.Suspense>
       ) : (
         <StudentDashboard user={user} toast={toast} navigate={navigate} />
       )}

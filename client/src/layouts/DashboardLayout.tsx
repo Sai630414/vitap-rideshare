@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 import {
   Home,
   Search,
@@ -97,11 +98,12 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         {/* Native Top Header */}
         <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
           <Link to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-md shadow-emerald-600/20 group-active:scale-95 transition-transform">
-              <Compass className="text-white w-5 h-5" />
-            </div>
+            <img src={logoImg} alt="Waygo Logo" className="w-9 h-9 object-contain rounded-xl shadow-md group-active:scale-95 transition-transform" />
             <div>
-              <span className="text-lg font-black tracking-tight text-slate-900 leading-none block">Waygo</span>
+              <span className="text-lg font-black tracking-tight leading-none block">
+                <span className="text-slate-900">Way</span>
+                <span className="text-emerald-600">go</span>
+              </span>
               <span className="text-[10px] font-bold text-emerald-600 tracking-wider uppercase leading-none block mt-0.5">VITAP Campus</span>
             </div>
           </Link>
