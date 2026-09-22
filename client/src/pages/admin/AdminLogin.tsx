@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import logoImg from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Mail, Lock, Shield, ChevronRight, Eye, EyeOff } from 'lucide-react';
@@ -43,14 +44,25 @@ export const AdminLogin: React.FC = () => {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-6 bg-slate-950 overflow-hidden font-sans">
+      {/* Topbar Header */}
+      <header className="w-full absolute top-0 left-0 p-4 sm:p-6 flex items-center justify-between z-20">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src={logoImg} alt="Waygo Logo" className="w-9 h-9 object-contain rounded-xl shadow-sm" />
+          <span className="text-lg font-black tracking-tight">
+            <span className="text-white">Way</span>
+            <span className="text-emerald-400">go</span>
+          </span>
+        </Link>
+      </header>
+
       {/* Background glowing decorations */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-650/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      <div className="w-full max-w-md z-10 flex flex-col gap-6 animate-fade-in">
+      <div className="w-full max-w-md z-10 flex flex-col gap-6 animate-fade-in mt-12 sm:mt-0">
         <div className="text-center">
-          <h1 className="text-3xl font-black tracking-widest bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent flex items-center justify-center gap-2">
-            <Shield className="w-8 h-8 text-emerald-400 animate-pulse" />
+          <h1 className="text-3xl font-black tracking-widest bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent flex items-center justify-center gap-2.5">
+            <img src={logoImg} alt="Waygo Logo" className="w-8 h-8 object-contain rounded-lg" />
             ADMIN GATEWAY
           </h1>
           <p className="text-xs text-slate-400 mt-2 font-bold tracking-wider uppercase">
