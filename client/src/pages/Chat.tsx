@@ -203,7 +203,7 @@ export const Chat: React.FC = () => {
 
   return (
     <div className="h-[75vh] max-h-[620px] bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col my-1 animate-in fade-in duration-300">
-      
+
       {/* Inbox List Screen View (when no chat selected) */}
       {!selectedChat ? (
         <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
@@ -273,7 +273,7 @@ export const Chat: React.FC = () => {
       ) : (
         /* Active Conversation Thread View */
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
-          
+
           {/* Header */}
           <div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-3">
@@ -312,11 +312,10 @@ export const Chat: React.FC = () => {
                 return (
                   <div key={m._id} className={`flex ${isSelf ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm leading-relaxed ${
-                        isSelf
-                          ? 'bg-emerald-600 text-white rounded-tr-none'
-                          : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
-                      }`}
+                      className={`max-w-[80%] p-3 rounded-2xl text-xs font-medium shadow-sm leading-relaxed ${isSelf
+                        ? 'bg-emerald-600 text-white rounded-tr-none'
+                        : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
+                        }`}
                     >
                       {m.text && <p className="break-words">{m.text}</p>}
                       {m.image && (
@@ -333,7 +332,7 @@ export const Chat: React.FC = () => {
                 );
               })
             )}
-            
+
             {/* Typing indicator */}
             {Object.keys(typingUsers).some((k) => typingUsers[k]) && (
               <div className="flex justify-start">
@@ -400,5 +399,5 @@ export const Chat: React.FC = () => {
   );
 };
 
-export default Chat;
+//export default Chat;
 
